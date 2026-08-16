@@ -283,8 +283,7 @@ function DistrictsTable({ regionId, onOpen }: { regionId: string; onOpen: (id: s
           </div>
           <LocationPicker
             value={loc}
-            polygon={poly}
-            onChange={(lat, lng, p) => { setLoc(lat && lng ? {lat, lng} : null); setPoly(p); }}
+            onChange={(lat, lng) => setLoc({ lat, lng })}
           />
           <div className="mt-3 flex justify-end gap-2">
             <button onClick={() => setLocFor(null)} className="btn-ghost">Bekor</button>
@@ -356,7 +355,7 @@ function NeighborhoodsTable({ districtId, onOpen }: { districtId: string; onOpen
             <h3 className="font-semibold text-slate-900">Joylashuvni belgilash</h3>
             <button onClick={() => setLocFor(null)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"><Icon name="close" size={16} /></button>
           </div>
-          <LocationPicker value={loc} polygon={poly} onChange={(lat, lng, p) => { setLoc(lat && lng ? {lat, lng} : null); setPoly(p); }} />
+          <LocationPicker value={loc} onChange={(lat, lng) => setLoc({ lat, lng })} />
           <div className="mt-3 flex justify-end gap-2">
             <button onClick={() => setLocFor(null)} className="btn-ghost">Bekor</button>
             <button onClick={async () => { if (locFor) await updateNeighborhood(locFor, { lat: loc?.lat ?? null, lng: loc?.lng ?? null, polygon: poly }); setLocFor(null); }} className="btn-primary">Saqlash</button>

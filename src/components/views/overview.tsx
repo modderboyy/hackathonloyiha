@@ -2,14 +2,37 @@
 
 import { useMemo } from "react";
 import dynamic from "next/dynamic";
+import {
+  Card,
+  CardContent,
+  Box,
+  Typography,
+  Chip,
+  Avatar,
+  List,
+  ListItem,
+  ListItemAvatar,
+  ListItemText,
+  LinearProgress,
+  Grid,
+  Stack,
+} from "@mui/material";
+import {
+  People as PeopleIcon,
+  Bed as BedIcon,
+  Assignment as AssignmentIcon,
+  Map as MapIcon,
+  NotificationsActive as NotifIcon,
+  Medication as MedIcon,
+  ArrowForward as ArrowIcon,
+} from "@mui/icons-material";
 import { useData } from "@/lib/data";
 import { BarChart, DonutChart, AreaChart } from "@/components/charts";
-import { Icon } from "@/components/icons";
-import { formatDate, cn } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 
 const RegionMap = dynamic(() => import("@/components/map/RegionMap"), {
   ssr: false,
-  loading: () => <div className="h-[380px] w-full animate-pulse rounded-xl bg-slate-100 sm:h-[460px]" />,
+  loading: () => <Box sx={{ height: 400, bgcolor: "grey.100", borderRadius: 2 }} />,
 });
 
 const MONTH_NAMES = ["Yan", "Fev", "Mar", "Apr", "May", "Iyn", "Iyl", "Avg", "Sen", "Okt", "Noy", "Dek"];
@@ -17,7 +40,6 @@ const MONTH_NAMES = ["Yan", "Fev", "Mar", "Apr", "May", "Iyn", "Iyl", "Avg", "Se
 export function Overview({ onRegionSelect }: { onRegionSelect: (regionId: string) => void }) {
   const { regions, districts, patients, profiles, followUps, discharges, visits, hospitalizations, clientHealth } = useData();
 
-  // ===== Sog'/kasal bemorlar =====
   const patientStats = useMemo(() => {
     const total = patients.length;
     const sick = patients.filter((p) => {
@@ -31,32 +53,22 @@ export function Overview({ onRegionSelect }: { onRegionSelect: (regionId: string
     return { total, sick, healthy: total - sick };
   }, [patients, profiles, hospitalizations, clientHealth]);
 
-  // ===== Statsionar (hospitalizatsiya) =====
   const hospitalStats = useMemo(() => {
     const total = hospitalizations.length;
     let ongoing = hospitalizations.filter((h) => h.status === "active").length;
     const discharged = hospitalizations.filter((h) => h.status === "discharged");
-
     let success = 0;
     let failed = 0;
     discharged.forEach((h) => {
       const disc = discharges.find((d) => d.hospitalization_id === h.id);
       const fu = disc ? followUps.find((f) => f.discharge_id === disc.id) : null;
-      if (!fu) {
-        success++;
-      } else if (fu.status === "completed") {
-        success++;
-      } else if (fu.status === "overdue") {
-        failed++;
-      } else {
-        ongoing++; // kuzatuv hali davom etyabti
-      }
+      if (!fu || fu.status === "completed") success++;
+      else if (fu.status === "overdue") failed++;
+      else ongoing++;
     });
-
     return { total, ongoing, success, failed };
   }, [hospitalizations, followUps, discharges]);
 
-  // ===== Kuzatuv (follow-up) =====
   const followUpStats = useMemo(() => {
     const counts = { pending: 0, in_progress: 0, completed: 0, overdue: 0 };
     followUps.forEach((f) => {
@@ -119,116 +131,144 @@ export function Overview({ onRegionSelect }: { onRegionSelect: (regionId: string
   const pname = (id: string) => patients.find((p) => p.id === id)?.full_name ?? "—";
 
   return (
-    <div className="space-y-6">
-      {/* ===== Sarlavha ===== */}
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Bosh sahifa</h1>
-        <p className="text-sm text-slate-500">Tizimning umumiy holati va statistikasi</p>
-      </div>
+    <Box>
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h5" sx={{ fontWeight: 700 }} color="text.primary">
+          Bosh sahifa
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Tizimning umumiy holati va statistikasi
+        </Typography>
+      </Box>
 
-      {/* ===== Asosiy KPI kartalar ===== */}
-      <div className="grid gap-5 lg:grid-cols-3">
-        {/* Jami bemorlar */}
-        <KpiCard
-          title="Jami bemorlar"
-          icon="users"
-          value={patientStats.total}
-          gradient="from-blue-600 to-indigo-700"
-          segments={[
-            { label: "Sog'", value: patientStats.healthy, color: "bg-emerald-400" },
-            { label: "Kasal", value: patientStats.sick, color: "bg-rose-400" },
-          ]}
-        />
+      {/* KPI kartalar */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <KpiCard
+            title="Jami bemorlar"
+            icon={<PeopleIcon />}
+            value={patientStats.total}
+            gradient="linear-gradient(135deg, #2563eb, #4338ca)"
+            segments={[
+              { label: "Sog'", value: patientStats.healthy, color: "#34d399" },
+              { label: "Kasal", value: patientStats.sick, color: "#f87171" },
+            ]}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <KpiCard
+            title="Statsionar"
+            icon={<BedIcon />}
+            value={hospitalStats.total}
+            gradient="linear-gradient(135deg, #7c3aed, #6d28d9)"
+            segments={[
+              { label: "Davom etyabti", value: hospitalStats.ongoing, color: "#38bdf8" },
+              { label: "Muvaffaqiyatli", value: hospitalStats.success, color: "#34d399" },
+              { label: "Muvaffaqiyatsiz", value: hospitalStats.failed, color: "#f87171" },
+            ]}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <KpiCard
+            title="Kuzatuvlar"
+            icon={<AssignmentIcon />}
+            value={followUpStats.pending + followUpStats.in_progress + followUpStats.overdue}
+            gradient="linear-gradient(135deg, #f59e0b, #ea580c)"
+            segments={[
+              { label: "Kutilmoqda", value: followUpStats.pending, color: "#fbbf24" },
+              { label: "Jarayonda", value: followUpStats.in_progress, color: "#38bdf8" },
+              { label: "Yakunlangan", value: followUpStats.completed, color: "#34d399" },
+              { label: "Muddati o'tdi", value: followUpStats.overdue, color: "#f87171" },
+            ]}
+          />
+        </Grid>
+      </Grid>
 
-        {/* Statsionar */}
-        <KpiCard
-          title="Statsionar"
-          icon="bed"
-          value={hospitalStats.total}
-          gradient="from-violet-600 to-purple-700"
-          segments={[
-            { label: "Davom etyabti", value: hospitalStats.ongoing, color: "bg-sky-400" },
-            { label: "Muvaffaqiyatli", value: hospitalStats.success, color: "bg-emerald-400" },
-            { label: "Muvaffaqiyatsiz", value: hospitalStats.failed, color: "bg-rose-400" },
-          ]}
-        />
+      {/* Xarita */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                Hududlar bo'yicha bemorlar
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Hududni bosing — bemorlar ro'yxati filtrlanadi
+              </Typography>
+            </Box>
+            <MapIcon sx={{ color: "primary.main" }} />
+          </Box>
+          <RegionMap regions={regions} counts={regionCounts} selected={null} districtMarkers={districtMarkers} onSelect={(id) => id && onRegionSelect(id)} />
+        </CardContent>
+      </Card>
 
-        {/* Kuzatuv */}
-        <KpiCard
-          title="Kuzatuvlar"
-          icon="clipboard"
-          value={followUpStats.pending + followUpStats.in_progress + followUpStats.overdue}
-          gradient="from-amber-500 to-orange-600"
-          segments={[
-            { label: "Kutilmoqda", value: followUpStats.pending, color: "bg-amber-400" },
-            { label: "Jarayonda", value: followUpStats.in_progress, color: "bg-sky-400" },
-            { label: "Yakunlangan", value: followUpStats.completed, color: "bg-emerald-400" },
-            { label: "Muddati o'tdi", value: followUpStats.overdue, color: "bg-rose-400" },
-          ]}
-        />
-      </div>
+      {/* Grafiklar */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid size={{ xs: 12, lg: 6 }}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>
+                Hududlar kesimida
+              </Typography>
+              <BarChart data={regions.map((r) => ({ label: r.code, value: regionCounts[r.id] ?? 0 }))} height={220} />
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid size={{ xs: 12, lg: 6 }}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>
+                Kuzatuv holati
+              </Typography>
+              <DonutChart data={followUpDist} centerLabel="Kuzatuv" centerValue={followUps.length} />
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
 
-      {/* ===== Xarita ===== */}
-      <div className="card">
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <h2 className="font-semibold text-slate-900">Hududlar bo'yicha bemorlar</h2>
-            <p className="text-sm text-slate-500">Hududni bosing — bemorlar ro'yxati filtrlanadi</p>
-          </div>
-          <Icon name="map" size={22} className="text-primary-700" />
-        </div>
-        <RegionMap regions={regions} counts={regionCounts} selected={null} districtMarkers={districtMarkers} onSelect={(id) => id && onRegionSelect(id)} />
-      </div>
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>
+            Tashriflar dinamikasi (6 oy)
+          </Typography>
+          <AreaChart data={monthly.map((m) => m.value)} labels={monthly.map((m) => m.label)} height={200} />
+        </CardContent>
+      </Card>
 
-      {/* ===== Grafiklar ===== */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="card">
-          <h2 className="mb-4 font-semibold text-slate-900">Hududlar kesimida</h2>
-          {regions.length > 0 ? (
-            <BarChart data={regions.map((r) => ({ label: r.code, value: regionCounts[r.id] ?? 0 }))} height={220} />
+      {/* So'nggi faollik */}
+      <Card>
+        <CardContent>
+          <Typography variant="h6" sx={{ mb: 1, fontWeight: 700 }}>
+            So'nggi faollik
+          </Typography>
+          {recent.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              Hozircha faollik yo'q.
+            </Typography>
           ) : (
-            <p className="text-sm text-slate-500">Hududlar yuklanmagan.</p>
+            <List disablePadding>
+              {recent.map((e, i) => (
+                <ListItem key={i} divider={i < recent.length - 1} sx={{ px: 0 }}>
+                  <ListItemAvatar>
+                    <Avatar sx={{ bgcolor: "primary.light", color: "primary.contrastText", width: 36, height: 36 }}>
+                      {e.icon === "bed" ? <BedIcon /> : e.icon === "clock" ? <NotifIcon /> : <MedIcon />}
+                    </Avatar>
+                  </ListItemAvatar>
+                  <ListItemText
+                    primary={`${e.title} — ${pname(e.pid)}`}
+                    secondary={formatDate(e.date)}
+                  />
+                  <ArrowIcon sx={{ color: "grey.400" }} />
+                </ListItem>
+              ))}
+            </List>
           )}
-        </div>
-        <div className="card">
-          <h2 className="mb-4 font-semibold text-slate-900">Kuzatuv holati</h2>
-          <DonutChart data={followUpDist} centerLabel="Kuzatuv" centerValue={followUps.length} />
-        </div>
-      </div>
-
-      <div className="card">
-        <h2 className="mb-4 font-semibold text-slate-900">Tashriflar dinamikasi (6 oy)</h2>
-        <AreaChart data={monthly.map((m) => m.value)} labels={monthly.map((m) => m.label)} height={200} />
-      </div>
-
-      {/* ===== So'nggi faollik ===== */}
-      <div className="card">
-        <h2 className="mb-4 font-semibold text-slate-900">So'nggi faollik</h2>
-        {recent.length === 0 ? (
-          <p className="text-sm text-slate-500">Hozircha faollik yo'q.</p>
-        ) : (
-          <ul className="divide-y divide-slate-100">
-            {recent.map((e, i) => (
-              <li key={i} className="flex items-center gap-3 py-3">
-                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-50 text-primary-700">
-                  <Icon name={e.icon} size={18} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-slate-800">
-                    {e.title} — {pname(e.pid)}
-                  </p>
-                </div>
-                <span className="text-xs text-slate-400">{formatDate(e.date)}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </div>
+        </CardContent>
+      </Card>
+    </Box>
   );
 }
 
-// ===== Katta KPI karta (gradient + segmentlar) =====
 function KpiCard({
   title,
   icon,
@@ -237,7 +277,7 @@ function KpiCard({
   segments,
 }: {
   title: string;
-  icon: string;
+  icon: React.ReactNode;
   value: number;
   gradient: string;
   segments: { label: string; value: number; color: string }[];
@@ -245,46 +285,64 @@ function KpiCard({
   const total = segments.reduce((s, seg) => s + seg.value, 0);
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md">
-      {/* Yuqori gradient qism */}
-      <div className={cn("relative bg-gradient-to-br p-5 text-white", gradient)}>
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-white/80">{title}</p>
-            <p className="mt-2 text-4xl font-bold leading-none drop-shadow-sm">{value}</p>
-          </div>
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/20 backdrop-blur">
-            <Icon name={icon} size={22} />
-          </span>
-        </div>
+    <Card sx={{ height: "100%", overflow: "hidden" }}>
+      {/* Gradient header */}
+      <Box
+        sx={{
+          background: gradient,
+          color: "white",
+          p: 2.5,
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <Box>
+            <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: 1 }}>
+              {title}
+            </Typography>
+            <Typography variant="h3" sx={{ mt: 1, lineHeight: 1, fontWeight: 800 }}>
+              {value}
+            </Typography>
+          </Box>
+          <Avatar sx={{ bgcolor: "rgba(255,255,255,0.25)", backdropFilter: "blur(4px)" }}>{icon}</Avatar>
+        </Box>
         {/* dekorativ doiralar */}
-        <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10" />
-        <div className="pointer-events-none absolute -bottom-10 -right-2 h-28 w-28 rounded-full bg-white/10" />
-      </div>
+        <Box sx={{ position: "absolute", top: -24, right: -24, width: 96, height: 96, borderRadius: "50%", bgcolor: "rgba(255,255,255,0.12)" }} />
+        <Box sx={{ position: "absolute", bottom: -40, right: -8, width: 112, height: 112, borderRadius: "50%", bgcolor: "rgba(255,255,255,0.08)" }} />
+      </Box>
 
       {/* Segmentlar */}
-      <div className="space-y-2.5 p-4">
-        {segments.map((seg, i) => {
-          const pct = total > 0 ? Math.round((seg.value / total) * 100) : 0;
-          return (
-            <div key={i}>
-              <div className="mb-1 flex items-center justify-between text-xs">
-                <span className="flex items-center gap-1.5 text-slate-600">
-                  <span className={cn("h-2 w-2 rounded-full", seg.color)} />
-                  {seg.label}
-                </span>
-                <span className="font-semibold text-slate-800">{seg.value}</span>
-              </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-                <div
-                  className={cn("h-full rounded-full transition-all duration-500", seg.color)}
-                  style={{ width: `${pct}%` }}
+      <CardContent sx={{ py: 1.5 }}>
+        <Stack spacing={1.5}>
+          {segments.map((seg, i) => {
+            const pct = total > 0 ? Math.round((seg.value / total) * 100) : 0;
+            return (
+              <Box key={i}>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.5 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+                    <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: seg.color }} />
+                    {seg.label}
+                  </Typography>
+                  <Typography variant="caption" sx={{ fontWeight: 700 }}>
+                    {seg.value}
+                  </Typography>
+                </Box>
+                <LinearProgress
+                  variant="determinate"
+                  value={pct}
+                  sx={{
+                    height: 6,
+                    borderRadius: 3,
+                    bgcolor: "grey.100",
+                    "& .MuiLinearProgress-bar": { bgcolor: seg.color, borderRadius: 3 },
+                  }}
                 />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
+              </Box>
+            );
+          })}
+        </Stack>
+      </CardContent>
+    </Card>
   );
 }

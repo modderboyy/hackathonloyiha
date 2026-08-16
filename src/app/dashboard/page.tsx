@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { DataProvider, useData } from "@/lib/data";
+import ThemeRegistry from "@/lib/theme";
 import { Icon, Logo } from "@/components/icons";
 import { ROLE_LABELS, type Notification } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -37,9 +38,11 @@ const NAV: { id: View; label: string; icon: string; adminOnly?: boolean }[] = [
 
 export default function DashboardPage() {
   return (
-    <DataProvider>
-      <Shell />
-    </DataProvider>
+    <ThemeRegistry>
+      <DataProvider>
+        <Shell />
+      </DataProvider>
+    </ThemeRegistry>
   );
 }
 

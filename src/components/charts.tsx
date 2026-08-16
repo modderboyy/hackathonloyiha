@@ -1,6 +1,8 @@
 "use client";
 
-// Inline SVG grafiklar — tashqi bog'liqliksiz, responsive
+import { useId } from "react";
+
+// Inline SVG grafiklar — MUI bilan birga ishlatiladi, tashqi bog'liqliksiz
 
 export function BarChart({
   data,
@@ -12,8 +14,6 @@ export function BarChart({
   color?: string;
 }) {
   const max = Math.max(1, ...data.map((d) => d.value));
-  const w = 100;
-  const gap = 8;
 
   return (
     <div className="w-full">
@@ -54,12 +54,15 @@ export function AreaChart({
   labels: string[];
   height?: number;
 }) {
+  const uid = useId().replace(/:/g, "");
+  const gradId = `areaGrad-${uid}`;
+
   const max = Math.max(1, ...data);
   const min = Math.min(0, ...data);
   const range = max - min || 1;
   const W = 600;
   const H = 200;
-  const pad = 10;
+  const pad = 12;
   const stepX = data.length > 1 ? (W - pad * 2) / (data.length - 1) : 0;
 
   const pts = data.map((v, i) => {
@@ -71,11 +74,13 @@ export function AreaChart({
   const line = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p[0]},${p[1]}`).join(" ");
   const area = `${line} L${pts[pts.length - 1][0]},${H - pad} L${pts[0][0]},${H - pad} Z`;
 
+  const allZero = data.every((v) => v === 0);
+
   return (
     <div className="w-full">
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height }} preserveAspectRatio="none">
         <defs>
-          <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.35" />
             <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.02" />
           </linearGradient>
@@ -92,13 +97,18 @@ export function AreaChart({
             strokeDasharray="4 4"
           />
         ))}
-        <path d={area} fill="url(#areaGrad)" />
+        <path d={area} fill={`url(#${gradId})`} />
         <path d={line} fill="none" stroke="#1e3a8a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
         {pts.map((p, i) => (
           <circle key={i} cx={p[0]} cy={p[1]} r="4" fill="#fff" stroke="#1e3a8a" strokeWidth="2">
             <title>{`${labels[i]}: ${data[i]}`}</title>
           </circle>
         ))}
+        {allZero && (
+          <text x={W / 2} y={H / 2} textAnchor="middle" fill="#94a3b8" fontSize="14">
+            Hozircha ma'lumot yo'q
+          </text>
+        )}
       </svg>
       <div className="mt-1 flex justify-between px-1">
         {labels.map((l, i) => (
@@ -155,10 +165,10 @@ export function DonutChart({
           offset += dash;
           return el;
         })}
-        <text x="70" y="66" textAnchor="middle" className="fill-slate-900" style={{ fontSize: 22, fontWeight: 700 }}>
+        <text x="70" y="66" textAnchor="middle" fill="#0f172a" style={{ fontSize: 22, fontWeight: 700 }}>
           {centerValue ?? total}
         </text>
-        <text x="70" y="84" textAnchor="middle" className="fill-slate-400" style={{ fontSize: 10 }}>
+        <text x="70" y="84" textAnchor="middle" fill="#94a3b8" style={{ fontSize: 10 }}>
           {centerLabel ?? "Jami"}
         </text>
       </svg>
