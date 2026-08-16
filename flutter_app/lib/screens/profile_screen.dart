@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models.dart';
 import '../state/app_state.dart';
+import '../theme/app_theme.dart';
+import '../widgets/custom_ui.dart';
 
 /// Profil va sog'liq ma'lumotlarini ko'rish/tahrirlash.
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final bool embedded;
+  const ProfileScreen({super.key, this.embedded = false});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -62,80 +65,129 @@ class _ProfileScreenState extends State<ProfileScreen> {
       avgWeight: double.tryParse(_weight.text),
     ));
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Saqlandi ✓')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Saqlandi ✓'),
+          backgroundColor: AppColors.emerald,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    return Scaffold(
-      appBar: AppBar(title: const Text('Profil va sog\'liq')),
-      body: SafeArea(
+
+    final body = Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.primaryDarker, AppColors.bg, AppColors.primaryDark],
+        ),
+      ),
+      child: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Card(
-                child: ListTile(
-                  leading: const CircleAvatar(backgroundColor: Color(0xFF1E3A8A), child: Icon(Icons.person, color: Colors.white)),
-                  title: Text(state.profile?.fullName ?? ''),
-                  subtitle: Text(state.isPremium ? 'Premium obuna faol ✓' : 'Obuna faol emas'),
+              // Profil kartasi
+              GlassCard(
+                cut: 14,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        gradient: AppColors.primaryGradient,
+                        borderRadius: BorderRadius.circular(13),
+                      ),
+                      child: const Icon(Icons.person, color: Colors.white, size: 28),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(state.profile?.fullName ?? '', style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16)),
+                          const SizedBox(height: 3),
+                          Row(
+                            children: [
+                              StatusDot(color: state.hasSubscription ? AppColors.emerald : AppColors.red, pulse: true),
+                              const SizedBox(width: 6),
+                              Text(state.hasSubscription ? 'Obuna faol ✓' : 'Obuna faol emas', style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
-              const Text('Sog\'liq ma\'lumotlari', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 20),
+
+              const NeonText('SOG\'LIQ MA\'LUMOTLARI', size: 16),
               const SizedBox(height: 12),
-              TextField(
-                controller: _condition,
-                maxLines: 3,
-                decoration: const InputDecoration(labelText: 'Hozirgi kasallik', border: OutlineInputBorder()),
-              ),
+              GlassInput(label: 'HOZIRGI KASALLIK', controller: _condition, maxLines: 3, hint: 'Agar mavjud bo\'lsa...'),
               const SizedBox(height: 16),
-              const Text('O\'rtacha hayotiy ko\'rsatkichlar (ixtiyoriy)', style: TextStyle(fontWeight: FontWeight.w600)),
+
+              const NeonText('O\'RTACHA KO\'RSATKICHLAR', size: 14),
               const SizedBox(height: 12),
               Row(children: [
-                Expanded(child: _num(_bpSys, 'AB sist.')),
-                const SizedBox(width: 12),
-                Expanded(child: _num(_bpDia, 'AB diast.')),
+                Expanded(child: _num(_bpSys, 'AB SIST.')),
+                const SizedBox(width: 10),
+                Expanded(child: _num(_bpDia, 'AB DIAST.')),
               ]),
               const SizedBox(height: 12),
               Row(children: [
-                Expanded(child: _num(_hr, 'Puls')),
-                const SizedBox(width: 12),
-                Expanded(child: _num(_temp, 'Harorat °C')),
+                Expanded(child: _num(_hr, 'PULS')),
+                const SizedBox(width: 10),
+                Expanded(child: _num(_temp, 'HARORAT °C')),
               ]),
               const SizedBox(height: 12),
               Row(children: [
                 Expanded(child: _num(_spo2, 'SpO₂ %')),
-                const SizedBox(width: 12),
-                Expanded(child: _num(_weight, 'Vazn kg')),
+                const SizedBox(width: 10),
+                Expanded(child: _num(_weight, 'VAZN KG')),
               ]),
               const SizedBox(height: 16),
-              TextField(controller: _allergies, decoration: const InputDecoration(labelText: 'Allergiyalar', border: OutlineInputBorder())),
+              GlassInput(label: 'ALLERGIYALAR', controller: _allergies),
               const SizedBox(height: 12),
-              TextField(controller: _medications, decoration: const InputDecoration(labelText: 'Dori-darmonlar', border: OutlineInputBorder())),
+              GlassInput(label: 'DORI-DARMONLAR', controller: _medications),
               const SizedBox(height: 12),
-              TextField(controller: _emergency, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Favqulodda aloqa raqami', border: OutlineInputBorder())),
+              GlassInput(label: 'FAVQULODDA ALOQA', controller: _emergency, keyboardType: TextInputType.phone),
               const SizedBox(height: 24),
-              FilledButton(
-                onPressed: state.loading ? null : _save,
-                style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
-                child: const Text('Saqlash'),
+              SlantButton(
+                label: 'SAQLASH',
+                icon: Icons.save,
+                loading: state.loading,
+                onPressed: _save,
               ),
             ],
           ),
         ),
       ),
     );
+
+    if (widget.embedded) return body;
+
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: AppColors.primaryDarker,
+        title: const Text('Profil va sog\'liq', style: TextStyle(color: AppColors.textPrimary)),
+      ),
+      body: body,
+    );
   }
 
   Widget _num(TextEditingController c, String label) {
-    return TextField(
+    return GlassInput(
+      label: label,
       controller: c,
       keyboardType: TextInputType.number,
-      decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
     );
   }
 }

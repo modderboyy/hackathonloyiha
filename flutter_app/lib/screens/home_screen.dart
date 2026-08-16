@@ -9,6 +9,7 @@ import 'chat_screen.dart';
 import 'lock_screen.dart';
 import 'profile_screen.dart';
 import 'reminders_screen.dart';
+import 'stats_screen.dart';
 import 'subscription_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -19,6 +20,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  int _tab = 0;
+
   @override
   void initState() {
     super.initState();
@@ -52,10 +55,6 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RemindersScreen())),
           ),
           IconButton(
-            icon: const Icon(Icons.person_outline, color: AppColors.textSecondary),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileScreen())),
-          ),
-          IconButton(
             icon: const Icon(Icons.logout, color: AppColors.textSecondary),
             onPressed: () async => await state.logout(),
           ),
@@ -69,231 +68,215 @@ class _HomeScreenState extends State<HomeScreen> {
             colors: [AppColors.primaryDarker, AppColors.bg, AppColors.primaryDark],
           ),
         ),
-        child: RefreshIndicator(
-          onRefresh: () => state.loadAll(),
-          color: AppColors.cyan,
-          backgroundColor: AppColors.surface,
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              // Salomlashish
-              GlassCard(
-                cut: 14,
-                child: Row(
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        gradient: AppColors.primaryGradient,
-                        borderRadius: BorderRadius.circular(12),
+        child: IndexedStack(
+          index: _tab,
+          children: [
+            _HomeTab(),
+            const StatsScreen(),
+            const ChatScreen(embedded: true),
+            const ProfileScreen(embedded: true),
+          ],
+        ),
+      ),
+      bottomNavigationBar: _BottomNav(current: _tab, onTap: (i) => setState(() => _tab = i)),
+    );
+  }
+}
+
+// =====================================================================
+// Bosh sahifa (tab)
+// =====================================================================
+class _HomeTab extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    return RefreshIndicator(
+      onRefresh: () => state.loadAll(),
+      color: AppColors.cyan,
+      backgroundColor: AppColors.surface,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Salomlashish
+          GlassCard(
+            cut: 14,
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    gradient: AppColors.primaryGradient,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.person, color: Colors.white, size: 26),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Salom, ${state.profile?.fullName ?? "bemor"}!',
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
-                      child: const Icon(Icons.person, color: Colors.white, size: 26),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      const SizedBox(height: 3),
+                      Row(
                         children: [
-                          Text(
-                            'Salom, ${state.profile?.fullName ?? "bemor"}!',
-                            style: const TextStyle(
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
+                          StatusDot(
+                            color: state.hasSubscription ? AppColors.emerald : AppColors.red,
+                            pulse: true,
                           ),
-                          const SizedBox(height: 3),
-                          Row(
+                          const SizedBox(width: 6),
+                          Text(
+                            _subLabel(state),
+                            style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Dori-darmon (sinxronlangan)
+          if (state.medications.isNotEmpty) ...[
+            const NeonText('DORI-DARMONLAR', size: 16),
+            const SizedBox(height: 10),
+            ...state.medications.map((m) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: GlassCard(
+                    cut: 10,
+                    padding: const EdgeInsets.all(14),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: AppColors.accent.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.medication, color: AppColors.cyan, size: 20),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              StatusDot(
-                                color: state.hasSubscription ? AppColors.emerald : AppColors.red,
-                                pulse: true,
-                              ),
-                              const SizedBox(width: 6),
+                              Text(m.name, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+                              if (m.dosage != null || m.frequency != null)
+                                Text(
+                                  [m.dosage, m.frequency].whereType<String>().join(' · '),
+                                  style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )),
+            const SizedBox(height: 16),
+          ],
+
+          // Sog'liq paneli
+          const NeonText('SOG\'LIQ HOLATI', size: 16),
+          const SizedBox(height: 10),
+          HealthDashboard(health: state.health),
+          const SizedBox(height: 16),
+
+          // So'nggi tekshiruvlar
+          const NeonText('SO\'NGGI TEKSHIRUVLAR', size: 16),
+          const SizedBox(height: 10),
+          if (state.checkins.isEmpty)
+            const GlassCard(
+              cut: 10,
+              child: Text('Hozircha tekshiruvlar yo\'q. Premium obuna bilan har soatda AI sizni tekshiradi.', style: TextStyle(color: AppColors.textSecondary)),
+            )
+          else
+            ...state.checkins.take(5).map((c) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: GlassCard(
+                    cut: 10,
+                    padding: const EdgeInsets.all(14),
+                    child: Row(
+                      children: [
+                        Icon(_checkinIcon(c.status), color: _checkinColor(c.status), size: 22),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(c.aiMessage, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.textPrimary, fontSize: 13)),
+                              const SizedBox(height: 2),
                               Text(
-                                _subLabel(state),
-                                style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                                '${_statusLabel(c.status)} · ${c.createdAt.toString().substring(0, 16)}',
+                                style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
                               ),
                             ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
+                  ),
+                )),
 
-              // Dori-darmon (sinxronlangan)
-              if (state.medications.isNotEmpty) ...[
-                const NeonText('DORI-DARMONLAR', size: 16),
-                const SizedBox(height: 10),
-                ...state.medications.map((m) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: GlassCard(
-                        cut: 10,
-                        padding: const EdgeInsets.all(14),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color: AppColors.accent.withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(Icons.medication, color: AppColors.cyan, size: 20),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(m.name, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
-                                  if (m.dosage != null || m.frequency != null)
-                                    Text(
-                                      [m.dosage, m.frequency].whereType<String>().join(' · '),
-                                      style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )),
-                const SizedBox(height: 16),
-              ],
-
-              // Sog'liq paneli
-              const NeonText('SOG\'LIQ HOLATI', size: 16),
-              const SizedBox(height: 10),
-              HealthDashboard(health: state.health),
-              const SizedBox(height: 16),
-
-              // AI chatbot
-              const NeonText('AI YORDAMCHI', size: 16),
-              const SizedBox(height: 10),
-              GestureDetector(
-                onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ChatScreen())),
-                child: GlassCard(
-                  cut: 12,
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
+          // Faol tekshiruvga javob
+          if (state.checkins.isNotEmpty && state.checkins.first.status == 'sent') ...[
+            const SizedBox(height: 12),
+            GlassCard(
+              cut: 14,
+              tint: AppColors.primaryDark,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Row(
                     children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          gradient: AppColors.neonGradient,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.smart_toy, color: Colors.white, size: 22),
-                      ),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Chatbot bilan suhbat', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
-                            Text('Holatingizni kuzatadi, savollarga javob beradi', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
-                          ],
-                        ),
-                      ),
-                      const Icon(Icons.chevron_right, color: AppColors.textMuted),
+                      Icon(Icons.notifications_active, color: AppColors.cyan, size: 18),
+                      SizedBox(width: 8),
+                      Text('OXIRGI TEKSHIRUV', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
                     ],
                   ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // So'nggi tekshiruvlar
-              const NeonText('SO\'NGGI TEKSHIRUVLAR', size: 16),
-              const SizedBox(height: 10),
-              if (state.checkins.isEmpty)
-                const GlassCard(
-                  cut: 10,
-                  child: Text('Hozircha tekshiruvlar yo\'q. Premium obuna bilan har soatda AI sizni tekshiradi.', style: TextStyle(color: AppColors.textSecondary)),
-                )
-              else
-                ...state.checkins.take(5).map((c) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: GlassCard(
-                        cut: 10,
-                        padding: const EdgeInsets.all(14),
-                        child: Row(
-                          children: [
-                            Icon(_checkinIcon(c.status), color: _checkinColor(c.status), size: 22),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(c.aiMessage, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.textPrimary, fontSize: 13)),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    '${_statusLabel(c.status)} · ${c.createdAt.toString().substring(0, 16)}',
-                                    style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+                  const SizedBox(height: 10),
+                  Typewriter(
+                    text: state.checkins.first.aiMessage,
+                    speed: const Duration(milliseconds: 25),
+                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 14, height: 1.4),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SlantButton(
+                          label: 'YAXSHIMAN',
+                          icon: Icons.check,
+                          onPressed: () => state.answerCheckin(state.checkins.first.id, 'Yaxshiman', isBad: false),
                         ),
                       ),
-                    )),
-
-              // Faol tekshiruvga javob
-              if (state.checkins.isNotEmpty && state.checkins.first.status == 'sent') ...[
-                const SizedBox(height: 12),
-                GlassCard(
-                  cut: 14,
-                  tint: AppColors.primaryDark,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Row(
-                        children: [
-                          Icon(Icons.notifications_active, color: AppColors.cyan, size: 18),
-                          SizedBox(width: 8),
-                          Text('OXIRGI TEKSHIRUV', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Typewriter(
-                        text: state.checkins.first.aiMessage,
-                        speed: const Duration(milliseconds: 25),
-                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 14, height: 1.4),
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: SlantButton(
-                              label: 'YAXSHIMAN',
-                              icon: Icons.check,
-                              onPressed: () => state.answerCheckin(state.checkins.first.id, 'Yaxshiman', isBad: false),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: SlantButton(
-                              label: 'YOMONMAN',
-                              icon: Icons.warning,
-                              outline: true,
-                              onPressed: () => state.answerCheckin(state.checkins.first.id, 'Yomonman', isBad: true),
-                            ),
-                          ),
-                        ],
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: SlantButton(
+                          label: 'YOMONMAN',
+                          icon: Icons.warning,
+                          outline: true,
+                          onPressed: () => state.answerCheckin(state.checkins.first.id, 'Yomonman', isBad: true),
+                        ),
                       ),
                     ],
                   ),
-                ),
-              ],
-            ],
-          ),
-        ),
+                ],
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -336,5 +319,69 @@ class _HomeScreenState extends State<HomeScreen> {
       case 'escalated': return 'Kuchaytirildi';
       default: return s;
     }
+  }
+}
+
+// =====================================================================
+// Bottom navigation bar
+// =====================================================================
+class _BottomNav extends StatelessWidget {
+  final int current;
+  final ValueChanged<int> onTap;
+
+  const _BottomNav({required this.current, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = [
+      (icon: Icons.home_outlined, activeIcon: Icons.home, label: 'Bosh sahifa'),
+      (icon: Icons.insights_outlined, activeIcon: Icons.insights, label: 'Statistika'),
+      (icon: Icons.chat_bubble_outline, activeIcon: Icons.chat_bubble, label: 'Chat'),
+      (icon: Icons.person_outline, activeIcon: Icons.person, label: 'Profil'),
+    ];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.primaryDarker.withOpacity(0.95),
+        border: const Border(top: BorderSide(color: Color(0xFF1E293B))),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          children: items.asMap().entries.map((e) {
+            final i = e.key;
+            final item = e.value;
+            final active = current == i;
+            return Expanded(
+              child: InkWell(
+                onTap: () => onTap(i),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        active ? item.activeIcon : item.icon,
+                        color: active ? AppColors.cyan : AppColors.textMuted,
+                        size: 22,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        item.label,
+                        style: TextStyle(
+                          color: active ? AppColors.cyan : AppColors.textMuted,
+                          fontSize: 10,
+                          fontWeight: active ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
   }
 }

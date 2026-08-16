@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models.dart';
 import '../state/app_state.dart';
+import '../theme/app_theme.dart';
 
 /// AI chatbot — bemor bilan suhbat
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key});
+  final bool embedded;
+  const ChatScreen({super.key, this.embedded = false});
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -34,17 +36,15 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Row(
-          children: [
-            Icon(Icons.smart_toy),
-            SizedBox(width: 8),
-            Text('AI yordamchi'),
-          ],
+    final body = Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.primaryDarker, AppColors.bg, AppColors.primaryDark],
         ),
       ),
-      body: Column(
+      child: Column(
         children: [
           Expanded(
             child: ListView.builder(
@@ -56,7 +56,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     alignment: Alignment.centerLeft,
                     child: Padding(
                       padding: EdgeInsets.all(8),
-                      child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                      child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.cyan)),
                     ),
                   );
                 }
@@ -68,13 +68,20 @@ class _ChatScreenState extends State<ChatScreen> {
                     margin: const EdgeInsets.symmetric(vertical: 4),
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(
-                      color: isUser ? const Color(0xFF1E3A8A) : Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.grey.shade200),
+                      color: isUser ? AppColors.accent : AppColors.surface,
+                      borderRadius: BorderRadius.only(
+                        topLeft: const Radius.circular(12),
+                        topRight: const Radius.circular(12),
+                        bottomLeft: Radius.circular(isUser ? 12 : 0),
+                        bottomRight: Radius.circular(isUser ? 0 : 12),
+                      ),
+                      boxShadow: [
+                        BoxShadow(color: (isUser ? AppColors.accent : Colors.black).withOpacity(0.15), blurRadius: 8),
+                      ],
                     ),
                     child: Text(
                       m.content,
-                      style: TextStyle(color: isUser ? Colors.white : Colors.black87),
+                      style: TextStyle(color: isUser ? Colors.white : AppColors.textPrimary),
                     ),
                   ),
                 );
@@ -83,24 +90,40 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
                   Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      decoration: InputDecoration(
-                        hintText: 'Xabaringizni yozing...',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(24)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.surface.withOpacity(0.6),
+                        border: Border.all(color: AppColors.accent.withOpacity(0.2)),
+                        borderRadius: BorderRadius.circular(24),
                       ),
-                      onSubmitted: (_) => _send(),
+                      child: TextField(
+                        controller: _controller,
+                        style: const TextStyle(color: AppColors.textPrimary),
+                        cursorColor: AppColors.accent,
+                        decoration: const InputDecoration(
+                          hintText: 'Xabaringizni yozing...',
+                          hintStyle: TextStyle(color: AppColors.textMuted),
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        onSubmitted: (_) => _send(),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  IconButton.filled(
-                    onPressed: _thinking ? null : _send,
-                    icon: const Icon(Icons.send),
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: AppColors.primaryGradient,
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      onPressed: _thinking ? null : _send,
+                      icon: const Icon(Icons.send, color: Colors.white),
+                    ),
                   ),
                 ],
               ),
@@ -108,6 +131,22 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         ],
       ),
+    );
+
+    if (widget.embedded) return body;
+
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: AppColors.primaryDarker,
+        title: const Row(
+          children: [
+            Icon(Icons.smart_toy, color: AppColors.cyan),
+            SizedBox(width: 8),
+            Text('AI yordamchi', style: TextStyle(color: AppColors.textPrimary)),
+          ],
+        ),
+      ),
+      body: body,
     );
   }
 }

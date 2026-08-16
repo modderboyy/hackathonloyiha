@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:provider/provider.dart';
 import '../models.dart';
 import '../state/app_state.dart';
+import '../theme/app_theme.dart';
+import '../widgets/custom_ui.dart';
 import 'home_screen.dart';
 
 /// Klinik (B2B) obuna — klinikani tanlash yoki kod kiritish.
-/// Kod = klinikadagi bemorning statsionar (hospitalization) kodi.
 class ClinicCodeScreen extends StatefulWidget {
   const ClinicCodeScreen({super.key});
 
@@ -55,7 +55,11 @@ class _ClinicCodeScreenState extends State<ClinicCodeScreen> {
       setState(() => _error = error);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Klinik obuna faollashtirildi! Ma\u2019lumotlar sinxronlandi.')),
+        SnackBar(
+          content: const Text('Klinik obuna faollashtirildi! Ma\u2019lumotlar sinxronlandi.'),
+          backgroundColor: AppColors.emerald,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
     }
@@ -64,63 +68,121 @@ class _ClinicCodeScreenState extends State<ClinicCodeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Klinik obuna'), centerTitle: true),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            ShadCard(
-              title: const Text('Klinikangizni tanlang', style: TextStyle(fontWeight: FontWeight.bold)),
-              description: const Text('Ixtiyoriy — kodni to\u2019g\u2019ridan-to\u2019g\u2019ri kiritsangiz ham bo\u2019ladi'),
-              child: _loaded
-                  ? ShadSelect<String>(
-                      placeholder: const Text('Klinikani tanlang (ixtiyoriy)'),
-                      options: _clinics
-                          .map((c) => ShadOption(value: c.id, child: Text(c.name)))
-                          .toList(),
-                      selectedOptionBuilder: (context, v) {
-                        Clinic? c;
-                        for (final x in _clinics) {
-                          if (x.id == v) { c = x; break; }
-                        }
-                        return Text(c?.name ?? 'Klinikani tanlang');
-                      },
-                      onChanged: (v) => setState(() => _selectedClinic = v),
-                    )
-                  : const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator())),
-            ),
-            const SizedBox(height: 16),
-            ShadCard(
-              title: const Text('Statsionar kodi', style: TextStyle(fontWeight: FontWeight.bold)),
-              description: const Text('Bu kodni klinikangizdagi shifokor beradi'),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  ShadInput(
-                    controller: _code,
-                    textCapitalization: TextCapitalization.characters,
-                    placeholder: const Text('Masalan: A1B2C3D4'),
-                    onChanged: (_) => setState(() => _error = null),
-                  ),
-                  if (_error != null) ...[
-                    const SizedBox(height: 8),
-                    Text(_error!, style: const TextStyle(color: Colors.red)),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppColors.primaryDarker, AppColors.bg, AppColors.primaryDark],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back, color: AppColors.textSecondary),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    const SizedBox(width: 4),
+                    const NeonText('KLINIK OBUNA', size: 20),
                   ],
-                ],
-              ),
+                ),
+                const SizedBox(height: 16),
+                GlassCard(
+                  cut: 14,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const NeonText('KLINIKANI TANLANG', size: 14),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'Ixtiyoriy — kodni to\u2019g\u2019ridan kiritsangiz ham bo\u2019ladi',
+                        style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                      ),
+                      const SizedBox(height: 14),
+                      _loaded
+                          ? ClipPath(
+                              clipper: const SlantClipper(cut: 10),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface.withOpacity(0.6),
+                                  border: Border.all(color: AppColors.accent.withOpacity(0.2)),
+                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<String>(
+                                    isExpanded: true,
+                                    value: _selectedClinic,
+                                    dropdownColor: AppColors.bgCard,
+                                    iconEnabledColor: AppColors.cyan,
+                                    style: const TextStyle(color: AppColors.textPrimary),
+                                    hint: const Text('Klinikani tanlang (ixtiyoriy)', style: TextStyle(color: AppColors.textMuted)),
+                                    items: _clinics
+                                        .map((c) => DropdownMenuItem(value: c.id, child: Text(c.name, overflow: TextOverflow.ellipsis)))
+                                        .toList(),
+                                    onChanged: (v) => setState(() => _selectedClinic = v),
+                                  ),
+                                ),
+                              ),
+                            )
+                          : const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(16),
+                                child: CircularProgressIndicator(color: AppColors.cyan),
+                              ),
+                            ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                GlassCard(
+                  cut: 14,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const NeonText('STATSIONAR KODI', size: 14),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'Bu kodni klinikangizdagi shifokor beradi',
+                        style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                      ),
+                      const SizedBox(height: 14),
+                      GlassInput(
+                        label: 'KOD',
+                        controller: _code,
+                        hint: 'Masalan: A1B2C3D4',
+                        textCapitalization: TextCapitalization.characters,
+                        onChanged: (_) => setState(() => _error = null),
+                      ),
+                      if (_error != null) ...[
+                        const SizedBox(height: 10),
+                        Text(_error!, style: const TextStyle(color: AppColors.red)),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SlantButton(
+                  label: _busy ? 'FAOLLASHTIRILMOQDA...' : 'FAOLLASHTIRISH',
+                  icon: Icons.key,
+                  loading: _busy,
+                  onPressed: _activate,
+                ),
+                const SizedBox(height: 18),
+                const Text(
+                  'Kodni qayerdan olasiz? Statsionarga yotqizilganingizda shifokor sizga bemor kodingizni beradi. Bu kod davolash muddati davomida klinik obunani faollashtiradi va barcha tibbiy ma\u2019lumotlaringizni (dori-darmon, tavsiyalar) avtomatik sinxronlaydi.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                ),
+              ],
             ),
-            const SizedBox(height: 20),
-            ShadButton(
-              onPressed: _busy ? null : _activate,
-              child: Text(_busy ? 'Faollashtirilmoqda...' : 'Faollashtirish'),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Kodni qayerdan olasiz? Statsionarga yotqizilganingizda shifokor sizga bemor kodingizni beradi. Bu kod davolash muddati davomida klinik obunani faollashtiradi va barcha tibbiy ma\u2019lumotlaringizni (dori-darmon, tavsiyalar) avtomatik sinxronlaydi.',
-              style: TextStyle(color: Colors.grey, fontSize: 12),
-            ),
-          ],
+          ),
         ),
       ),
     );
