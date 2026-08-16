@@ -7,7 +7,7 @@ export default function Home() {
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-600 text-lg font-bold text-white">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-700 text-lg font-bold text-white">
               C
             </span>
             <span className="text-lg font-bold text-slate-900">CareLink</span>
@@ -27,12 +27,12 @@ export default function Home() {
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-16">
         <div className="grid items-center gap-12 md:grid-cols-2">
           <div>
-            <p className="mb-3 inline-flex rounded-full bg-teal-50 px-3 py-1 text-sm font-medium text-teal-700">
+            <p className="mb-3 inline-flex rounded-full bg-primary-50 px-3 py-1 text-sm font-medium text-primary-800">
               Raqamli tibbiy kuzatuv platformasi
             </p>
             <h1 className="text-4xl font-bold leading-tight tracking-tight text-slate-900 md:text-5xl">
               Bemor smartfoni yoki interneti{" "}
-              <span className="text-teal-600">bo&lsquo;lmasa ham</span>, tibbiy
+              <span className="text-primary-700">bo&lsquo;lmasa ham</span>, tibbiy
               ma&lsquo;lumotlari yo&lsquo;qolmaydi.
             </h1>
             <p className="mt-5 text-lg text-slate-600">
@@ -102,7 +102,7 @@ export default function Home() {
 function Step({ n, label, desc }: { n: number; label: string; desc: string }) {
   return (
     <div className="flex-1">
-      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-teal-600 text-sm font-bold text-white">
+      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-700 text-sm font-bold text-white">
         {n}
       </span>
       <p className="mt-2 text-sm font-semibold text-slate-800">{label}</p>
@@ -118,7 +118,7 @@ function Arrow() {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="card text-center">
-      <p className="text-3xl font-bold text-teal-600">{value}</p>
+      <p className="text-3xl font-bold text-primary-700">{value}</p>
       <p className="mt-1 text-xs text-slate-500">{label}</p>
     </div>
   );

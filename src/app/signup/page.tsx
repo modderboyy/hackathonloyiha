@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signupAction } from "@/lib/auth";
 import { SignupForm } from "./signup-form";
+import { Logo } from "@/components/icons";
 
 export default function SignupPage() {
   return (
@@ -8,10 +9,7 @@ export default function SignupPage() {
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <Link href="/" className="inline-flex items-center gap-2">
-            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-600 text-xl font-bold text-white">
-              C
-            </span>
-            <span className="text-xl font-bold text-slate-900">CareLink</span>
+            <Logo size={40} withText />
           </Link>
           <h1 className="mt-6 text-2xl font-bold text-slate-900">Ro&lsquo;yxatdan o&lsquo;tish</h1>
           <p className="mt-1 text-sm text-slate-500">

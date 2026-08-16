@@ -44,17 +44,41 @@ npm run dev
 
 | Rol | Tavsif |
 | --- | --- |
+| `super_admin` | To'liq boshqaruv: adminlar, rollar, audit va barcha ma'lumotlar |
 | `admin` | Hududlar, muassasalar, rollar va audit |
 | `medical_worker` | Bemorni ro'yxatga olish, shikoyat va ko'rsatkichlarni kiritish |
 | `hospital_doctor` | Statsionar davolash, discharge va yo'naltirish |
 | `family_doctor` | Follow-up kuzatuvlari va natijalarini qayd qilish |
 
 > Ro'yxatdan o'tgan foydalanuvchi dastlab `medical_worker` rolida bo'ladi.
-> Birinchi adminni SQL orqali tayinlang:
+> Birinchi super adminni SQL orqali tayinlang:
 >
 > ```sql
-> update public.profiles set role = 'admin' where id = '<user-uuid>';
+> update public.profiles set role = 'super_admin' where id = '<user-uuid>';
 > ```
+
+## Interfeys (native SPA)
+
+Dashboard **reloadsiz** ishlaydi — barcha bo'limlar (bemorlar, chiqarish, kuzatuvlar,
+xabarnomalar, boshqaruv) client-side view sifatida almashinadi, xuddi native
+dastur kabi.
+
+- **Duotone standart ikonkalar** — deep ko'k primary, oq fon, yumaloq burchakli
+  (UFlow uslubida, tashqi bog'liqliksiz `src/components/icons.tsx`).
+- **Logotip** — deep ko'k gradient, oq fonda tibbiy xoch + care halqasi.
+- **Qidiruv va filtr** — barcha ro'yxatlarda (bemor, chiqarish, kuzatuv,
+  xabarnoma, foydalanuvchilar).
+- **Required / optional** belgilar — barcha formalarda.
+- **Grafiklar** — bar, area va donut (SVG, bog'liqliksiz).
+- **O'zbekiston xaritasi** — hududni tanlash, har hududda bemorlar soni.
+- **To'liq responsiv** — mobil qurilmalar uchun moslashadi.
+
+## Demo rejimi
+
+Supabase muhit o'zgaruvchilari sozlanmagan bo'lsa, dashboard avtomatik
+**demo rejimida** ishlaydi — namuna ma'lumotlar bilan barcha funksiyalar
+ko'rinadi. Real ma'lumotlar uchun `.env.local` ni to'ldiring va migratsiyani
+ishga tushiring.
 
 ## Asosiy oqim (bemor care journey)
 

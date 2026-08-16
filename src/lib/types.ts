@@ -1,6 +1,7 @@
 // CareLink — umumiy tiplar
 
 export type Role =
+  | "super_admin"
   | "admin"
   | "medical_worker"
   | "hospital_doctor"
@@ -19,6 +20,9 @@ export interface Region {
   id: string;
   name: string;
   code: string;
+  points?: string; // xarita uchun polygon koordinatalari
+  cx?: number;
+  cy?: number;
 }
 
 export interface Facility {
@@ -117,11 +121,9 @@ export interface AuditEntry {
   action: string;
   entity: string | null;
   entity_id: string | null;
-  details: unknown;
   created_at: string;
 }
 
-// Timeline uchun birlashtirilgan hodisa
 export interface TimelineEvent {
   id: string;
   type: "visit" | "vital" | "hospitalization" | "discharge" | "follow_up";
@@ -131,7 +133,8 @@ export interface TimelineEvent {
 }
 
 export const ROLE_LABELS: Record<Role, string> = {
-  admin: "Tizim administratori",
+  super_admin: "Super admin",
+  admin: "Administrator",
   medical_worker: "Tibbiyot xodimi",
   hospital_doctor: "Statsionar shifokori",
   family_doctor: "Oilaviy shifokor",
@@ -141,4 +144,11 @@ export const GENDER_LABELS: Record<string, string> = {
   male: "Erkak",
   female: "Ayol",
   other: "Boshqa",
+};
+
+export const FOLLOWUP_STATUS: Record<string, { label: string; cls: string }> = {
+  pending: { label: "Kutilmoqda", cls: "bg-amber-100 text-amber-700" },
+  in_progress: { label: "Jarayonda", cls: "bg-blue-100 text-blue-700" },
+  completed: { label: "Yakunlandi", cls: "bg-emerald-100 text-emerald-700" },
+  overdue: { label: "Muddati o'tdi", cls: "bg-red-100 text-red-700" },
 };

@@ -1,157 +1,149 @@
-import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
-import { formatDate } from "@/lib/utils";
-import { ROLE_LABELS, type FollowUp, type Notification, type Patient } from "@/lib/types";
+"use client";
 
-export default async function DashboardPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+import { useState } from "react";
+import { StoreProvider, useStore } from "@/lib/store";
+import { Icon, Logo } from "@/components/icons";
+import { ROLE_LABELS } from "@/lib/types";
+import { cn } from "@/lib/utils";
+import { Overview } from "@/components/views/overview";
+import { Patients } from "@/components/views/patients";
+import { Discharges } from "@/components/views/discharges";
+import { FollowUps } from "@/components/views/followups";
+import { Notifications } from "@/components/views/notifications";
+import { Admin } from "@/components/views/admin";
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
+type View = "overview" | "patients" | "discharges" | "followups" | "notifications" | "admin";
 
-  const [{ count: patientCount }, { count: followUpCount }, { data: followUps }, { data: notifications }, { data: patients }] =
-    await Promise.all([
-      supabase.from("patients").select("*", { count: "exact", head: true }),
-      supabase
-        .from("follow_ups")
-        .select("*", { count: "exact", head: true })
-        .in("status", ["pending", "in_progress"]),
-      supabase
-        .from("follow_ups")
-        .select("*, patients(full_name)")
-        .in("status", ["pending", "in_progress"])
-        .order("due_date", { ascending: true })
-        .limit(5),
-      supabase
-        .from("notifications")
-        .select("*")
-        .eq("recipient_id", user.id)
-        .eq("is_read", false)
-        .order("created_at", { ascending: false })
-        .limit(5),
-      supabase
-        .from("patients")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(5),
-    ]);
+const NAV: { id: View; label: string; icon: string }[] = [
+  { id: "overview", label: "Bosh sahifa", icon: "home" },
+  { id: "patients", label: "Bemorlar", icon: "users" },
+  { id: "discharges", label: "Chiqarish", icon: "bed" },
+  { id: "followups", label: "Kuzatuvlar", icon: "clipboard" },
+  { id: "notifications", label: "Xabarnomalar", icon: "bell" },
+  { id: "admin", label: "Boshqaruv", icon: "shield" },
+];
+
+export default function DashboardPage() {
+  return (
+    <StoreProvider>
+      <Shell />
+    </StoreProvider>
+  );
+}
+
+function Shell() {
+  const [view, setView] = useState<View>("overview");
+  const [regionFilter, setRegionFilter] = useState<string | null>(null);
+  const [navOpen, setNavOpen] = useState(false);
+  const { currentUser, notifications } = useStore();
+
+  const unread = notifications.filter((n) => !n.is_read).length;
+
+  function navigate(v: View) {
+    setView(v);
+    setNavOpen(false);
+  }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">
-          Xush kelibsiz, {profile?.full_name || "hamkasb"} 👋
-        </h1>
-        <p className="mt-1 text-sm text-slate-500">
-          {profile?.role ? ROLE_LABELS[profile.role as keyof typeof ROLE_LABELS] : ""} — bugungi holat
-        </p>
-      </div>
+    <div className="flex min-h-screen">
+      {/* Overlay (mobil) */}
+      {navOpen && <div className="fixed inset-0 z-30 bg-slate-900/40 backdrop-blur-sm lg:hidden" onClick={() => setNavOpen(false)} />}
 
-      {/* Statistika */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Jami bemorlar" value={patientCount ?? 0} href="/dashboard/patients" />
-        <StatCard label="Faol kuzatuvlar" value={followUpCount ?? 0} href="/dashboard/follow-ups" />
-        <StatCard label="O'qilmagan xabarlar" value={notifications?.length ?? 0} href="/dashboard/notifications" />
-        <StatCard label="Yangi bemorlar" value={patients?.length ?? 0} href="/dashboard/patients" />
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Kuzatuvlar */}
-        <div className="card">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-semibold text-slate-900">Kutilayotgan kuzatuvlar</h2>
-            <Link href="/dashboard/follow-ups" className="text-sm font-medium text-teal-600 hover:text-teal-700">
-              Barchasi →
-            </Link>
-          </div>
-          {followUps && followUps.length > 0 ? (
-            <ul className="divide-y divide-slate-100">
-              {followUps.map((fu: FollowUp & { patients?: Patient | null }) => (
-                <li key={fu.id} className="flex items-center justify-between py-3">
-                  <div>
-                    <p className="text-sm font-medium text-slate-800">
-                      {(fu as unknown as { patients?: { full_name?: string } }).patients?.full_name ?? "Bemor"}
-                    </p>
-                    <p className="text-xs text-slate-500">Muddat: {formatDate(fu.due_date)}</p>
-                  </div>
-                  <StatusBadge status={fu.status} />
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-slate-500">Hozircha kutilayotgan kuzatuv yo&lsquo;q.</p>
-          )}
+      {/* Sidebar */}
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-slate-200 bg-white transition-transform duration-300 lg:static lg:translate-x-0",
+          navOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        <div className="flex items-center gap-2 border-b border-slate-200 px-5 py-4">
+          <Logo size={34} withText />
         </div>
 
-        {/* Xabarnomalar */}
-        <div className="card">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-semibold text-slate-900">So&lsquo;nggi xabarnomalar</h2>
-            <Link href="/dashboard/notifications" className="text-sm font-medium text-teal-600 hover:text-teal-700">
-              Barchasi →
-            </Link>
-          </div>
-          {notifications && notifications.length > 0 ? (
-            <ul className="divide-y divide-slate-100">
-              {notifications.map((n: Notification) => (
-                <li key={n.id} className="py-3">
-                  <p className="text-sm font-medium text-slate-800">{n.title}</p>
-                  <p className="text-xs text-slate-500">{n.body}</p>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-slate-500">Yangi xabarnomalar yo&lsquo;q.</p>
-          )}
-        </div>
-      </div>
+        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+          {NAV.map((n) => (
+            <button
+              key={n.id}
+              onClick={() => navigate(n.id)}
+              className={cn(
+                "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition",
+                view === n.id ? "bg-primary-50 text-primary-800" : "text-slate-600 hover:bg-slate-50"
+              )}
+            >
+              <Icon name={n.icon} size={18} gradient={view === n.id} />
+              <span className="flex-1 text-left">{n.label}</span>
+              {n.id === "notifications" && unread > 0 && (
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white">
+                  {unread}
+                </span>
+              )}
+            </button>
+          ))}
+        </nav>
 
-      {/* Tezkor amallar */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <QuickAction href="/dashboard/patients/new" title="Yangi bemor" desc="Bemorni ro'yxatdan o'tkazish" icon="➕" />
-        <QuickAction href="/dashboard/discharges/new" title="Chiqarish" desc="Statsionardan chiqarish va yo'naltirish" icon="🏥" />
-        <QuickAction href="/dashboard/follow-ups" title="Kuzatuv" desc="Follow-up natijalarini qayd qilish" icon="📋" />
+        <div className="border-t border-slate-200 px-4 py-4">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-primary-800 font-semibold text-white">
+              {currentUser.full_name.charAt(0)}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-slate-900">{currentUser.full_name}</p>
+              <p className="truncate text-xs text-slate-500">{ROLE_LABELS[currentUser.role]}</p>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Asosiy kontent */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Topbar */}
+        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur sm:px-6">
+          <button
+            onClick={() => setNavOpen(true)}
+            className="rounded-lg p-2 text-slate-600 transition hover:bg-slate-100 lg:hidden"
+            aria-label="Menyu"
+          >
+            <Icon name="menu" size={20} />
+          </button>
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-base font-semibold text-slate-900 sm:text-lg">
+              {NAV.find((n) => n.id === view)?.label}
+            </h2>
+          </div>
+          <button
+            onClick={() => navigate("notifications")}
+            className="relative rounded-lg p-2 text-slate-600 transition hover:bg-slate-100"
+            aria-label="Xabarnomalar"
+          >
+            <Icon name="bell" size={20} />
+            {unread > 0 && (
+              <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                {unread}
+              </span>
+            )}
+          </button>
+          <span className="hidden h-6 w-px bg-slate-200 sm:block" />
+          <span className="hidden items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 sm:flex">
+            <span className="h-2 w-2 rounded-full bg-emerald-500" /> Demo rejimi
+          </span>
+        </header>
+
+        {/* Kontent */}
+        <main className="flex-1 px-4 py-6 sm:px-6">
+          <div key={view} className="view-enter mx-auto max-w-6xl">
+            {view === "overview" && (
+              <Overview onRegionSelect={(rid) => { setRegionFilter(rid); setView("patients"); }} />
+            )}
+            {view === "patients" && (
+              <Patients regionFilter={regionFilter} onClearRegion={() => setRegionFilter(null)} />
+            )}
+            {view === "discharges" && <Discharges />}
+            {view === "followups" && <FollowUps />}
+            {view === "notifications" && <Notifications />}
+            {view === "admin" && <Admin />}
+          </div>
+        </main>
       </div>
     </div>
-  );
-}
-
-function StatCard({ label, value, href }: { label: string; value: number; href: string }) {
-  return (
-    <Link href={href} className="card block transition hover:border-teal-200 hover:shadow-sm">
-      <p className="text-3xl font-bold text-teal-600">{value}</p>
-      <p className="mt-1 text-sm text-slate-500">{label}</p>
-    </Link>
-  );
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, { label: string; cls: string }> = {
-    pending: { label: "Kutilmoqda", cls: "bg-amber-100 text-amber-700" },
-    in_progress: { label: "Jarayonda", cls: "bg-blue-100 text-blue-700" },
-    completed: { label: "Yakunlandi", cls: "bg-green-100 text-green-700" },
-    overdue: { label: "Muddati o'tdi", cls: "bg-red-100 text-red-700" },
-  };
-  const s = map[status] ?? { label: status, cls: "bg-slate-100 text-slate-600" };
-  return <span className={`badge ${s.cls}`}>{s.label}</span>;
-}
-
-function QuickAction({ href, title, desc, icon }: { href: string; title: string; desc: string; icon: string }) {
-  return (
-    <Link href={href} className="card flex items-center gap-4 transition hover:border-teal-200 hover:shadow-sm">
-      <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-teal-50 text-xl">{icon}</span>
-      <div>
-        <p className="font-semibold text-slate-900">{title}</p>
-        <p className="text-sm text-slate-500">{desc}</p>
-      </div>
-    </Link>
   );
 }

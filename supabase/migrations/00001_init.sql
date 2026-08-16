@@ -38,7 +38,7 @@ create table if not exists public.profiles (
   id          uuid primary key references auth.users(id) on delete cascade,
   full_name   text not null default '',
   role        text not null default 'medical_worker'
-              check (role in ('admin','medical_worker','hospital_doctor','family_doctor')),
+              check (role in ('super_admin','admin','medical_worker','hospital_doctor','family_doctor')),
   phone       text,
   facility_id uuid references public.facilities(id) on delete set null,
   region_id   uuid references public.regions(id) on delete set null,
@@ -245,12 +245,12 @@ alter table public.audit_log        enable row level security;
 -- rollar yordamchi funksiyalari
 create or replace function public.is_admin() returns boolean
 language sql stable security definer set search_path = public as
-$$ select exists (select 1 from profiles where id = auth.uid() and role = 'admin') $$;
+$$ select exists (select 1 from profiles where id = auth.uid() and role in ('super_admin','admin')) $$;
 
 create or replace function public.is_medical_staff() returns boolean
 language sql stable security definer set search_path = public as
 $$ select exists (select 1 from profiles where id = auth.uid()
-                  and role in ('admin','medical_worker','hospital_doctor','family_doctor')) $$;
+                  and role in ('super_admin','admin','medical_worker','hospital_doctor','family_doctor')) $$;
 
 -- ------------------------- regions -------------------------
 create policy "regions_read_staff" on public.regions
