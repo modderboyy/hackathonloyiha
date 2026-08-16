@@ -254,11 +254,11 @@ class SupabaseService {
     await client.from('family_members').delete().eq('id', memberId);
   }
 
-  // ---------- OneSignal ----------
-  Future<void> saveOnesignalId(String onesignalId) async {
+  // ---------- Firebase (FCM) ----------
+  Future<void> saveFcmToken(String fcmToken) async {
     final id = userId;
     if (id == null) return;
-    await client.from('profiles').update({'onesignal_id': onesignalId}).eq('id', id);
+    await client.from('profiles').update({'fcm_token': fcmToken}).eq('id', id);
   }
 
   /// Realtime: yangi check-in yoki bloklashni tinglash

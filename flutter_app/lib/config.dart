@@ -12,6 +12,4 @@ class Config {
   static const String emergency103 = '103';
   static const bool smsDemo = true;
 
-  // OneSignal (tekin push notification) — https://onesignal.com dan oling
-  static const String oneSignalAppId = 'YOUR-ONESIGNAL-APP-ID';
 }

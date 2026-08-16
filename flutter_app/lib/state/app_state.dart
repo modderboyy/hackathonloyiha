@@ -5,7 +5,7 @@ import '../services/supabase_service.dart';
 import '../services/openai_service.dart';
 import '../services/notification_service.dart';
 import '../services/reminder_service.dart';
-import '../services/onesignal_service.dart';
+import '../services/fcm_service.dart';
 
 /// Ilova holati — auth, sog'liq, obuna, tekshiruv va bloklash.
 class AppState extends ChangeNotifier {
@@ -13,7 +13,6 @@ class AppState extends ChangeNotifier {
   final OpenAIService ai = OpenAIService();
   final NotificationService notifications = NotificationService();
   final ReminderService reminders = ReminderService();
-  final OneSignalService oneSignal = OneSignalService();
 
   UserProfile? profile;
   HealthData? health;
@@ -33,9 +32,8 @@ class AppState extends ChangeNotifier {
   Future<void> init() async {
     try {
       await notifications.init();
-      await oneSignal.init();
+      await _initFcm();
       if (isLoggedIn) {
-        await _linkOneSignal();
         await loadAll();
       }
     } catch (e) {
@@ -46,13 +44,17 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> _linkOneSignal() async {
-    final uid = db.userId;
-    if (uid == null) return;
-    await oneSignal.linkUser(uid);
-    final playerId = await oneSignal.getPlayerId();
-    if (playerId != null) {
-      await db.saveOnesignalId(playerId);
+  Future<void> _initFcm() async {
+    // FCM token Supabase'ga saqlanadi (login'da ham chaqiriladi)
+    FirebaseMessagingService.setTokenCallback((token) async {
+      if (db.userId != null) {
+        await db.saveFcmToken(token);
+      }
+    });
+    try {
+      await FirebaseMessagingService.init();
+    } catch (e) {
+      debugPrint('FCM init xato: $e');
     }
   }
 
@@ -89,7 +91,7 @@ class AppState extends ChangeNotifier {
         error = 'Ro\'yxatdan o\'tishda xato. Email tasdiqlanishi kerak bo\'lishi mumkin.';
       } else {
         await db.ensureClientRole();
-        await _linkOneSignal();
+        await _initFcm();
         await loadAll();
       }
     } catch (e) {
@@ -106,7 +108,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     try {
       await db.login(email, password);
-      await _linkOneSignal();
+      await _initFcm();
       await loadAll();
     } catch (e) {
       error = 'Email yoki parol noto\'g\'ri.';
@@ -117,7 +119,6 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> logout() async {
-    await oneSignal.logout();
     await db.logout();
     profile = null;
     health = null;

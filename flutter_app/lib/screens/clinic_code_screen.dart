@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_ui.dart';
 import 'home_screen.dart';
 
-/// Klinik (B2B) obuna — klinikani tanlash yoki kod kiritish.
+/// Klinik (B2B) obuna — faqat kod kiritish.
+/// Kod klinikani avtomatik bog'laydi (klinika tanlash shart emas).
 class ClinicCodeScreen extends StatefulWidget {
   const ClinicCodeScreen({super.key});
 
@@ -16,27 +16,8 @@ class ClinicCodeScreen extends StatefulWidget {
 
 class _ClinicCodeScreenState extends State<ClinicCodeScreen> {
   final _code = TextEditingController();
-  List<Clinic> _clinics = [];
-  String? _selectedClinic;
   String? _error;
   bool _busy = false;
-  bool _loaded = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadClinics();
-  }
-
-  Future<void> _loadClinics() async {
-    final clinics = await context.read<AppState>().db.getClinics();
-    if (mounted) {
-      setState(() {
-        _clinics = clinics;
-        _loaded = true;
-      });
-    }
-  }
 
   Future<void> _activate() async {
     final code = _code.text.trim();
@@ -99,57 +80,10 @@ class _ClinicCodeScreenState extends State<ClinicCodeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const NeonText('KLINIKANI TANLANG', size: 14),
-                      const SizedBox(height: 6),
-                      const Text(
-                        'Ixtiyoriy — kodni to\u2019g\u2019ridan kiritsangiz ham bo\u2019ladi',
-                        style: TextStyle(color: AppColors.textMuted, fontSize: 12),
-                      ),
-                      const SizedBox(height: 14),
-                      _loaded
-                          ? ClipPath(
-                              clipper: const SlantClipper(cut: 10),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: AppColors.surface.withOpacity(0.6),
-                                  border: Border.all(color: AppColors.accent.withOpacity(0.2)),
-                                ),
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                child: DropdownButtonHideUnderline(
-                                  child: DropdownButton<String>(
-                                    isExpanded: true,
-                                    value: _selectedClinic,
-                                    dropdownColor: AppColors.bgCard,
-                                    iconEnabledColor: AppColors.cyan,
-                                    style: const TextStyle(color: AppColors.textPrimary),
-                                    hint: const Text('Klinikani tanlang (ixtiyoriy)', style: TextStyle(color: AppColors.textMuted)),
-                                    items: _clinics
-                                        .map((c) => DropdownMenuItem(value: c.id, child: Text(c.name, overflow: TextOverflow.ellipsis)))
-                                        .toList(),
-                                    onChanged: (v) => setState(() => _selectedClinic = v),
-                                  ),
-                                ),
-                              ),
-                            )
-                          : const Center(
-                              child: Padding(
-                                padding: EdgeInsets.all(16),
-                                child: CircularProgressIndicator(color: AppColors.cyan),
-                              ),
-                            ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                GlassCard(
-                  cut: 14,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
                       const NeonText('STATSIONAR KODI', size: 14),
                       const SizedBox(height: 6),
                       const Text(
-                        'Bu kodni klinikangizdagi shifokor beradi',
+                        'Bu kodni klinikangizdagi shifokor statsionardan chiqarishda beradi',
                         style: TextStyle(color: AppColors.textMuted, fontSize: 12),
                       ),
                       const SizedBox(height: 14),
@@ -176,7 +110,7 @@ class _ClinicCodeScreenState extends State<ClinicCodeScreen> {
                 ),
                 const SizedBox(height: 18),
                 const Text(
-                  'Kodni qayerdan olasiz? Statsionarga yotqizilganingizda shifokor sizga bemor kodingizni beradi. Bu kod davolash muddati davomida klinik obunani faollashtiradi va barcha tibbiy ma\u2019lumotlaringizni (dori-darmon, tavsiyalar) avtomatik sinxronlaydi.',
+                  'Kod kiritilgach klinika avtomatik aniqlanadi va statsionar muddati davomida barcha tibbiy ma\u2019lumotlaringiz (dori-darmon, tavsiyalar, bemor ma\u2019lumotlari) hisobingizga sinxronlanadi.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: AppColors.textMuted, fontSize: 12),
                 ),

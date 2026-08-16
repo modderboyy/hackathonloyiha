@@ -9,8 +9,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const ONESIGNAL_APP_ID = Deno.env.get("ONESIGNAL_APP_ID")!;
-const ONESIGNAL_REST_KEY = Deno.env.get("ONESIGNAL_REST_KEY")!;
+// Firebase Cloud Messaging (FCM) — tekin push
+// Firebase Console > Project Settings > Cloud Messaging > Server key (legacy)
+// yoki Service Account (v1 HTTP API)
+const FCM_SERVER_KEY = Deno.env.get("FCM_SERVER_KEY")!;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
 
@@ -23,29 +25,27 @@ const TEMPLATES = [
   "Nafas olishingiz va uyqungiz yaxshimi?",
 ];
 
-// ---------- OneSignal push ----------
-async function sendPush(onesignalIds: string[], title: string, body: string, data: Record<string, string>) {
-  if (!ONESIGNAL_APP_ID || !ONESIGNAL_REST_KEY) {
-    console.log("[PUSH-DEMO] yuboriladi:", title, body);
+// ---------- Firebase (FCM) push ----------
+async function sendPush(fcmTokens: string[], title: string, body: string, data: Record<string, string>) {
+  if (!FCM_SERVER_KEY || fcmTokens.length === 0) {
+    console.log("[FCM-DEMO] yuboriladi:", title, body);
     return;
   }
   try {
-    await fetch("https://onesignal.com/api/v1/notifications", {
+    await fetch("https://fcm.googleapis.com/fcm/send", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Basic ${ONESIGNAL_REST_KEY}`,
+        Authorization: `key=${FCM_SERVER_KEY}`,
       },
       body: JSON.stringify({
-        app_id: ONESIGNAL_APP_ID,
-        include_player_ids: onesignalIds,
-        headings: { en: title },
-        contents: { en: body },
+        registration_ids: fcmTokens, // bir nechta qurilmaga
+        notification: { title, body },
         data,
       }),
     });
   } catch (e) {
-    console.error("OneSignal error", e);
+    console.error("FCM error", e);
   }
 }
 
@@ -121,7 +121,7 @@ Deno.serve(async (req) => {
   // 2. Yangi so'rov yuborish (faol obunachilarga)
   const { data: subs } = await supabase
     .from("subscriptions")
-    .select("client_id, profiles(onesignal_id)")
+    .select("client_id, profiles(fcm_token)")
     .eq("status", "active")
     .gte("expires_at", new Date().toISOString());
 
@@ -138,9 +138,9 @@ Deno.serve(async (req) => {
         family_step: 0,
       });
 
-      const onesignalId = (s as any).profiles?.onesignal_id;
-      if (onesignalId) {
-        await sendPush([onesignalId], "CareLink — holatingizni so'raymiz", template, { type: "checkin" });
+      const fcmToken = (s as any).profiles?.fcm_token;
+      if (fcmToken) {
+        await sendPush([fcmToken], "CareLink — holatingizni so'raymiz", template, { type: "checkin" });
       }
 
       results.push({ client: s.client_id, template });
