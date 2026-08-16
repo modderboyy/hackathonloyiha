@@ -1,0 +1,27 @@
+name: carelink_patient
+description: CareLink — bemor (mijoz) ilovasi. Statsionardan chiqqan bemorlarning uzluksiz kuzatuvi.
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  supabase_flutter: ^2.5.0
+  provider: ^6.1.2
+  http: ^1.2.1
+  url_launcher: ^6.2.6
+  shared_preferences: ^2.2.3
+  flutter_local_notifications: ^17.1.2
+  intl: ^0.19.0
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true

@@ -6,7 +6,8 @@ export type Role =
   | "district_admin"
   | "medical_worker"
   | "hospital_doctor"
-  | "family_doctor";
+  | "family_doctor"
+  | "client";
 
 export interface Profile {
   id: string;
@@ -205,6 +206,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   medical_worker: "Tibbiyot xodimi",
   hospital_doctor: "Statsionar shifokori",
   family_doctor: "Oilaviy shifokor",
+  client: "Mijoz (Bemor)",
 };
 
 export const GENDER_LABELS: Record<string, string> = {

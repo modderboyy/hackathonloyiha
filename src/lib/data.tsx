@@ -335,7 +335,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const addDistrict = useCallback(async (name: string, regionId: string, lat?: number | null, lng?: number | null): Promise<string | null> => {
     if (!supabase) {
-      setDistricts((prev) => [...prev, { id: `dist_${Date.now()}`, name, region_id: regionId, lat: lat ?? null, lng: lng ?? null }]);
+      setDistricts((prev) => [...prev, { id: `dist_${Date.now()}`, name, region_id: regionId, lat: lat ?? null, lng: lng ?? null, polygon: null }]);
       return null;
     }
     const { data, error } = await supabase.from("districts").insert({ name, region_id: regionId, lat: lat ?? null, lng: lng ?? null }).select().single();
@@ -368,7 +368,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const addNeighborhood = useCallback(async (name: string, districtId: string, lat?: number | null, lng?: number | null): Promise<string | null> => {
     if (!supabase) {
-      setNeighborhoods((prev) => [...prev, { id: `nbh_${Date.now()}`, name, district_id: districtId, lat: lat ?? null, lng: lng ?? null }]);
+      setNeighborhoods((prev) => [...prev, { id: `nbh_${Date.now()}`, name, district_id: districtId, lat: lat ?? null, lng: lng ?? null, polygon: null }]);
       return null;
     }
     const { data, error } = await supabase.from("neighborhoods").insert({ name, district_id: districtId, lat: lat ?? null, lng: lng ?? null }).select().single();

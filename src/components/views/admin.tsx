@@ -369,6 +369,7 @@ function roleTone(r: Role): string {
     medical_worker: "bg-sky-100 text-sky-700",
     hospital_doctor: "bg-teal-100 text-teal-700",
     family_doctor: "bg-emerald-100 text-emerald-700",
+    client: "bg-amber-100 text-amber-700",
   };
   return m[r];
 }
