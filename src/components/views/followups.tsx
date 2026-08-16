@@ -8,7 +8,7 @@ import { FOLLOWUP_STATUS, type FollowUp } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 
 export function FollowUps() {
-  const { patients, followUps, profiles, completeFollowUp } = useData();
+  const { patients, followUps, profiles, completeFollowUp, checkins, chatMessages } = useData();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [completing, setCompleting] = useState<FollowUp | null>(null);
@@ -25,6 +25,23 @@ export function FollowUps() {
 
   const pname = (id: string) => patients.find((p) => p.id === id)?.full_name ?? "—";
   const dname = (id: string | null) => profiles.find((p) => p.id === id)?.full_name ?? "—";
+
+  // Bemorning monitoring ma'lumotlari (mobil ilova bilan integratsiya)
+  // checkins.client_id = profiles.id, profiles.patient_id = bemor
+  const monitoring = useMemo(() => {
+    return (patientId: string) => {
+      const profileRow = profiles.find((p) => p.patient_id === patientId);
+      const clientId = profileRow?.id;
+      if (!clientId) return { lastCheckin: null, chatCount: 0, lastChat: null };
+      const chk = checkins.filter((c) => c.client_id === clientId);
+      const chat = chatMessages.filter((c) => c.client_id === clientId);
+      return {
+        lastCheckin: chk[0] ?? null,
+        chatCount: chat.length,
+        lastChat: chat[0] ?? null,
+      };
+    };
+  }, [profiles, checkins, chatMessages]);
 
   return (
     <div className="space-y-4">
@@ -52,33 +69,79 @@ export function FollowUps() {
         </div>
       ) : (
         <div className="space-y-3">
-          {filtered.map((f) => (
-            <div key={f.id} className="card flex flex-wrap items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-semibold text-slate-900">{pname(f.patient_id)}</p>
-                  <Badge className={FOLLOWUP_STATUS[f.status]?.cls ?? "bg-slate-100 text-slate-600"}>
-                    {FOLLOWUP_STATUS[f.status]?.label ?? f.status}
-                  </Badge>
+          {filtered.map((f) => {
+            const m = monitoring(f.patient_id);
+            return (
+              <div key={f.id} className="card space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-slate-900">{pname(f.patient_id)}</p>
+                      <Badge className={FOLLOWUP_STATUS[f.status]?.cls ?? "bg-slate-100 text-slate-600"}>
+                        {FOLLOWUP_STATUS[f.status]?.label ?? f.status}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-slate-500">
+                      Muddat: {formatDate(f.due_date)}
+                      {f.family_doctor_id ? ` · ${dname(f.family_doctor_id)}` : ""}
+                    </p>
+                    {f.result_notes && <p className="mt-1 text-sm text-slate-600">{f.result_notes}</p>}
+                    {f.next_step && (
+                      <p className="mt-1 text-xs text-slate-500">
+                        <span className="font-medium">Keyingi qadam:</span> {f.next_step}
+                      </p>
+                    )}
+                  </div>
+                  {f.status !== "completed" && (
+                    <button onClick={() => setCompleting(f)} className="btn-primary">
+                      <Icon name="check" size={15} /> Natijani qayd etish
+                    </button>
+                  )}
                 </div>
-                <p className="text-sm text-slate-500">
-                  Muddat: {formatDate(f.due_date)}
-                  {f.family_doctor_id ? ` · ${dname(f.family_doctor_id)}` : ""}
-                </p>
-                {f.result_notes && <p className="mt-1 text-sm text-slate-600">{f.result_notes}</p>}
-                {f.next_step && (
-                  <p className="mt-1 text-xs text-slate-500">
-                    <span className="font-medium">Keyingi qadam:</span> {f.next_step}
-                  </p>
-                )}
+
+                {/* Monitoring (mobil ilova integratsiyasi) */}
+                <div className="grid gap-2 rounded-lg bg-slate-50 p-3 text-sm sm:grid-cols-3">
+                  <div>
+                    <p className="text-xs text-slate-400">Oxirgi tekshiruv</p>
+                    {m.lastCheckin ? (
+                      <div className="mt-0.5">
+                        <span className={checkinTone(m.lastCheckin.status)}>
+                          {checkinLabel(m.lastCheckin.status)}
+                        </span>
+                        <span className="ml-2 text-xs text-slate-400">{formatDate(m.lastCheckin.created_at)}</span>
+                      </div>
+                    ) : (
+                      <p className="text-slate-400">—</p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-400">AI suhbat</p>
+                    {m.chatCount > 0 ? (
+                      <div className="mt-0.5">
+                        <span className="font-medium text-slate-700">{m.chatCount} xabar</span>
+                        {m.lastChat && (
+                          <p className="line-clamp-1 text-xs text-slate-400">"{m.lastChat.content}"</p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-slate-400">—</p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-400">Holat darajasi</p>
+                    <div className="mt-1 flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((i) => (
+                        <span
+                          key={i}
+                          className={`h-2 w-4 rounded-sm ${i <= level(m) ? "bg-primary-600" : "bg-slate-200"}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
-              {f.status !== "completed" && (
-                <button onClick={() => setCompleting(f)} className="btn-primary">
-                  <Icon name="check" size={15} /> Natijani qayd etish
-                </button>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -92,6 +155,38 @@ export function FollowUps() {
       )}
     </div>
   );
+}
+
+function checkinLabel(s: string): string {
+  switch (s) {
+    case "answered_fine": return "✓ Yaxshiman";
+    case "answered_bad": return "⚠ Yomonman";
+    case "locked": return "🔒 Qulflangan";
+    case "sms_sent": return "📱 SMS yuborilgan";
+    case "escalated": return "↑ Kuchaytirilgan";
+    default: return "⏳ Kutilmoqda";
+  }
+}
+
+function checkinTone(s: string): string {
+  switch (s) {
+    case "answered_fine": return "font-medium text-emerald-600";
+    case "answered_bad": return "font-medium text-amber-600";
+    case "locked": return "font-medium text-red-600";
+    default: return "font-medium text-slate-500";
+  }
+}
+
+function level(m: { lastCheckin: { status: string } | null; chatCount: number }): number {
+  if (!m.lastCheckin) return m.chatCount > 0 ? 2 : 1;
+  switch (m.lastCheckin.status) {
+    case "answered_fine": return 5;
+    case "answered_bad": return 2;
+    case "locked": return 1;
+    case "sms_sent": return 2;
+    case "escalated": return 3;
+    default: return 3;
+  }
 }
 
 function CompleteModal({

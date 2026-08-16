@@ -89,6 +89,7 @@ class AppState extends ChangeNotifier {
         error = 'Ro\'yxatdan o\'tishda xato. Email tasdiqlanishi kerak bo\'lishi mumkin.';
       } else {
         await db.ensureClientRole();
+        await _linkOneSignal();
         await loadAll();
       }
     } catch (e) {
@@ -105,6 +106,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     try {
       await db.login(email, password);
+      await _linkOneSignal();
       await loadAll();
     } catch (e) {
       error = 'Email yoki parol noto\'g\'ri.';
@@ -147,8 +149,7 @@ class AppState extends ChangeNotifier {
   // ---------- Obuna ----------
   Future<void> buyIndividual() async {
     await db.subscribeIndividual();
-    subscription = await db.getSubscription();
-    notifyListeners();
+    await loadAll(); // to'liq sync (obuna + barcha ma'lumotlar)
   }
 
   /// Klinik kod bilan faollashtirish (B2B — tekin, klinika to'laydi)

@@ -22,6 +22,7 @@ export interface Profile {
   district_id: string | null;
   neighborhood_id: string | null;
   specialty_id: string | null;
+  patient_id: string | null;
 }
 
 export interface Specialty {
@@ -188,6 +189,28 @@ export interface AuditEntry {
   action: string;
   entity: string | null;
   entity_id: string | null;
+  created_at: string;
+}
+
+// Bemorning mobil monitoring ma'lumotlari (mobil ilova bilan integratsiya)
+export interface Checkin {
+  id: string;
+  client_id: string;
+  scheduled_at: string | null;
+  ai_message: string | null;
+  status: "sent" | "answered_fine" | "answered_bad" | "sms_sent" | "locked" | "escalated";
+  response: string | null;
+  responded_at: string | null;
+  escalation: number;
+  family_step: number;
+  created_at: string;
+}
+
+export interface ChatMessageRow {
+  id: string;
+  client_id: string;
+  role: string;
+  content: string;
   created_at: string;
 }
 

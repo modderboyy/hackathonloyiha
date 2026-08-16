@@ -15,6 +15,8 @@ import type {
   Approval,
   AuditEntry,
   Building,
+  ChatMessageRow,
+  Checkin,
   ClinicalVisit,
   Discharge,
   District,
@@ -45,6 +47,12 @@ export interface DischargeInput {
   requiresFollowUp: boolean;
   followUpDays: number;
   familyDoctorId: string | null;
+  medications: { name: string; dosage: string; frequency: string }[];
+}
+
+export interface DischargeResult {
+  error: string | null;
+  code: string | null;
 }
 
 interface Data {
@@ -69,6 +77,8 @@ interface Data {
   liveNotification: Notification | null;
   audit: AuditEntry[];
   approvals: Approval[];
+  checkins: Checkin[];
+  chatMessages: ChatMessageRow[];
 
   addPatient: (p: Omit<Patient, "id" | "created_at" | "created_by">) => Promise<string | null>;
   updatePatient: (id: string, patch: Partial<Patient>) => Promise<string | null>;
@@ -76,7 +86,7 @@ interface Data {
     v: Omit<ClinicalVisit, "id" | "visit_date" | "doctor_id" | "specialty" | "routed_to" | "status">,
     vt?: Partial<Omit<Vital, "id" | "measured_at" | "recorded_by">>
   ) => Promise<string | null>;
-  addDischarge: (d: DischargeInput) => Promise<string | null>;
+  addDischarge: (d: DischargeInput) => Promise<DischargeResult>;
   completeFollowUp: (id: string, notes: string, next: string) => Promise<string | null>;
   markNotificationRead: (id: string) => Promise<string | null>;
   deletePatient: (id: string) => Promise<string | null>;
@@ -138,6 +148,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [liveNotification, setLiveNotification] = useState<Notification | null>(null);
+  const [checkins, setCheckins] = useState<Checkin[]>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessageRow[]>([]);
 
   // Realtime: yangi xabarnomalar (popup uchun)
   useEffect(() => {
@@ -178,7 +190,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setProfile(prof as Profile | null);
 
       const [
-        prf, reg, dist, nbh, str, bld, spec, fac, pat, vis, vit, hosp, dis, fu, notif, aud, appr,
+        prf, reg, dist, nbh, str, bld, spec, fac, pat, vis, vit, hosp, dis, fu, notif, aud, appr, ckin, chat,
       ] = await Promise.all([
         supabase.from("profiles").select("*").order("created_at"),
         supabase.from("regions").select("*").order("name"),
@@ -197,6 +209,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         supabase.from("notifications").select("*").order("created_at", { ascending: false }),
         supabase.from("audit_log").select("*").order("created_at", { ascending: false }).limit(100),
         supabase.from("approvals").select("*").order("created_at", { ascending: false }),
+        supabase.from("checkins").select("*").order("created_at", { ascending: false }).limit(200),
+        supabase.from("chat_messages").select("*").order("created_at", { ascending: false }).limit(200),
       ]);
 
       if (cancelled) return;
@@ -217,6 +231,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setNotifications((notif.data as Notification[]) ?? []);
       setAudit((aud.data as AuditEntry[]) ?? []);
       setApprovals((appr.data as Approval[]) ?? []);
+      setCheckins((ckin.data as Checkin[]) ?? []);
+      setChatMessages((chat.data as ChatMessageRow[]) ?? []);
       setReady(true);
     })();
     return () => { cancelled = true; };
@@ -311,16 +327,66 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setNotifications((notif.data as Notification[]) ?? []);
   }, [supabase]);
 
-  const addDischarge = useCallback(async (d: DischargeInput): Promise<string | null> => {
-    if (!supabase || !profile) return "Tizimga ulanmagan";
-    const { data: hosp, error: e1 } = await supabase.from("hospitalizations").insert({ patient_id: d.patientId, doctor_id: profile.id, admission_date: d.admissionDate, diagnosis: d.diagnosis || null, status: "discharged" }).select().single();
-    if (e1) return e1.message;
+  const addDischarge = useCallback(async (d: DischargeInput): Promise<DischargeResult> => {
+    if (!supabase || !profile) return { error: "Tizimga ulanmagan", code: null };
+
+    // Klinik kod generatsiya (bemor mobil ilovada shu bilan kiradi)
+    const code = Array.from({ length: 8 }, () =>
+      "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random() * 32)]
+    ).join("");
+
+    // Statsionar tugash sanasi (klinik obuna muddati)
+    const endDate = new Date(d.dischargeDate);
+    endDate.setDate(endDate.getDate() + (d.requiresFollowUp ? d.followUpDays : 0));
+
+    const { data: hosp, error: e1 } = await supabase
+      .from("hospitalizations")
+      .insert({
+        patient_id: d.patientId,
+        doctor_id: profile.id,
+        admission_date: d.admissionDate,
+        diagnosis: d.diagnosis || null,
+        status: "discharged",
+        code,
+        end_date: endDate.toISOString().slice(0, 10),
+      })
+      .select()
+      .single();
+    if (e1) return { error: e1.message, code: null };
     setHospitalizations((prev) => [hosp as Hospitalization, ...prev]);
-    const { data: disc, error: e2 } = await supabase.from("discharges").insert({ hospitalization_id: hosp.id, patient_id: d.patientId, doctor_id: profile.id, discharge_date: d.dischargeDate, summary: d.summary || null, recommendations: d.recommendations || null, requires_follow_up: d.requiresFollowUp, follow_up_days: d.requiresFollowUp ? d.followUpDays : null, assigned_family_doctor_id: d.familyDoctorId }).select().single();
-    if (e2) return e2.message;
+
+    const { data: disc, error: e2 } = await supabase
+      .from("discharges")
+      .insert({
+        hospitalization_id: hosp.id,
+        patient_id: d.patientId,
+        doctor_id: profile.id,
+        discharge_date: d.dischargeDate,
+        summary: d.summary || null,
+        recommendations: d.recommendations || null,
+        requires_follow_up: d.requiresFollowUp,
+        follow_up_days: d.requiresFollowUp ? d.followUpDays : null,
+        assigned_family_doctor_id: d.familyDoctorId,
+      })
+      .select()
+      .single();
+    if (e2) return { error: e2.message, code: null };
     setDischarges((prev) => [disc as Discharge, ...prev]);
+
+    // Dori-darmonlarni bemorga bog'lash (mobil ilovada sinxron bo'ladi)
+    if (d.medications.length > 0) {
+      const meds = d.medications.map((m) => ({
+        patient_id: d.patientId,
+        name: m.name,
+        dosage: m.dosage || null,
+        frequency: m.frequency || null,
+        prescribed_by: profile.id,
+      }));
+      await supabase.from("medications").insert(meds);
+    }
+
     await refreshFollowupsAndNotifications();
-    return null;
+    return { error: null, code };
   }, [supabase, profile, refreshFollowupsAndNotifications]);
 
   const completeFollowUp = useCallback(async (id: string, notes: string, next: string): Promise<string | null> => {
@@ -513,7 +579,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     () => ({
       ready, notConfigured, profile, profiles, regions, districts, neighborhoods,
       streets, buildings, specialties, facilities, patients, visits, vitals, hospitalizations,
-      discharges, followUps, notifications, liveNotification, audit, approvals,
+      discharges, followUps, notifications, liveNotification, audit, approvals, checkins, chatMessages,
       addPatient, updatePatient, addVisit, addDischarge, completeFollowUp, markNotificationRead,
       deletePatient, addRegion, addDistrict, updateDistrict, deleteDistrict, addNeighborhood,
       updateNeighborhood, deleteNeighborhood, addStreet, updateStreet, deleteStreet,
@@ -522,7 +588,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     [
       ready, notConfigured, profile, profiles, regions, districts, neighborhoods,
       streets, buildings, specialties, facilities, patients, visits, vitals, hospitalizations,
-      discharges, followUps, notifications, liveNotification, audit, approvals,
+      discharges, followUps, notifications, liveNotification, audit, approvals, checkins, chatMessages,
       addPatient, updatePatient, addVisit, addDischarge, completeFollowUp, markNotificationRead,
       deletePatient, addRegion, addDistrict, updateDistrict, deleteDistrict, addNeighborhood,
       updateNeighborhood, deleteNeighborhood, addStreet, updateStreet, deleteStreet,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useData, type DischargeInput } from "@/lib/data";
+import { useData, type DischargeInput, type DischargeResult } from "@/lib/data";
 import { SearchInput, Badge, Modal, Field, Input, Select, Textarea, EmptyState } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { formatDate } from "@/lib/utils";
@@ -84,7 +84,7 @@ function DischargeModal({
   onDone,
 }: {
   onClose: () => void;
-  onSubmit: (d: DischargeInput) => Promise<string | null>;
+  onSubmit: (d: DischargeInput) => Promise<DischargeResult>;
   onDone: () => void;
 }) {
   const { patients, profiles } = useData();
@@ -100,8 +100,16 @@ function DischargeModal({
   const [requiresFollowUp, setRequiresFollowUp] = useState(true);
   const [followUpDays, setFollowUpDays] = useState(7);
   const [familyDoctorId, setFamilyDoctorId] = useState("");
+  const [medications, setMedications] = useState<{ name: string; dosage: string; frequency: string }[]>([
+    { name: "", dosage: "", frequency: "" },
+  ]);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+  const [resultCode, setResultCode] = useState<string | null>(null);
+
+  function updateMed(i: number, field: "name" | "dosage" | "frequency", value: string) {
+    setMedications((prev) => prev.map((m, idx) => (idx === i ? { ...m, [field]: value } : m)));
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -109,8 +117,9 @@ function DischargeModal({
       setErr("Bemorni tanlang (majburiy).");
       return;
     }
+    const meds = medications.filter((m) => m.name.trim());
     setBusy(true);
-    const error = await onSubmit({
+    const res = await onSubmit({
       patientId,
       admissionDate,
       dischargeDate,
@@ -120,10 +129,34 @@ function DischargeModal({
       requiresFollowUp,
       followUpDays,
       familyDoctorId: familyDoctorId || null,
+      medications: meds,
     });
     setBusy(false);
-    if (error) setErr(error);
-    else onDone();
+    if (res.error) setErr(res.error);
+    else setResultCode(res.code);
+  }
+
+  // Natija (kod) ko'rsatish ekrani
+  if (resultCode) {
+    const patient = patients.find((p) => p.id === patientId);
+    return (
+      <Modal open onClose={onClose} title="Chiqarish yakunlandi">
+        <div className="space-y-4 text-center">
+          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+            <Icon name="check" size={26} />
+          </span>
+          <p className="font-semibold text-slate-900">{patient?.full_name ?? "Bemor"} statsionardan chiqarildi</p>
+          <p className="text-sm text-slate-500">Bemorga bering — mobil ilovada shu kod bilan klinik obunani faollashtiradi:</p>
+          <div className="rounded-xl bg-slate-900 p-4">
+            <p className="font-mono text-2xl font-bold tracking-[0.3em] text-white">{resultCode}</p>
+          </div>
+          <p className="text-xs text-slate-400">
+            Bu kod statsionar muddati ({requiresFollowUp ? followUpDays : 0} kun) davomida faol bo'ladi. Bemor ma'lumotlari va dori-darmonlar avtomatik sinxronlanadi.
+          </p>
+          <button onClick={onDone} className="btn-primary w-full">Tayyor</button>
+        </div>
+      </Modal>
+    );
   }
 
   return (
@@ -157,6 +190,36 @@ function DischargeModal({
           <Textarea rows={2} value={recommendations} onChange={(e) => setRecommendations(e.target.value)} />
         </Field>
 
+        {/* Dori-darmonlar */}
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <p className="label">Dori-darmonlar (bemorga sinxronlanadi)</p>
+            <button
+              type="button"
+              onClick={() => setMedications((prev) => [...prev, { name: "", dosage: "", frequency: "" }])}
+              className="text-sm font-medium text-primary-700 hover:text-primary-800"
+            >
+              + Qo'shish
+            </button>
+          </div>
+          <div className="space-y-2">
+            {medications.map((m, i) => (
+              <div key={i} className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
+                <Input placeholder="Nomi" value={m.name} onChange={(e) => updateMed(i, "name", e.target.value)} />
+                <Input placeholder="Dozasi" value={m.dosage} onChange={(e) => updateMed(i, "dosage", e.target.value)} />
+                <Input placeholder="Qabul vaqti" value={m.frequency} onChange={(e) => updateMed(i, "frequency", e.target.value)} />
+                <button
+                  type="button"
+                  onClick={() => setMedications((prev) => prev.filter((_, idx) => idx !== i))}
+                  className="self-center rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                >
+                  <Icon name="trash" size={15} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
         <div className="rounded-xl border border-primary-200 bg-primary-50 p-4">
           <label className="flex items-center gap-3">
             <input
@@ -185,7 +248,7 @@ function DischargeModal({
             </div>
           )}
           <p className="mt-3 flex items-center gap-2 text-xs text-primary-700">
-            <Icon name="zap" size={13} /> Saqlangach CareLink avtomatik follow-up va xabarnoma yaratadi.
+            <Icon name="zap" size={13} /> Saqlangach bemor uchun klinik kod yaratiladi, follow-up va xabarnoma avtomatik ochiladi.
           </p>
         </div>
 
