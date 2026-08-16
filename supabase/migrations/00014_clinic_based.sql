@@ -61,7 +61,19 @@ alter table public.facilities
   add column if not exists activated_at timestamptz;
 
 -- ---------------------------------------------------------------------
--- 3. RLS
+-- 3. clinic_admin rol funksiyasi (RLS dan OLDIN yaratilishi kerak!)
+-- ---------------------------------------------------------------------
+create or replace function public.is_clinic_admin() returns boolean
+language sql stable security definer set search_path = public as
+$$ select exists (select 1 from profiles where id = auth.uid() and role = 'clinic_admin') $$;
+
+create or replace function public.is_medical_staff() returns boolean
+language sql stable security definer set search_path = public as
+$$ select exists (select 1 from profiles where id = auth.uid()
+                  and role in ('super_admin','admin','district_admin','clinic_admin','medical_worker','hospital_doctor','family_doctor')) $$;
+
+-- ---------------------------------------------------------------------
+-- 4. RLS
 -- ---------------------------------------------------------------------
 alter table public.clinic_activation_requests enable row level security;
 
@@ -81,20 +93,6 @@ create policy "car_insert_clinic" on public.clinic_activation_requests
 drop policy if exists "car_update_super" on public.clinic_activation_requests;
 create policy "car_update_super" on public.clinic_activation_requests
   for update using (public.is_super_admin());
-
--- ---------------------------------------------------------------------
--- 4. clinic_admin rol funksiyasi
--- ---------------------------------------------------------------------
-create or replace function public.is_clinic_admin() returns boolean
-language sql stable security definer set search_path = public as
-$$ select exists (select 1 from profiles where id = auth.uid() and role = 'clinic_admin') $$;
-
--- is_admin ga clinic_admin qo'shmaslik (clinic_admin faqat o'z klinikasi)
--- lekin is_medical_staff ga clinic_admin kiritamiz (tizimga kirish uchun)
-create or replace function public.is_medical_staff() returns boolean
-language sql stable security definer set search_path = public as
-$$ select exists (select 1 from profiles where id = auth.uid()
-                  and role in ('super_admin','admin','district_admin','clinic_admin','medical_worker','hospital_doctor','family_doctor')) $$;
 
 -- ---------------------------------------------------------------------
 -- 5. Klinika faollashtirish RPC (super_admin tasdiqlaganda)
