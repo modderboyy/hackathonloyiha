@@ -53,7 +53,7 @@ Bemor ma'lumotlari:
 - O'rtacha qon bosimi: ${health?.avgBpSys ?? '—'}/${health?.avgBpDia ?? '—'}
 - Puls: ${health?.avgHeartRate ?? '—'}
 - Harorat: ${health?.avgTemperature ?? '—'}°C
-- SpO2: ${health?.avgSpO2 ?? '—'}%
+- SpO2: ${health?.avgSpo2 ?? '—'}%
 - Allergiya: ${health?.allergies ?? 'yo\'q'}
 - Dorilar: ${health?.medications ?? 'yo\'q'}
 

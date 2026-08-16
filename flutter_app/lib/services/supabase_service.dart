@@ -79,7 +79,7 @@ class SupabaseService {
         .from('subscriptions')
         .select()
         .eq('client_id', id)
-        .order('created_at', descending: true)
+        .order('created_at', ascending: false)
         .limit(1)
         .maybeSingle();
     if (res == null) return null;
@@ -109,7 +109,7 @@ class SupabaseService {
         .from('checkins')
         .select()
         .eq('client_id', id)
-        .order('created_at', descending: true)
+        .order('created_at', ascending: false)
         .limit(20);
     return (res as List).map((e) => Checkin.fromJson(e)).toList();
   }
@@ -122,7 +122,7 @@ class SupabaseService {
         .select()
         .eq('client_id', id)
         .eq('status', 'locked')
-        .order('created_at', descending: true)
+        .order('created_at', ascending: false)
         .limit(1)
         .maybeSingle();
     if (res == null) return null;
@@ -140,12 +140,13 @@ class SupabaseService {
   }
 
   /// Realtime: yangi check-in yoki bloklashni tinglash
-  Stream<Map<String, dynamic>> watchCheckins() {
+  Stream<List<Map<String, dynamic>>> watchCheckins() {
     final id = userId;
-    if (id == null) return const Stream.empty();
+    if (id == null) return const Stream<List<Map<String, dynamic>>>.empty();
     return client
         .from('checkins')
         .stream(primaryKey: ['id'])
-        .eq('client_id', id);
+        .eq('client_id', id)
+        .map((rows) => rows);
   }
 }
