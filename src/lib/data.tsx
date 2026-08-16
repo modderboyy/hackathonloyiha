@@ -322,9 +322,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     return null;
   }, [supabase]);
 
-  // --- Hududlar ---
   const addRegion = useCallback(async (name: string, code: string): Promise<string | null> => {
-    if (!supabase) return "Tizimga ulanmagan";
+    if (!supabase) {
+      setRegions((prev) => [...prev, { id: `reg_${Date.now()}`, name, code }]);
+      return null;
+    }
     const { data, error } = await supabase.from("regions").insert({ name, code }).select().single();
     if (error) return error.message;
     setRegions((prev) => [...prev, data as Region]);
@@ -332,7 +334,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, [supabase]);
 
   const addDistrict = useCallback(async (name: string, regionId: string, lat?: number | null, lng?: number | null): Promise<string | null> => {
-    if (!supabase) return "Tizimga ulanmagan";
+    if (!supabase) {
+      setDistricts((prev) => [...prev, { id: `dist_${Date.now()}`, name, region_id: regionId, lat: lat ?? null, lng: lng ?? null }]);
+      return null;
+    }
     const { data, error } = await supabase.from("districts").insert({ name, region_id: regionId, lat: lat ?? null, lng: lng ?? null }).select().single();
     if (error) return error.message;
     setDistricts((prev) => [...prev, data as District]);
@@ -340,7 +345,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, [supabase]);
 
   const updateDistrict = useCallback(async (id: string, patch: Partial<District>): Promise<string | null> => {
-    if (!supabase) return "Tizimga ulanmagan";
+    if (!supabase) {
+      setDistricts((prev) => prev.map((d) => (d.id === id ? { ...d, ...patch } : d)));
+      return null;
+    }
     setDistricts((prev) => prev.map((d) => (d.id === id ? { ...d, ...patch } : d)));
     const { error } = await supabase.from("districts").update(patch).eq("id", id);
     if (error) return error.message;
@@ -348,7 +356,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, [supabase]);
 
   const deleteDistrict = useCallback(async (id: string): Promise<string | null> => {
-    if (!supabase) return "Tizimga ulanmagan";
+    if (!supabase) {
+      setDistricts((prev) => prev.filter((d) => d.id !== id));
+      return null;
+    }
     const { error } = await supabase.from("districts").delete().eq("id", id);
     if (error) return error.message;
     setDistricts((prev) => prev.filter((d) => d.id !== id));
@@ -356,7 +367,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, [supabase]);
 
   const addNeighborhood = useCallback(async (name: string, districtId: string, lat?: number | null, lng?: number | null): Promise<string | null> => {
-    if (!supabase) return "Tizimga ulanmagan";
+    if (!supabase) {
+      setNeighborhoods((prev) => [...prev, { id: `nbh_${Date.now()}`, name, district_id: districtId, lat: lat ?? null, lng: lng ?? null }]);
+      return null;
+    }
     const { data, error } = await supabase.from("neighborhoods").insert({ name, district_id: districtId, lat: lat ?? null, lng: lng ?? null }).select().single();
     if (error) return error.message;
     setNeighborhoods((prev) => [...prev, data as Neighborhood]);
@@ -380,7 +394,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, [supabase]);
 
   const addStreet = useCallback(async (name: string, neighborhoodId: string): Promise<string | null> => {
-    if (!supabase) return "Tizimga ulanmagan";
+    if (!supabase) {
+      setStreets((prev) => [...prev, { id: `str_${Date.now()}`, name, neighborhood_id: neighborhoodId }]);
+      return null;
+    }
     const { data, error } = await supabase.from("streets").insert({ name, neighborhood_id: neighborhoodId }).select().single();
     if (error) return error.message;
     setStreets((prev) => [...prev, data as Street]);
@@ -404,7 +421,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, [supabase]);
 
   const addBuilding = useCallback(async (number: string, name: string, streetId: string): Promise<string | null> => {
-    if (!supabase) return "Tizimga ulanmagan";
+    if (!supabase) {
+      setBuildings((prev) => [...prev, { id: `bld_${Date.now()}`, number, name: name || null, street_id: streetId }]);
+      return null;
+    }
     const { data, error } = await supabase.from("buildings").insert({ number, name: name || null, street_id: streetId }).select().single();
     if (error) return error.message;
     setBuildings((prev) => [...prev, data as Building]);
