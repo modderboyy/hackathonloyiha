@@ -87,18 +87,57 @@ class SupabaseService {
   }
 
   /// Premium obuna sotib olish (demo — real to'lov gateway keyinroq)
-  Future<void> subscribePremium() async {
+  Future<void> subscribeIndividual() async {
     final id = userId;
     if (id == null) return;
     final expiresAt = DateTime.now().add(const Duration(days: 30));
     await client.from('subscriptions').insert({
       'client_id': id,
+      'type': 'individual',
       'plan': 'premium',
       'price_usd': Config.premiumPriceUsd,
       'status': 'active',
       'started_at': DateTime.now().toIso8601String(),
       'expires_at': expiresAt.toIso8601String(),
     });
+  }
+
+  // ---------- Klinik (B2B) ----------
+  Future<List<Clinic>> getClinics() async {
+    final res = await client
+        .from('facilities')
+        .select()
+        .eq('type', 'hospital')
+        .order('name');
+    return (res as List).map((e) => Clinic.fromJson(e)).toList();
+  }
+
+  /// Klinik kodni faollashtirish (kod = statsionar kodi)
+  Future<String?> activateClinicCode(String code) async {
+    final res = await client.rpc('activate_clinic_code', params: {'p_code': code});
+    final data = res as Map<String, dynamic>;
+    if (data['ok'] == true) return null;
+    return data['error']?.toString() ?? 'Xatolik yuz berdi';
+  }
+
+  // ---------- Dori-darmon (bemordan sinxron) ----------
+  Future<List<Medication>> getMedications() async {
+    final id = userId;
+    if (id == null) return [];
+    // avval mijozning bemor yozuvini olish
+    final prof = await client.from('profiles').select('patient_id').eq('id', id).maybeSingle();
+    final patientId = prof?['patient_id'];
+    if (patientId == null) return [];
+    final res = await client.from('medications').select().eq('patient_id', patientId).order('created_at');
+    return (res as List).map((e) => Medication.fromJson(e)).toList();
+  }
+
+  /// Mijoz bemor yozuviga bog'langanmi (klinik sinxron uchun)
+  Future<String?> getLinkedPatientId() async {
+    final id = userId;
+    if (id == null) return null;
+    final prof = await client.from('profiles').select('patient_id').eq('id', id).maybeSingle();
+    return prof?['patient_id']?.toString();
   }
 
   // ---------- Tekshiruvlar (check-ins) ----------

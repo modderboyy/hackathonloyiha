@@ -18,12 +18,14 @@ class AppState extends ChangeNotifier {
   Subscription? subscription;
   List<Checkin> checkins = [];
   List<Reminder> reminderList = [];
+  List<Medication> medications = [];
   bool locked = false;
   bool loading = true;
   String? error;
 
   bool get isLoggedIn => db.userId != null;
   bool get isPremium => subscription?.isActive ?? false;
+  bool get hasSubscription => subscription?.isActive ?? false;
 
   Future<void> init() async {
     try {
@@ -45,6 +47,7 @@ class AppState extends ChangeNotifier {
     subscription = await db.getSubscription();
     checkins = await db.getCheckins();
     reminderList = await db.getReminders();
+    medications = await db.getMedications();
     await checkLocked();
   }
 
@@ -112,10 +115,19 @@ class AppState extends ChangeNotifier {
   }
 
   // ---------- Obuna ----------
-  Future<void> buyPremium() async {
-    await db.subscribePremium();
+  Future<void> buyIndividual() async {
+    await db.subscribeIndividual();
     subscription = await db.getSubscription();
     notifyListeners();
+  }
+
+  /// Klinik kod bilan faollashtirish (B2B — tekin, klinika to'laydi)
+  Future<String?> activateClinic(String code) async {
+    final error = await db.activateClinicCode(code);
+    if (error == null) {
+      await loadAll(); // bemor ma'lumotlari + dori-darmon sinxronlanadi
+    }
+    return error;
   }
 
   // ---------- Tekshiruv ----------

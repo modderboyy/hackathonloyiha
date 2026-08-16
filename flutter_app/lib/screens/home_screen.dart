@@ -7,6 +7,7 @@ import 'chat_screen.dart';
 import 'lock_screen.dart';
 import 'profile_screen.dart';
 import 'reminders_screen.dart';
+import 'subscription_screen.dart';
 
 /// Bosh ekran — sog'liq holati, obuna, so'nggi tekshiruvlar va AI chatbot.
 class HomeScreen extends StatefulWidget {
@@ -32,6 +33,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Telefon qulflangan bo'lsa — bloklash ekrani
     if (state.locked) return const LockScreen();
+
+    // Obunasiz — obuna ekraniga qaytarish (qat'iy)
+    if (!state.hasSubscription) return const SubscriptionScreen();
 
     return Scaffold(
       appBar: AppBar(
@@ -64,10 +68,25 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Icon(Icons.person, color: Colors.white),
                 ),
                 title: Text('Salom, ${state.profile?.fullName ?? "bemor"}!'),
-                subtitle: Text(state.isPremium ? 'Premium obuna faol ✓' : 'Obuna faol emas'),
+                subtitle: Text(_subLabel(state)),
               ),
             ),
             const SizedBox(height: 16),
+
+            // Dori-darmonlar (klinikadan sinxronlangan)
+            if (state.medications.isNotEmpty) ...[
+              const Text('Dori-darmonlar (shifokor buyurgan)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              ...state.medications.map((m) => Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.medication, color: Color(0xFF1E3A8A)),
+                      title: Text(m.name),
+                      subtitle: Text([m.dosage, m.frequency].whereType<String>().join(' · ')),
+                      isThreeLine: m.notes != null,
+                    ),
+                  )),
+              const SizedBox(height: 16),
+            ],
 
             // Vizual sog'liq paneli
             const Text('Sog\'liq holati', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -157,6 +176,16 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+  }
+
+  String _subLabel(AppState state) {
+    final sub = state.subscription;
+    if (sub == null) return 'Obuna yo\'q';
+    if (sub.isClinic) {
+      final days = sub.expiresAt?.difference(DateTime.now()).inDays;
+      return 'Klinik obuna ✓ (${days != null && days > 0 ? "$days kun qoldi" : "faol"})';
+    }
+    return 'Individual obuna ✓';
   }
 
   String _statusLabel(String s) {

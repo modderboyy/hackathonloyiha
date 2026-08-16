@@ -35,6 +35,10 @@ class Subscription {
   final String plan;
   final double priceUsd;
   final String status;
+  final String type; // 'individual' | 'clinic'
+  final String? clinicId;
+  final String? hospitalizationId;
+  final String? clinicCode;
   final DateTime? startedAt;
   final DateTime? expiresAt;
 
@@ -43,19 +47,69 @@ class Subscription {
     required this.plan,
     required this.priceUsd,
     required this.status,
+    this.type = 'individual',
+    this.clinicId,
+    this.hospitalizationId,
+    this.clinicCode,
     this.startedAt,
     this.expiresAt,
   });
 
   bool get isActive => status == 'active' && (expiresAt == null || expiresAt!.isAfter(DateTime.now()));
+  bool get isClinic => type == 'clinic';
+  bool get isIndividual => type == 'individual';
 
   factory Subscription.fromJson(Map<String, dynamic> json) => Subscription(
         id: json['id'],
         plan: json['plan'] ?? 'premium',
         priceUsd: (json['price_usd'] as num?)?.toDouble() ?? 5.0,
         status: json['status'] ?? 'active',
+        type: json['type'] ?? 'individual',
+        clinicId: json['clinic_id'],
+        hospitalizationId: json['hospitalization_id'],
+        clinicCode: json['clinic_code'],
         startedAt: json['started_at'] != null ? DateTime.parse(json['started_at']) : null,
         expiresAt: json['expires_at'] != null ? DateTime.parse(json['expires_at']) : null,
+      );
+}
+
+// --- Dori-darmon ---
+class Medication {
+  final String id;
+  final String name;
+  final String? dosage;
+  final String? frequency;
+  final String? notes;
+
+  Medication({
+    required this.id,
+    required this.name,
+    this.dosage,
+    this.frequency,
+    this.notes,
+  });
+
+  factory Medication.fromJson(Map<String, dynamic> json) => Medication(
+        id: json['id'],
+        name: json['name'] ?? '',
+        dosage: json['dosage'],
+        frequency: json['frequency'],
+        notes: json['notes'],
+      );
+}
+
+// --- Klinika ---
+class Clinic {
+  final String id;
+  final String name;
+  final String type;
+
+  Clinic({required this.id, required this.name, required this.type});
+
+  factory Clinic.fromJson(Map<String, dynamic> json) => Clinic(
+        id: json['id'],
+        name: json['name'] ?? '',
+        type: json['type'] ?? 'other',
       );
 }
 

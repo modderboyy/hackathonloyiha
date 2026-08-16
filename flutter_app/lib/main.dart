@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:forui/forui.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:timezone/data/latest.dart' as tz;
@@ -32,17 +33,16 @@ class CareLinkApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = FThemes.neutral.light.touch;
     return MaterialApp(
       title: 'CareLink — Bemor ilovasi',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1E3A8A), // deep ko'k primary
-          primary: const Color(0xFF1E3A8A),
-        ),
-        scaffoldBackgroundColor: const Color(0xFFF8FAFC),
-        useMaterial3: true,
-        fontFamily: 'Roboto',
+      supportedLocales: FLocalizations.supportedLocales,
+      localizationsDelegates: FLocalizations.localizationsDelegates,
+      theme: theme.toApproximateMaterialTheme(),
+      builder: (context, child) => FTheme(
+        data: theme,
+        child: FToaster(child: FTooltipGroup(child: child!)),
       ),
       home: const SplashScreen(),
     );

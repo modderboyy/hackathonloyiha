@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import 'auth/login_screen.dart';
 import 'home_screen.dart';
+import 'subscription_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -27,9 +28,16 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
     if (state.isLoggedIn) {
       state.watchCheckins(); // realtime tinglash
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-      );
+      // Obuna tekshiruvi — obunasiz ishlatib bo'lmaydi
+      if (!state.hasSubscription) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
+        );
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      }
     } else {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const LoginScreen()),
