@@ -20,9 +20,6 @@ export interface Region {
   id: string;
   name: string;
   code: string;
-  points?: string; // xarita uchun polygon koordinatalari
-  cx?: number;
-  cy?: number;
 }
 
 export interface Facility {

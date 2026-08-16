@@ -1,15 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useStore } from "@/lib/store";
-import { SearchInput, Badge, Modal, Field, Input, Select, Textarea, EmptyState, Avatar, StatCard } from "@/components/ui";
+import { useData } from "@/lib/data";
+import { SearchInput, Badge, Modal, Field, Input, Select, Textarea, EmptyState, Avatar } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { GENDER_LABELS, type Patient, type TimelineEvent } from "@/lib/types";
 import { ageFromBirthDate, formatDate, formatDateTime } from "@/lib/utils";
 
 export function Patients({ regionFilter, onClearRegion }: { regionFilter: string | null; onClearRegion: () => void }) {
-  const store = useStore();
-  const { patients, regions, visits, vitals, hospitalizations, discharges, followUps, profiles, deletePatient } = store;
+  const { patients, regions, deletePatient } = useData();
 
   const [query, setQuery] = useState("");
   const [genderFilter, setGenderFilter] = useState("");
@@ -96,7 +95,6 @@ export function Patients({ regionFilter, onClearRegion }: { regionFilter: string
         </div>
       ) : (
         <div className="card overflow-hidden p-0">
-          {/* desktop jadval */}
           <div className="hidden md:block">
             <table className="w-full text-sm">
               <thead>
@@ -133,7 +131,6 @@ export function Patients({ regionFilter, onClearRegion }: { regionFilter: string
               </tbody>
             </table>
           </div>
-          {/* mobil kartalar */}
           <ul className="divide-y divide-slate-100 md:hidden">
             {filtered.map((p) => (
               <li key={p.id}>
@@ -153,15 +150,12 @@ export function Patients({ regionFilter, onClearRegion }: { regionFilter: string
         </div>
       )}
 
-      {showNew && <NewPatientModal onClose={() => setShowNew(false)} onCreated={(p) => { setShowNew(false); setSelected(p); }} />}
+      {showNew && <NewPatientModal onClose={() => setShowNew(false)} onCreated={() => setShowNew(false)} />}
       {selected && (
         <PatientDetail
           patient={selected}
           onClose={() => setSelected(null)}
-          onDelete={() => {
-            deletePatient(selected.id);
-            setSelected(null);
-          }}
+          onDeleted={() => setSelected(null)}
         />
       )}
     </div>
@@ -169,20 +163,22 @@ export function Patients({ regionFilter, onClearRegion }: { regionFilter: string
 }
 
 // --- Yangi bemor modali ---
-function NewPatientModal({ onClose, onCreated }: { onClose: () => void; onCreated: (p: Patient) => void }) {
-  const { regions, addPatient } = useStore();
+function NewPatientModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const { regions, addPatient } = useData();
   const [form, setForm] = useState({ full_name: "", pinfl: "", birth_date: "", gender: "", region_id: "", phone: "", address: "", emergency_contact: "" });
   const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.full_name.trim()) {
       setErr("To'liq ism majburiy.");
       return;
     }
-    const p = addPatient({
+    setBusy(true);
+    const error = await addPatient({
       full_name: form.full_name.trim(),
       pinfl: form.pinfl || null,
       birth_date: form.birth_date || null,
@@ -192,7 +188,9 @@ function NewPatientModal({ onClose, onCreated }: { onClose: () => void; onCreate
       address: form.address || null,
       emergency_contact: form.emergency_contact || null,
     });
-    onCreated(p);
+    setBusy(false);
+    if (error) setErr(error);
+    else onCreated();
   }
 
   return (
@@ -216,7 +214,7 @@ function NewPatientModal({ onClose, onCreated }: { onClose: () => void; onCreate
               <option value="other">Boshqa</option>
             </Select>
           </Field>
-          <Field label="Yashash hududi" optional hint="Bemorning smartfoni bo'lmasa ham tanlanadi">
+          <Field label="Yashash hududi" optional>
             <Select value={form.region_id} onChange={(e) => set("region_id", e.target.value)}>
               <option value="">Tanlanmagan</option>
               {regions.map((r) => (
@@ -239,7 +237,7 @@ function NewPatientModal({ onClose, onCreated }: { onClose: () => void; onCreate
         {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{err}</p>}
         <div className="flex justify-end gap-3 pt-2">
           <button type="button" onClick={onClose} className="btn-ghost">Bekor qilish</button>
-          <button type="submit" className="btn-primary">Saqlash</button>
+          <button type="submit" disabled={busy} className="btn-primary">{busy ? "Saqlanmoqda..." : "Saqlash"}</button>
         </div>
       </form>
     </Modal>
@@ -247,12 +245,14 @@ function NewPatientModal({ onClose, onCreated }: { onClose: () => void; onCreate
 }
 
 // --- Bemor batafsil modali ---
-function PatientDetail({ patient, onClose, onDelete }: { patient: Patient; onClose: () => void; onDelete: () => void }) {
-  const { regions, visits, vitals, hospitalizations, discharges, followUps, profiles, addVisit } = useStore();
+function PatientDetail({ patient, onClose, onDeleted }: { patient: Patient; onClose: () => void; onDeleted: () => void }) {
+  const { regions, visits, vitals, discharges, followUps, addVisit, deletePatient } = useData();
   const [tab, setTab] = useState<"timeline" | "visit">("timeline");
   const [complaint, setComplaint] = useState("");
   const [diagnosis, setDiagnosis] = useState("");
   const [vt, setVt] = useState({ bp_sys: "", bp_dia: "", heart_rate: "", temperature: "", spo2: "", weight: "" });
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
 
   const pVisits = visits.filter((v) => v.patient_id === patient.id);
   const pVitals = vitals.filter((v) => v.patient_id === patient.id);
@@ -268,10 +268,15 @@ function PatientDetail({ patient, onClose, onDelete }: { patient: Patient; onClo
 
   const lastVital = pVitals[0];
 
-  function submitVisit(e: React.FormEvent) {
+  async function submitVisit(e: React.FormEvent) {
     e.preventDefault();
-    addVisit(
-      { patient_id: patient.id, facility_id: null, doctor_id: null, chief_complaint: complaint || null, diagnosis: diagnosis || null, notes: null, recommendations: null },
+    if (!complaint.trim()) {
+      setErr("Shikoyat majburiy.");
+      return;
+    }
+    setBusy(true);
+    const error = await addVisit(
+      { patient_id: patient.id, facility_id: null, chief_complaint: complaint || null, diagnosis: diagnosis || null, notes: null, recommendations: null },
       {
         bp_sys: vt.bp_sys ? +vt.bp_sys : null,
         bp_dia: vt.bp_dia ? +vt.bp_dia : null,
@@ -281,10 +286,21 @@ function PatientDetail({ patient, onClose, onDelete }: { patient: Patient; onClo
         weight: vt.weight ? +vt.weight : null,
       }
     );
-    setComplaint("");
-    setDiagnosis("");
-    setVt({ bp_sys: "", bp_dia: "", heart_rate: "", temperature: "", spo2: "", weight: "" });
-    setTab("timeline");
+    setBusy(false);
+    if (error) {
+      setErr(error);
+    } else {
+      setComplaint("");
+      setDiagnosis("");
+      setVt({ bp_sys: "", bp_dia: "", heart_rate: "", temperature: "", spo2: "", weight: "" });
+      setTab("timeline");
+    }
+  }
+
+  async function handleDelete() {
+    if (!confirm("Bemorni o'chirishni tasdiqlaysizmi?")) return;
+    const error = await deletePatient(patient.id);
+    if (!error) onDeleted();
   }
 
   const regionName = regions.find((r) => r.id === patient.region_id)?.name ?? "—";
@@ -303,12 +319,11 @@ function PatientDetail({ patient, onClose, onDelete }: { patient: Patient; onClo
               </p>
             </div>
           </div>
-          <button onClick={onDelete} className="flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-red-600 transition hover:bg-red-50">
+          <button onClick={handleDelete} className="flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-red-600 transition hover:bg-red-50">
             <Icon name="trash" size={15} /> O'chirish
           </button>
         </div>
 
-        {/* ma'lumotlar */}
         <dl className="mt-4 grid gap-3 rounded-xl bg-slate-50 p-4 text-sm sm:grid-cols-3">
           <Info label="JSHSHIR" value={patient.pinfl} />
           <Info label="Telefon" value={patient.phone} />
@@ -318,7 +333,6 @@ function PatientDetail({ patient, onClose, onDelete }: { patient: Patient; onClo
           {lastVital && <Info label="So'nggi AB" value={lastVital.bp_sys ? `${lastVital.bp_sys}/${lastVital.bp_dia}` : "—"} />}
         </dl>
 
-        {/* tablar */}
         <div className="mt-5 flex gap-1 border-b border-slate-200">
           <TabBtn active={tab === "timeline"} onClick={() => setTab("timeline")} icon="activity" label="Timeline" />
           <TabBtn active={tab === "visit"} onClick={() => setTab("visit")} icon="plus" label="Yangi tashrif" />
@@ -364,8 +378,9 @@ function PatientDetail({ patient, onClose, onDelete }: { patient: Patient; onClo
                 <VInput label="Vazn kg" value={vt.weight} onChange={(v) => setVt((s) => ({ ...s, weight: v }))} placeholder="70" />
               </div>
             </div>
+            {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{err}</p>}
             <div className="flex justify-end gap-3">
-              <button type="submit" className="btn-primary">Tashvisni saqlash</button>
+              <button type="submit" disabled={busy} className="btn-primary">{busy ? "Saqlanmoqda..." : "Tashvisni saqlash"}</button>
             </div>
           </form>
         )}

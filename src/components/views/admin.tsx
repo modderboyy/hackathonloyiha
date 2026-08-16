@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useStore } from "@/lib/store";
+import { useData } from "@/lib/data";
 import { SearchInput, Badge, Avatar } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { ROLE_LABELS, type Role } from "@/lib/types";
@@ -18,10 +18,10 @@ const ROLE_TONE: Record<Role, string> = {
 };
 
 export function Admin() {
-  const { profiles, audit, regions, setRole, currentUser } = useStore();
+  const { profiles, audit, regions, setRole, profile } = useData();
   const [query, setQuery] = useState("");
 
-  const isSuperAdmin = currentUser.role === "super_admin";
+  const isSuperAdmin = profile?.role === "super_admin";
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -46,7 +46,7 @@ export function Admin() {
 
       {/* Foydalanuvchilar */}
       <div className="card">
-        <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h2 className="font-semibold text-slate-900">Foydalanuvchilar ({profiles.length})</h2>
           <div className="w-full max-w-xs">
             <SearchInput value={query} onChange={setQuery} placeholder="Ism yoki rol qidirish..." />
@@ -61,7 +61,7 @@ export function Admin() {
                 <div>
                   <p className="font-medium text-slate-900">
                     {p.full_name}
-                    {p.id === currentUser.id && <span className="ml-2 text-xs text-slate-400">(siz)</span>}
+                    {p.id === profile?.id && <span className="ml-2 text-xs text-slate-400">(siz)</span>}
                   </p>
                   <p className="text-xs text-slate-500">{p.phone ?? "Telefon yo'q"} · {regionName(p.region_id)}</p>
                 </div>
@@ -70,7 +70,7 @@ export function Admin() {
                 {isSuperAdmin ? (
                   <select
                     value={p.role}
-                    disabled={p.id === currentUser.id}
+                    disabled={p.id === profile?.id}
                     onChange={(e) => setRole(p.id, e.target.value as Role)}
                     className="field max-w-[180px] py-1.5"
                   >

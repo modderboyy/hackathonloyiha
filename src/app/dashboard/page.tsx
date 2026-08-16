@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { StoreProvider, useStore } from "@/lib/store";
+import { DataProvider, useData } from "@/lib/data";
 import { Icon, Logo } from "@/components/icons";
 import { ROLE_LABELS } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -14,20 +14,20 @@ import { Admin } from "@/components/views/admin";
 
 type View = "overview" | "patients" | "discharges" | "followups" | "notifications" | "admin";
 
-const NAV: { id: View; label: string; icon: string }[] = [
+const NAV: { id: View; label: string; icon: string; adminOnly?: boolean }[] = [
   { id: "overview", label: "Bosh sahifa", icon: "home" },
   { id: "patients", label: "Bemorlar", icon: "users" },
   { id: "discharges", label: "Chiqarish", icon: "bed" },
   { id: "followups", label: "Kuzatuvlar", icon: "clipboard" },
   { id: "notifications", label: "Xabarnomalar", icon: "bell" },
-  { id: "admin", label: "Boshqaruv", icon: "shield" },
+  { id: "admin", label: "Boshqaruv", icon: "shield", adminOnly: true },
 ];
 
 export default function DashboardPage() {
   return (
-    <StoreProvider>
+    <DataProvider>
       <Shell />
-    </StoreProvider>
+    </DataProvider>
   );
 }
 
@@ -35,14 +35,56 @@ function Shell() {
   const [view, setView] = useState<View>("overview");
   const [regionFilter, setRegionFilter] = useState<string | null>(null);
   const [navOpen, setNavOpen] = useState(false);
-  const { currentUser, notifications } = useStore();
+  const data = useData();
 
+  const { ready, notConfigured, profile, notifications } = data;
   const unread = notifications.filter((n) => !n.is_read).length;
+  const isAdmin = profile?.role === "super_admin" || profile?.role === "admin";
 
   function navigate(v: View) {
     setView(v);
     setNavOpen(false);
   }
+
+  // Supabase sozlanmagan
+  if (notConfigured) {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-4">
+        <div className="w-full max-w-md text-center">
+          <div className="flex justify-center">
+            <Logo size={48} withText />
+          </div>
+          <h1 className="mt-6 text-xl font-bold text-slate-900">Supabase sozlanmagan</h1>
+          <p className="mt-2 text-sm text-slate-500">
+            Real rejimda ishlash uchun <code className="rounded bg-slate-100 px-1">.env.local</code> faylini
+            to&lsquo;ldiring:
+          </p>
+          <div className="mt-4 rounded-xl bg-slate-900 p-4 text-left font-mono text-xs text-slate-100">
+            <p>NEXT_PUBLIC_SUPABASE_URL=...</p>
+            <p>NEXT_PUBLIC_SUPABASE_ANON_KEY=...</p>
+          </div>
+          <p className="mt-4 text-xs text-slate-400">
+            Keyin <code className="rounded bg-slate-100 px-1">supabase/migrations/00001_init.sql</code> ni
+            SQL editor&apos;da ishga tushiring va serverni qayta yuklang.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Yuklanmoqda
+  if (!ready || !profile) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <span className="h-8 w-8 animate-spin rounded-full border-2 border-primary-200 border-t-primary-700" />
+          <p className="text-sm text-slate-500">Ma&lsquo;lumotlar yuklanmoqda...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const nav = NAV.filter((n) => !n.adminOnly || isAdmin);
 
   return (
     <div className="flex min-h-screen">
@@ -61,7 +103,7 @@ function Shell() {
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-          {NAV.map((n) => (
+          {nav.map((n) => (
             <button
               key={n.id}
               onClick={() => navigate(n.id)}
@@ -84,11 +126,11 @@ function Shell() {
         <div className="border-t border-slate-200 px-4 py-4">
           <div className="flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-primary-800 font-semibold text-white">
-              {currentUser.full_name.charAt(0)}
+              {(profile.full_name || "?").charAt(0)}
             </span>
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-slate-900">{currentUser.full_name}</p>
-              <p className="truncate text-xs text-slate-500">{ROLE_LABELS[currentUser.role]}</p>
+              <p className="truncate text-sm font-semibold text-slate-900">{profile.full_name}</p>
+              <p className="truncate text-xs text-slate-500">{ROLE_LABELS[profile.role]}</p>
             </div>
           </div>
         </div>
@@ -96,7 +138,6 @@ function Shell() {
 
       {/* Asosiy kontent */}
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* Topbar */}
         <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur sm:px-6">
           <button
             onClick={() => setNavOpen(true)}
@@ -122,13 +163,8 @@ function Shell() {
               </span>
             )}
           </button>
-          <span className="hidden h-6 w-px bg-slate-200 sm:block" />
-          <span className="hidden items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 sm:flex">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" /> Demo rejimi
-          </span>
         </header>
 
-        {/* Kontent */}
         <main className="flex-1 px-4 py-6 sm:px-6">
           <div key={view} className="view-enter mx-auto max-w-6xl">
             {view === "overview" && (
@@ -140,7 +176,7 @@ function Shell() {
             {view === "discharges" && <Discharges />}
             {view === "followups" && <FollowUps />}
             {view === "notifications" && <Notifications />}
-            {view === "admin" && <Admin />}
+            {view === "admin" && isAdmin && <Admin />}
           </div>
         </main>
       </div>

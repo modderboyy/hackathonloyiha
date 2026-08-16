@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useStore } from "@/lib/store";
+import { useData } from "@/lib/data";
 import { SearchInput, Badge, EmptyState } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { formatDateTime } from "@/lib/utils";
@@ -14,15 +14,14 @@ const TYPE_META: Record<string, { icon: string; label: string; cls: string }> = 
 };
 
 export function Notifications() {
-  const { notifications, patients, markNotificationRead } = useStore();
-  const [filter, setFilter] = useState<"all" | "unread" | string>("all");
+  const { notifications, patients, markNotificationRead } = useData();
+  const [filter, setFilter] = useState<"all" | "unread">("all");
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return notifications.filter((n) => {
       if (filter === "unread" && n.is_read) return false;
-      if (filter !== "all" && filter !== "unread" && n.type !== filter) return false;
       if (q) {
         const hay = `${n.title} ${n.body ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;

@@ -1,14 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useStore } from "@/lib/store";
+import { useData } from "@/lib/data";
 import { SearchInput, Badge, Modal, Field, Textarea, Input, Select, EmptyState } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { FOLLOWUP_STATUS, type FollowUp } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 
 export function FollowUps() {
-  const { patients, followUps, profiles, completeFollowUp } = useStore();
+  const { patients, followUps, profiles, completeFollowUp } = useData();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [completing, setCompleting] = useState<FollowUp | null>(null);
@@ -86,10 +86,8 @@ export function FollowUps() {
         <CompleteModal
           followUp={completing}
           onClose={() => setCompleting(null)}
-          onSubmit={(notes, next) => {
-            completeFollowUp(completing.id, notes, next);
-            setCompleting(null);
-          }}
+          onSubmit={completeFollowUp}
+          onDone={() => setCompleting(null)}
         />
       )}
     </div>
@@ -100,34 +98,46 @@ function CompleteModal({
   followUp,
   onClose,
   onSubmit,
+  onDone,
 }: {
   followUp: FollowUp;
   onClose: () => void;
-  onSubmit: (notes: string, next: string) => void;
+  onSubmit: (id: string, notes: string, next: string) => Promise<string | null>;
+  onDone: () => void;
 }) {
-  const { patients } = useStore();
+  const { patients } = useData();
   const [notes, setNotes] = useState("");
   const [next, setNext] = useState("");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
   const pname = patients.find((p) => p.id === followUp.patient_id)?.full_name ?? "—";
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!notes.trim()) {
+      setErr("Ko'rik natijasi majburiy.");
+      return;
+    }
+    setBusy(true);
+    const error = await onSubmit(followUp.id, notes, next);
+    setBusy(false);
+    if (error) setErr(error);
+    else onDone();
+  }
 
   return (
     <Modal open onClose={onClose} title={`Kuzatuv natijasi — ${pname}`}>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          onSubmit(notes, next);
-        }}
-        className="space-y-4"
-      >
+      <form onSubmit={submit} className="space-y-4">
         <Field label="Ko'rik natijasi" required>
           <Textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Bemor holati, o'lchovlar..." />
         </Field>
         <Field label="Keyingi qadam" optional>
           <Input value={next} onChange={(e) => setNext(e.target.value)} placeholder="Masalan: 1 oydan keyin qayta ko'rik" />
         </Field>
+        {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{err}</p>}
         <div className="flex justify-end gap-3">
           <button type="button" onClick={onClose} className="btn-ghost">Bekor qilish</button>
-          <button type="submit" className="btn-primary">Yakunlash</button>
+          <button type="submit" disabled={busy} className="btn-primary">{busy ? "Saqlanmoqda..." : "Yakunlash"}</button>
         </div>
       </form>
     </Modal>

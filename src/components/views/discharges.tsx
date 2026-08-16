@@ -1,16 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useStore } from "@/lib/store";
+import { useData, type DischargeInput } from "@/lib/data";
 import { SearchInput, Badge, Modal, Field, Input, Select, Textarea, EmptyState } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { formatDate } from "@/lib/utils";
 
 export function Discharges() {
-  const { patients, discharges, profiles, followUps, addDischarge } = useStore();
+  const { patients, discharges, profiles, followUps, addDischarge } = useData();
   const [query, setQuery] = useState("");
   const [showNew, setShowNew] = useState(false);
-  const [prePatient, setPrePatient] = useState("");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -31,7 +30,7 @@ export function Discharges() {
           <h1 className="text-2xl font-bold text-slate-900">Chiqarishlar</h1>
           <p className="text-sm text-slate-500">Statsionardan chiqarish va avtomatik yo'naltirish</p>
         </div>
-        <button onClick={() => { setPrePatient(""); setShowNew(true); }} className="btn-primary">
+        <button onClick={() => setShowNew(true)} className="btn-primary">
           <Icon name="plus" size={16} /> Yangi chiqarish
         </button>
       </div>
@@ -58,9 +57,7 @@ export function Discharges() {
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   {d.requires_follow_up ? (
-                    <Badge className="bg-primary-100 text-primary-800">
-                      Kuzatuv {d.follow_up_days ?? 7} kun
-                    </Badge>
+                    <Badge className="bg-primary-100 text-primary-800">Kuzatuv {d.follow_up_days ?? 7} kun</Badge>
                   ) : (
                     <Badge className="bg-slate-100 text-slate-600">Kuzatuvsiz</Badge>
                   )}
@@ -76,44 +73,25 @@ export function Discharges() {
         </div>
       )}
 
-      {showNew && (
-        <DischargeModal
-          onClose={() => setShowNew(false)}
-          preselect={prePatient}
-          onSubmit={(d) => {
-            addDischarge(d);
-            setShowNew(false);
-          }}
-        />
-      )}
+      {showNew && <DischargeModal onClose={() => setShowNew(false)} onSubmit={addDischarge} onDone={() => setShowNew(false)} />}
     </div>
   );
 }
 
 function DischargeModal({
   onClose,
-  preselect,
   onSubmit,
+  onDone,
 }: {
   onClose: () => void;
-  preselect: string;
-  onSubmit: (d: {
-    patientId: string;
-    admissionDate: string;
-    dischargeDate: string;
-    diagnosis: string;
-    summary: string;
-    recommendations: string;
-    requiresFollowUp: boolean;
-    followUpDays: number;
-    familyDoctorId: string | null;
-  }) => void;
+  onSubmit: (d: DischargeInput) => Promise<string | null>;
+  onDone: () => void;
 }) {
-  const { patients, profiles } = useStore();
+  const { patients, profiles } = useData();
   const familyDoctors = profiles.filter((p) => p.role === "family_doctor");
   const today = new Date().toISOString().slice(0, 10);
 
-  const [patientId, setPatientId] = useState(preselect);
+  const [patientId, setPatientId] = useState("");
   const [admissionDate, setAdmissionDate] = useState(today);
   const [dischargeDate, setDischargeDate] = useState(today);
   const [diagnosis, setDiagnosis] = useState("");
@@ -123,14 +101,16 @@ function DischargeModal({
   const [followUpDays, setFollowUpDays] = useState(7);
   const [familyDoctorId, setFamilyDoctorId] = useState("");
   const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!patientId) {
       setErr("Bemorni tanlang (majburiy).");
       return;
     }
-    onSubmit({
+    setBusy(true);
+    const error = await onSubmit({
       patientId,
       admissionDate,
       dischargeDate,
@@ -141,6 +121,9 @@ function DischargeModal({
       followUpDays,
       familyDoctorId: familyDoctorId || null,
     });
+    setBusy(false);
+    if (error) setErr(error);
+    else onDone();
   }
 
   return (
@@ -209,7 +192,7 @@ function DischargeModal({
         {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{err}</p>}
         <div className="flex justify-end gap-3 pt-2">
           <button type="button" onClick={onClose} className="btn-ghost">Bekor qilish</button>
-          <button type="submit" className="btn-primary">Chiqarish va yo'naltirish</button>
+          <button type="submit" disabled={busy} className="btn-primary">{busy ? "Saqlanmoqda..." : "Chiqarish va yo'naltirish"}</button>
         </div>
       </form>
     </Modal>

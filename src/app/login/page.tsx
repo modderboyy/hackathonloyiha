@@ -26,16 +26,6 @@ export default function LoginPage() {
               Ro&lsquo;yxatdan o&lsquo;ting
             </Link>
           </div>
-
-          <div className="mt-3 rounded-lg bg-primary-50 p-3 text-center">
-            <Link
-              href="/dashboard"
-              className="text-sm font-medium text-primary-700 hover:text-primary-800"
-            >
-              Demo rejimda ko&lsquo;rish →
-            </Link>
-            <p className="mt-0.5 text-xs text-slate-400">Supabase sozlanmagan bo&lsquo;lsa ham ishlaydi</p>
-          </div>
         </div>
       </div>
     </div>

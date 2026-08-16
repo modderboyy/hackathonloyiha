@@ -265,8 +265,9 @@ create policy "facilities_write_admin" on public.facilities
   for all using (public.is_admin()) with check (public.is_admin());
 
 -- ------------------------- profiles -------------------------
-create policy "profiles_select_self_or_admin" on public.profiles
-  for select using (id = auth.uid() or public.is_admin());
+-- Barcha tibbiy xodimlar hamkasblarini ko'rishi mumkin (nom/rol/hudud — sezgir emas)
+create policy "profiles_select_staff" on public.profiles
+  for select using (public.is_medical_staff());
 create policy "profiles_update_self" on public.profiles
   for update using (id = auth.uid()) with check (id = auth.uid());
 create policy "profiles_admin_all" on public.profiles

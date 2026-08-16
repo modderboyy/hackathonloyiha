@@ -70,15 +70,28 @@ dastur kabi.
   xabarnoma, foydalanuvchilar).
 - **Required / optional** belgilar — barcha formalarda.
 - **Grafiklar** — bar, area va donut (SVG, bog'liqliksiz).
-- **O'zbekiston xaritasi** — hududni tanlash, har hududda bemorlar soni.
+- **O'zbekiston xaritasi (Leaflet)** — hududni tanlash, har hududda bemorlar soni.
 - **To'liq responsiv** — mobil qurilmalar uchun moslashadi.
 
-## Demo rejimi
+## Real rejim (Supabase)
 
-Supabase muhit o'zgaruvchilari sozlanmagan bo'lsa, dashboard avtomatik
-**demo rejimida** ishlaydi — namuna ma'lumotlar bilan barcha funksiyalar
-ko'rinadi. Real ma'lumotlar uchun `.env.local` ni to'ldiring va migratsiyani
-ishga tushiring.
+Loyiha to'liq **real Supabase** bilan ishlaydi — demo/mock ma'lumotlar yo'q.
+
+1. [supabase.com](https://supabase.com) da loyiha yarating.
+2. SQL editor'da `supabase/migrations/00001_init.sql` ni ishga tushiring.
+3. `supabase/seed.sql` orqali 14 ta hudud va muassasalarni qo'shing.
+4. `.env.local` ga URL va anon key yozing, serverni qayta yuklang.
+5. Ro'yxatdan o'tgandan so'ng birinchi super adminni tayinlang:
+   ```sql
+   update public.profiles set role = 'super_admin' where id = '<user-uuid>';
+   ```
+
+## Xarita (Leaflet + OpenStreetMap)
+
+Hududlar xaritasi **Leaflet + OpenStreetMap** bilan ishlaydi — hech qanday API
+kalit talab qilmaydi. Har hududda bemorlar soni markerda ko'rinadi, hududni
+bosish bemorlar ro'yxatini filtrlaydi. Koordinatalar `src/lib/geo.ts` da
+(14 ta hudud, soddalashtirilgan poligonlar).
 
 ## Asosiy oqim (bemor care journey)
 
