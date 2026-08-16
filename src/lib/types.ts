@@ -17,6 +17,13 @@ export interface Profile {
   region_id: string | null;
   district_id: string | null;
   neighborhood_id: string | null;
+  specialty_id: string | null;
+}
+
+export interface Specialty {
+  id: string;
+  name: string;
+  code: string;
 }
 
 export interface Region {
@@ -29,12 +36,16 @@ export interface District {
   id: string;
   name: string;
   region_id: string;
+  lat: number | null;
+  lng: number | null;
 }
 
 export interface Neighborhood {
   id: string;
   name: string;
   district_id: string;
+  lat: number | null;
+  lng: number | null;
 }
 
 export interface Street {
@@ -85,6 +96,8 @@ export interface Patient {
   gender: "male" | "female" | "other" | null;
   phone: string | null;
   region_id: string | null;
+  district_id: string | null;
+  neighborhood_id: string | null;
   address: string | null;
   emergency_contact: string | null;
   created_at: string;
@@ -100,6 +113,9 @@ export interface ClinicalVisit {
   notes: string | null;
   recommendations: string | null;
   visit_date: string;
+  specialty: string | null;
+  routed_to: string | null;
+  status: "open" | "routed" | "in_progress" | "done";
 }
 
 export interface Vital {
