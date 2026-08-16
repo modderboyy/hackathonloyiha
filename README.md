@@ -40,15 +40,33 @@ npm run dev
 
 [http://localhost:3000](http://localhost:3000) da oching.
 
-## Rollar
+## Rollar (hududiy ierarxiya)
 
-| Rol | Tavsif |
-| --- | --- |
-| `super_admin` | To'liq boshqaruv: adminlar, rollar, audit va barcha ma'lumotlar |
-| `admin` | Hududlar, muassasalar, rollar va audit |
-| `medical_worker` | Bemorni ro'yxatga olish, shikoyat va ko'rsatkichlarni kiritish |
-| `hospital_doctor` | Statsionar davolash, discharge va yo'naltirish |
-| `family_doctor` | Follow-up kuzatuvlari va natijalarini qayd qilish |
+| Rol | Daraja | Vazifasi |
+| --- | --- | --- |
+| `super_admin` | Respublika | Viloyatlarga admin biriktirish, yakuniy tasdiqlash, audit |
+| `admin` | Viloyat | Tuman adminlarini biriktirish, so'rovlarni tasdiqlash |
+| `district_admin` | Tuman | Mahalla/area bo'yicha xodimlarni biriktirish, so'rov yuborish |
+| `medical_worker` | Xodim | Bemorni ro'yxatga olish, shikoyat va ko'rsatkichlarni kiritish |
+| `hospital_doctor` | Xodim | Statsionar davolash, discharge va yo'naltirish |
+| `family_doctor` | Xodim | Follow-up kuzatuvlari va natijalarini qayd qilish |
+
+### Tasdiqlash (approval) oqimi
+
+Xodim qo'shish faqat tasdiqlash orqali:
+
+```
+Tuman admini so'rov yuboradi
+  → Viloyat admini tasdiqlaydi → TUGADI (qabul qilindi)
+  → Viloyat rad etsa → Respublika (super admin)
+      → Respublika tasdiqlaydi → qabul qilindi
+      → Respublika rad etsa → rad etildi
+```
+
+## Manzil ierarxiyasi (Punktlar)
+
+Viloyat → Tuman → Mahalla → Ko'cha → Bino → Raqam (bino nomi ixtiyoriy).
+Har darajani qo'shish/o'chirish mumkin. Xodimlar mahalla/area darajasida biriktiriladi.
 
 > Ro'yxatdan o'tgan foydalanuvchi dastlab `medical_worker` rolida bo'ladi.
 > Birinchi super adminni SQL orqali tayinlang:

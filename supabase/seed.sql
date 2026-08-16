@@ -29,3 +29,12 @@ insert into public.facilities (name, type, region_id) values
   ('Samarqand viloyat shifoxonasi', 'hospital', (select id from regions where code = 'SA')),
   ('Buxoro tuman poliklinikasi', 'polyclinic', (select id from regions where code = 'BU'))
 on conflict do nothing;
+
+-- Tumanlar (namuna)
+insert into public.districts (name, region_id) values
+  ('Yunusobod tumani', (select id from regions where code = 'TS')),
+  ('Chilonzor tumani', (select id from regions where code = 'TS')),
+  ('Qibray tumani', (select id from regions where code = 'TV')),
+  ('Parkent tumani', (select id from regions where code = 'TV')),
+  ('Samarqand tumani', (select id from regions where code = 'SA'))
+on conflict do nothing;

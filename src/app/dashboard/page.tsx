@@ -11,8 +11,18 @@ import { Discharges } from "@/components/views/discharges";
 import { FollowUps } from "@/components/views/followups";
 import { Notifications } from "@/components/views/notifications";
 import { Admin } from "@/components/views/admin";
+import { Points } from "@/components/views/points";
+import { Approvals } from "@/components/views/approvals";
 
-type View = "overview" | "patients" | "discharges" | "followups" | "notifications" | "admin";
+type View =
+  | "overview"
+  | "patients"
+  | "discharges"
+  | "followups"
+  | "notifications"
+  | "points"
+  | "approvals"
+  | "admin";
 
 const NAV: { id: View; label: string; icon: string; adminOnly?: boolean }[] = [
   { id: "overview", label: "Bosh sahifa", icon: "home" },
@@ -20,7 +30,9 @@ const NAV: { id: View; label: string; icon: string; adminOnly?: boolean }[] = [
   { id: "discharges", label: "Chiqarish", icon: "bed" },
   { id: "followups", label: "Kuzatuvlar", icon: "clipboard" },
   { id: "notifications", label: "Xabarnomalar", icon: "bell" },
-  { id: "admin", label: "Boshqaruv", icon: "shield", adminOnly: true },
+  { id: "points", label: "Punktlar", icon: "map-pin" },
+  { id: "approvals", label: "Tasdiqlash", icon: "shield", adminOnly: true },
+  { id: "admin", label: "Boshqaruv", icon: "settings", adminOnly: true },
 ];
 
 export default function DashboardPage() {
@@ -39,7 +51,10 @@ function Shell() {
 
   const { ready, notConfigured, profile, notifications } = data;
   const unread = notifications.filter((n) => !n.is_read).length;
-  const isAdmin = profile?.role === "super_admin" || profile?.role === "admin";
+  const isAdmin =
+    profile?.role === "super_admin" ||
+    profile?.role === "admin" ||
+    profile?.role === "district_admin";
 
   function navigate(v: View) {
     setView(v);
@@ -176,6 +191,8 @@ function Shell() {
             {view === "discharges" && <Discharges />}
             {view === "followups" && <FollowUps />}
             {view === "notifications" && <Notifications />}
+            {view === "points" && <Points />}
+            {view === "approvals" && isAdmin && <Approvals />}
             {view === "admin" && isAdmin && <Admin />}
           </div>
         </main>

@@ -3,6 +3,7 @@
 export type Role =
   | "super_admin"
   | "admin"
+  | "district_admin"
   | "medical_worker"
   | "hospital_doctor"
   | "family_doctor";
@@ -14,12 +15,59 @@ export interface Profile {
   phone: string | null;
   facility_id: string | null;
   region_id: string | null;
+  district_id: string | null;
+  neighborhood_id: string | null;
 }
 
 export interface Region {
   id: string;
   name: string;
   code: string;
+}
+
+export interface District {
+  id: string;
+  name: string;
+  region_id: string;
+}
+
+export interface Neighborhood {
+  id: string;
+  name: string;
+  district_id: string;
+}
+
+export interface Street {
+  id: string;
+  name: string;
+  neighborhood_id: string;
+}
+
+export interface Building {
+  id: string;
+  number: string;
+  name: string | null;
+  street_id: string;
+}
+
+export type ApprovalStatus = "pending_region" | "pending_republic" | "approved" | "rejected";
+
+export interface Approval {
+  id: string;
+  type: "staff_join" | "district_assign" | "other";
+  title: string;
+  payload: Record<string, unknown>;
+  district_id: string | null;
+  region_id: string | null;
+  submitted_by: string | null;
+  status: ApprovalStatus;
+  region_decision: "approve" | "reject" | null;
+  region_decided_by: string | null;
+  region_decided_at: string | null;
+  republic_decision: "approve" | "reject" | null;
+  republic_decided_by: string | null;
+  republic_decided_at: string | null;
+  created_at: string;
 }
 
 export interface Facility {
@@ -130,8 +178,9 @@ export interface TimelineEvent {
 }
 
 export const ROLE_LABELS: Record<Role, string> = {
-  super_admin: "Super admin",
-  admin: "Administrator",
+  super_admin: "Super admin (Respublika)",
+  admin: "Viloyat admini",
+  district_admin: "Tuman admini",
   medical_worker: "Tibbiyot xodimi",
   hospital_doctor: "Statsionar shifokori",
   family_doctor: "Oilaviy shifokor",
