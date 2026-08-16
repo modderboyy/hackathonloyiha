@@ -9,19 +9,6 @@
 create extension if not exists "pgcrypto";
 
 -- ---------------------------------------------------------------------
--- 1. Yordamchi funksiya: joriy foydalanuvchi roli
--- ---------------------------------------------------------------------
-create or replace function public.current_role()
-returns text
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select role from public.profiles where id = auth.uid()
-$$;
-
--- ---------------------------------------------------------------------
 -- 2. Hududlar (regions)
 -- ---------------------------------------------------------------------
 create table if not exists public.regions (
@@ -61,6 +48,17 @@ create table if not exists public.profiles (
 
 create index if not exists idx_profiles_role on public.profiles(role);
 create index if not exists idx_profiles_region on public.profiles(region_id);
+
+-- Yordamchi funksiya: joriy foydalanuvchi roli (profiles jadvalidan keyin)
+create or replace function public.current_role()
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select role from public.profiles where id = auth.uid()
+$$;
 
 -- Yangi foydalanuvchi ro'yxatdan o'tganda avtomatik profil yaratish
 create or replace function public.handle_new_user()
