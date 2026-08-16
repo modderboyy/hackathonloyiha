@@ -35,7 +35,7 @@ export function Overview({ onRegionSelect }: { onRegionSelect: (regionId: string
     });
     return districts
       .filter((d) => d.lat !== null && d.lng !== null)
-      .map((d) => ({ id: d.id, name: d.name, lat: d.lat as number, lng: d.lng as number, count: counts[d.id] ?? 0 }));
+      .map((d) => ({ id: d.id, name: d.name, lat: d.lat as number, lng: d.lng as number, count: counts[d.id] ?? 0, polygon: d.polygon }));
   }, [districts, patients]);
 
   const activeFollowUps = followUps.filter((f) => f.status === "pending" || f.status === "in_progress").length;

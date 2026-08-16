@@ -225,10 +225,12 @@ function DistrictsTable({ regionId, onOpen }: { regionId: string; onOpen: (id: s
   const nbhCount = (id: string) => neighborhoods.filter((n) => n.district_id === id).length;
   const [locFor, setLocFor] = useState<string | null>(null);
   const [loc, setLoc] = useState<{ lat: number; lng: number } | null>(null);
+  const [poly, setPoly] = useState<{ lat: number; lng: number }[] | null>(null);
 
-  function openLocation(d: { id: string; lat: number | null; lng: number | null }) {
+  function openLocation(d: { id: string; lat: number | null; lng: number | null; polygon?: {lat: number; lng: number}[] | null }) {
     setLocFor(d.id);
     setLoc(d.lat !== null && d.lng !== null ? { lat: d.lat, lng: d.lng } : null);
+    setPoly(d.polygon || null);
   }
 
   return (
@@ -281,12 +283,13 @@ function DistrictsTable({ regionId, onOpen }: { regionId: string; onOpen: (id: s
           </div>
           <LocationPicker
             value={loc}
-            onChange={(lat, lng) => setLoc({ lat, lng })}
+            polygon={poly}
+            onChange={(lat, lng, p) => { setLoc(lat && lng ? {lat, lng} : null); setPoly(p); }}
           />
           <div className="mt-3 flex justify-end gap-2">
             <button onClick={() => setLocFor(null)} className="btn-ghost">Bekor</button>
             <button
-              onClick={async () => { if (loc) await updateDistrict(locFor, { lat: loc.lat, lng: loc.lng }); setLocFor(null); }}
+              onClick={async () => { if (locFor) await updateDistrict(locFor, { lat: loc?.lat ?? null, lng: loc?.lng ?? null, polygon: poly }); setLocFor(null); }}
               className="btn-primary"
             >
               Saqlash
@@ -307,6 +310,7 @@ function NeighborhoodsTable({ districtId, onOpen }: { districtId: string; onOpen
   const strCount = (id: string) => streets.filter((s) => s.neighborhood_id === id).length;
   const [locFor, setLocFor] = useState<string | null>(null);
   const [loc, setLoc] = useState<{ lat: number; lng: number } | null>(null);
+  const [poly, setPoly] = useState<{ lat: number; lng: number }[] | null>(null);
 
   return (
     <div className="space-y-4">
@@ -326,9 +330,9 @@ function NeighborhoodsTable({ districtId, onOpen }: { districtId: string; onOpen
                 <tr key={n.id} className="transition hover:bg-slate-50">
                   <td className="px-4 py-2.5"><EditableCell value={n.name} onSave={(v) => updateNeighborhood(n.id, { name: v })} /></td>
                   <td className="px-4 py-2.5">
-                    <button onClick={() => { setLocFor(n.id); setLoc(n.lat !== null && n.lng !== null ? { lat: n.lat, lng: n.lng } : null); }} className={cn("flex items-center gap-1 text-xs", n.lat !== null ? "text-emerald-600" : "text-slate-400")}>
+                    <button onClick={() => { setLocFor(n.id); setLoc(n.lat !== null && n.lng !== null ? { lat: n.lat, lng: n.lng } : null); setPoly(n.polygon || null); }} className={cn("flex items-center gap-1 text-xs", n.lat !== null || n.polygon ? "text-emerald-600" : "text-slate-400")}>
                       <Icon name="map-pin" size={13} />
-                      {n.lat !== null && n.lng !== null ? `${n.lat.toFixed(3)}, ${n.lng.toFixed(3)}` : "Belgilanmagan"}
+                      {n.lat !== null && n.lng !== null ? `${n.lat.toFixed(3)}, ${n.lng.toFixed(3)}` : n.polygon ? "Hudud chizilgan" : "Belgilanmagan"}
                     </button>
                   </td>
                   <td className="px-4 py-2.5 text-slate-600">{strCount(n.id)}</td>
@@ -352,10 +356,10 @@ function NeighborhoodsTable({ districtId, onOpen }: { districtId: string; onOpen
             <h3 className="font-semibold text-slate-900">Joylashuvni belgilash</h3>
             <button onClick={() => setLocFor(null)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"><Icon name="close" size={16} /></button>
           </div>
-          <LocationPicker value={loc} onChange={(lat, lng) => setLoc({ lat, lng })} />
+          <LocationPicker value={loc} polygon={poly} onChange={(lat, lng, p) => { setLoc(lat && lng ? {lat, lng} : null); setPoly(p); }} />
           <div className="mt-3 flex justify-end gap-2">
             <button onClick={() => setLocFor(null)} className="btn-ghost">Bekor</button>
-            <button onClick={async () => { if (loc) await updateNeighborhood(locFor, { lat: loc.lat, lng: loc.lng }); setLocFor(null); }} className="btn-primary">Saqlash</button>
+            <button onClick={async () => { if (locFor) await updateNeighborhood(locFor, { lat: loc?.lat ?? null, lng: loc?.lng ?? null, polygon: poly }); setLocFor(null); }} className="btn-primary">Saqlash</button>
           </div>
         </div>
       )}

@@ -41,6 +41,7 @@ export interface District {
   region_id: string;
   lat: number | null;
   lng: number | null;
+  polygon: { lat: number; lng: number }[] | null;
 }
 
 export interface Neighborhood {
@@ -49,6 +50,7 @@ export interface Neighborhood {
   district_id: string;
   lat: number | null;
   lng: number | null;
+  polygon: { lat: number; lng: number }[] | null;
 }
 
 export interface Street {
