@@ -60,7 +60,7 @@ export function Points() {
         ))}
       </div>
 
-      {level === "regions" && <RegionsTable />}
+      {level === "regions" && <RegionsTable onOpen={(id) => setRegionId(id)} />}
       {level === "districts" && regionId && <DistrictsTable regionId={regionId} onOpen={(id) => setDistrictId(id)} />}
       {level === "neighborhoods" && districtId && <NeighborhoodsTable districtId={districtId} onOpen={(id) => setNeighborhoodId(id)} />}
       {level === "streets" && neighborhoodId && <StreetsTable neighborhoodId={neighborhoodId} onOpen={(id) => setStreetId(id)} />}
@@ -174,7 +174,7 @@ function AddRow({ onAdd, placeholder, twoFields }: { onAdd: (a: string, b: strin
 // =====================================================================
 // VILOYATLAR
 // =====================================================================
-function RegionsTable() {
+function RegionsTable({ onOpen }: { onOpen: (id: string) => void }) {
   const { regions, districts, addRegion } = useData();
   const distCount = (regionId: string) => districts.filter((d) => d.region_id === regionId).length;
 
@@ -193,10 +193,17 @@ function RegionsTable() {
           <tbody className="divide-y divide-slate-100">
             {regions.map((r) => (
               <tr key={r.id} className="transition hover:bg-slate-50">
-                <td className="px-4 py-2.5"><EditableCell value={r.name} onSave={() => {}} disabled /></td>
+                <td className="px-4 py-2.5">
+                  <button onClick={() => onOpen(r.id)} className="font-medium text-primary-700 hover:underline">
+                    {r.name}
+                  </button>
+                </td>
                 <td className="px-4 py-2.5"><span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-slate-600">{r.code}</span></td>
                 <td className="px-4 py-2.5 text-slate-600">{distCount(r.id)}</td>
-                <td className="px-4 py-2.5 text-right"><DeleteBtn onClick={() => {}} /></td>
+                <td className="px-4 py-2.5 text-right">
+                  <button onClick={() => onOpen(r.id)} className="mr-1 rounded-lg p-1.5 text-primary-700 hover:bg-primary-50" aria-label="Ochish"><Icon name="arrow-right" size={15} /></button>
+                  <DeleteBtn onClick={() => {}} />
+                </td>
               </tr>
             ))}
           </tbody>
