@@ -38,6 +38,11 @@ begin
     return jsonb_build_object('ok', false, 'error', 'Kod muddati tugagan. Iltimos klinikangizga murojaat qiling.');
   end if;
 
+  -- Klinika faol bo'lishi kerak (super_admin tasdiqlagan)
+  if not exists (select 1 from facilities where id = v_hosp.facility_id and is_active = true) then
+    return jsonb_build_object('ok', false, 'error', 'Klinika hali faollashtirilmagan. Klinika administratori bilan bog''laning.');
+  end if;
+
   -- Mijozni bemorga bog'lash
   update profiles set patient_id = v_hosp.patient_id where id = v_uid;
 
