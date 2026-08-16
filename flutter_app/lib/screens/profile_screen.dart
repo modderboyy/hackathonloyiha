@@ -81,11 +81,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     final body = Container(
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppColors.primaryDarker, AppColors.bg, AppColors.primaryDark],
-        ),
+        gradient: AppColors.bgGradient,
       ),
       child: SafeArea(
         child: SingleChildScrollView(
@@ -176,7 +172,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AppColors.primaryDarker,
+        backgroundColor: AppColors.bgCard,
         title: const Text('Profil va sog\'liq', style: TextStyle(color: AppColors.textPrimary)),
       ),
       body: body,

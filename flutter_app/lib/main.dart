@@ -38,11 +38,11 @@ class CareLinkApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        brightness: Brightness.dark,
+        brightness: Brightness.light,
         scaffoldBackgroundColor: AppColors.bg,
-        colorScheme: const ColorScheme.dark(
-          primary: AppColors.accent,
-          secondary: AppColors.cyan,
+        colorScheme: const ColorScheme.light(
+          primary: AppColors.primary,
+          secondary: AppColors.accent,
           surface: AppColors.bgCard,
         ),
         fontFamily: 'Roboto',

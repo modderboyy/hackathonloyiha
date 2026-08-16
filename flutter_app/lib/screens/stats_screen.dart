@@ -23,11 +23,7 @@ class StatsScreen extends StatelessWidget {
 
     return Container(
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppColors.primaryDarker, AppColors.bg, AppColors.primaryDark],
-        ),
+        gradient: AppColors.bgGradient,
       ),
       child: ListView(
         padding: const EdgeInsets.all(16),

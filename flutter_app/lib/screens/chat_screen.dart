@@ -172,11 +172,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     final body = Container(
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppColors.primaryDarker, AppColors.bg, AppColors.primaryDark],
-        ),
+        gradient: AppColors.bgGradient,
       ),
       child: Column(
         children: [
@@ -284,7 +280,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AppColors.primaryDarker,
+        backgroundColor: AppColors.bgCard,
         title: const Row(
           children: [
             Icon(Icons.smart_toy, color: AppColors.cyan),

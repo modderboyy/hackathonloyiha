@@ -114,10 +114,14 @@ class SupabaseService {
 
   /// Klinik kodni faollashtirish (kod = statsionar kodi)
   Future<String?> activateClinicCode(String code) async {
-    final res = await client.rpc('activate_clinic_code', params: {'p_code': code});
-    final data = res as Map<String, dynamic>;
-    if (data['ok'] == true) return null;
-    return data['error']?.toString() ?? 'Xatolik yuz berdi';
+    try {
+      final res = await client.rpc('activate_clinic_code', params: {'p_code': code});
+      final data = (res as Map?) ?? {};
+      if (data['ok'] == true) return null;
+      return data['error']?.toString() ?? 'Kodni faollashtirishda xatolik';
+    } catch (e) {
+      return 'Xatolik: ${e.toString()}';
+    }
   }
 
   // ---------- Dori-darmon (bemordan sinxron) ----------

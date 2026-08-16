@@ -116,23 +116,23 @@ class SlantButton extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 if (loading)
-                  const SizedBox(
+                  SizedBox(
                     height: 18,
                     width: 18,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Colors.white,
+                      color: outline ? AppColors.accent : Colors.white,
                     ),
                   )
                 else ...[
                   if (icon != null) ...[
-                    Icon(icon, color: Colors.white, size: 18),
+                    Icon(icon, color: outline ? AppColors.accent : Colors.white, size: 18),
                     const SizedBox(width: 8),
                   ],
                   Text(
                     label,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: outline ? AppColors.primary : Colors.white,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.5,
                     ),

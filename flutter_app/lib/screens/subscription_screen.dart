@@ -17,11 +17,7 @@ class SubscriptionScreen extends StatelessWidget {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AppColors.primaryDarker, AppColors.bg, AppColors.primaryDark],
-          ),
+          gradient: AppColors.bgGradient,
         ),
         child: SafeArea(
           child: SingleChildScrollView(
@@ -41,53 +37,58 @@ class SubscriptionScreen extends StatelessWidget {
                 const Center(child: AccentLine(width: 60)),
                 const SizedBox(height: 32),
 
-                // --- B2C Individual ---
-                GlassCard(
-                  cut: 16,
-                  tint: AppColors.primaryDark,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.person, color: AppColors.accent, size: 22),
-                          const SizedBox(width: 10),
-                          const NeonText('INDIVIDUAL', size: 18),
-                          const Spacer(),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.accent.withOpacity(0.2),
-                              border: Border.all(color: AppColors.accent.withOpacity(0.5)),
+                // --- B2C Individual (deep blue premium karta) ---
+                ClipPath(
+                  clipper: const SlantClipper(cut: 16),
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: const BoxDecoration(
+                      gradient: AppColors.primaryGradient,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.person, color: Colors.white, size: 22),
+                            const SizedBox(width: 10),
+                            const Text('INDIVIDUAL', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.15),
+                                border: Border.all(color: Colors.white.withOpacity(0.4)),
+                              ),
+                              child: const Text('B2C', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
                             ),
-                            child: const Text('B2C', style: TextStyle(color: AppColors.cyan, fontSize: 11, fontWeight: FontWeight.bold)),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        '\$${Config.premiumPriceUsd.toStringAsFixed(0)}',
-                        style: const TextStyle(
-                          fontSize: 48,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          shadows: [Shadow(color: AppColors.accent, blurRadius: 20)],
+                          ],
                         ),
-                      ),
-                      const Text('/ oy', style: TextStyle(color: AppColors.textSecondary)),
-                      const SizedBox(height: 16),
-                      const _Feature('Har soatda AI tekshiruvi'),
-                      const _Feature('Push bildirishnomalar va SMS'),
-                      const _Feature('Dori-darmon eslatmalari'),
-                      const _Feature('24/7 AI chatbot'),
-                      const SizedBox(height: 20),
-                      SlantButton(
-                        label: 'SOTIB OLISH',
-                        icon: Icons.bolt,
-                        loading: state.loading,
-                        onPressed: () => _showPayment(context),
-                      ),
-                    ],
+                        const SizedBox(height: 16),
+                        Text(
+                          '\$${Config.premiumPriceUsd.toStringAsFixed(0)}',
+                          style: const TextStyle(
+                            fontSize: 48,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            shadows: [Shadow(color: Colors.white24, blurRadius: 20)],
+                          ),
+                        ),
+                        const Text('/ oy', style: TextStyle(color: Colors.white70)),
+                        const SizedBox(height: 16),
+                        const _Feature('Har soatda AI tekshiruvi', light: true),
+                        const _Feature('Push bildirishnomalar va SMS', light: true),
+                        const _Feature('Dori-darmon eslatmalari', light: true),
+                        const _Feature('24/7 AI chatbot', light: true),
+                        const SizedBox(height: 20),
+                        SlantButton(
+                          label: 'SOTIB OLISH',
+                          icon: Icons.bolt,
+                          loading: state.loading,
+                          onPressed: () => _showPayment(context),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
 
@@ -204,7 +205,8 @@ class SubscriptionScreen extends StatelessWidget {
 
 class _Feature extends StatelessWidget {
   final String text;
-  const _Feature(this.text);
+  final bool light;
+  const _Feature(this.text, {this.light = false});
 
   @override
   Widget build(BuildContext context) {
@@ -212,9 +214,14 @@ class _Feature extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          const Icon(Icons.check_circle, color: AppColors.cyan, size: 16),
+          Icon(Icons.check_circle, color: light ? Colors.white70 : AppColors.cyan, size: 16),
           const SizedBox(width: 8),
-          Expanded(child: Text(text, style: const TextStyle(color: AppColors.textSecondary))),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(color: light ? Colors.white : AppColors.textSecondary),
+            ),
+          ),
         ],
       ),
     );

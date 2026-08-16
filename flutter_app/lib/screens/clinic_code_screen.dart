@@ -29,7 +29,12 @@ class _ClinicCodeScreenState extends State<ClinicCodeScreen> {
       _busy = true;
       _error = null;
     });
-    final error = await context.read<AppState>().activateClinic(code);
+    String? error;
+    try {
+      error = await context.read<AppState>().activateClinic(code);
+    } catch (e) {
+      error = 'Xatolik: ${e.toString()}';
+    }
     if (!mounted) return;
     setState(() => _busy = false);
     if (error != null) {
@@ -51,11 +56,7 @@ class _ClinicCodeScreenState extends State<ClinicCodeScreen> {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AppColors.primaryDarker, AppColors.bg, AppColors.primaryDark],
-          ),
+          gradient: AppColors.bgGradient,
         ),
         child: SafeArea(
           child: SingleChildScrollView(

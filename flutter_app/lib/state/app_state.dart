@@ -157,7 +157,11 @@ class AppState extends ChangeNotifier {
   Future<String?> activateClinic(String code) async {
     final error = await db.activateClinicCode(code);
     if (error == null) {
-      await loadAll(); // bemor ma'lumotlari + dori-darmon sinxronlanadi
+      // Obuna darhol aktiv — loadAll xatosi bo'lsa ham oqimni to'xtatmaymiz
+      try {
+        await loadAll();
+      } catch (_) {}
+      notifyListeners();
     }
     return error;
   }

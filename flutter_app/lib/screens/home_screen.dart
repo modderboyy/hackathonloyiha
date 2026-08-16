@@ -39,7 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AppColors.primaryDarker,
+        backgroundColor: AppColors.bgCard,
         elevation: 0,
         title: const Text(
           'CareLink',
@@ -62,11 +62,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AppColors.primaryDarker, AppColors.bg, AppColors.primaryDark],
-          ),
+          gradient: AppColors.bgGradient,
         ),
         child: IndexedStack(
           index: _tab,
@@ -234,7 +230,7 @@ class _HomeTab extends StatelessWidget {
             const SizedBox(height: 12),
             GlassCard(
               cut: 14,
-              tint: AppColors.primaryDark,
+              tint: AppColors.accent.withOpacity(0.08),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -342,8 +338,8 @@ class _BottomNav extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.primaryDarker.withOpacity(0.95),
-        border: const Border(top: BorderSide(color: Color(0xFF1E293B))),
+        color: AppColors.bgCard,
+        border: const Border(top: BorderSide(color: Color(0xFFE2E8F0))),
       ),
       child: SafeArea(
         top: false,
