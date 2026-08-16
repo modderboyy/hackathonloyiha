@@ -9,7 +9,7 @@ class OpenAIService {
 
   /// Bemorning sog'liq kontekstini berib, chatbotga savol yuborish
   Future<String> chat(String userMessage, {HealthData? health}) async {
-    _history.add(ChatMessage(role: 'user', content: userMessage));
+    _history.add(ChatMessage(role: 'user', content: userMessage, createdAt: DateTime.now()));
 
     final systemPrompt = _buildSystemPrompt(health);
     final messages = [
@@ -41,7 +41,7 @@ class OpenAIService {
     final json = jsonDecode(utf8.decode(res.bodyBytes));
     final reply = json['choices']?[0]?['message']?['content']?.toString()?.trim();
     if (reply == null || reply.isEmpty) return "Uzr, tushunmadim.";
-    _history.add(ChatMessage(role: 'assistant', content: reply));
+    _history.add(ChatMessage(role: 'assistant', content: reply, createdAt: DateTime.now()));
     return reply;
   }
 
