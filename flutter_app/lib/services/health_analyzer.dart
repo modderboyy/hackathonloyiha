@@ -59,7 +59,7 @@ class HealthAnalyzer {
     }
 
     // Severity bo'yicha saralash: high → medium → low
-    problems.sort((a, b) => _sev(b) - _sev(a));
+    problems.sort((a, b) => _sev(b.severity) - _sev(a.severity));
     return problems;
   }
 

@@ -63,6 +63,8 @@ class ReminderService {
         scheduled,
         details,
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time,
       );
       return;
@@ -76,6 +78,8 @@ class ReminderService {
         tz.TZDateTime.from(r.remindOnceAt!, tz.local),
         details,
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
       );
     }
   }
