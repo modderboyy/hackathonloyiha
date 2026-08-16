@@ -8,7 +8,8 @@ class Config {
 
   // OpenAI (faqat AI chatbot va soatlik tekshiruv uchun)
   // https://platform.openai.com/api-keys dan oling
-  static const String openaiApiKey = 'YOUR-OPENAI-KEY';
+  static const String openaiApiKey =
+      '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';
 
   // Premium obuna narxi
   static const double premiumPriceUsd = 5.0;
