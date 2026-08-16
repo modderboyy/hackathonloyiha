@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'config.dart';
 import 'state/app_state.dart';
+import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
 
 Future<void> main() async {
@@ -33,9 +33,20 @@ class CareLinkApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ShadApp(
+    return MaterialApp(
       title: 'CareLink — Bemor ilovasi',
       debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        useMaterial3: true,
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: AppColors.bg,
+        colorScheme: const ColorScheme.dark(
+          primary: AppColors.accent,
+          secondary: AppColors.cyan,
+          surface: AppColors.bgCard,
+        ),
+        fontFamily: 'Roboto',
+      ),
       home: const SplashScreen(),
     );
   }

@@ -3,17 +3,16 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config.dart';
 import '../state/app_state.dart';
+import '../theme/app_theme.dart';
+import '../widgets/custom_ui.dart';
 
-/// BLOKLASH ekrani — bemor javob bermasa, telefon qulflanadi.
-/// 102 (politsiya), 103 (tez tibbiy yordam), Yopish, Yaxshiman, Yomonman.
+/// BLOKLASH ekrani — bemor javob bermasa telefon qulflanadi.
 class LockScreen extends StatelessWidget {
   const LockScreen({super.key});
 
   Future<void> _call(String number) async {
     final uri = Uri.parse('tel:$number');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    }
+    if (await canLaunchUrl(uri)) await launchUrl(uri);
   }
 
   @override
@@ -21,95 +20,96 @@ class LockScreen extends StatelessWidget {
     final state = context.watch<AppState>();
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              const Spacer(),
-              const Icon(Icons.lock, color: Colors.redAccent, size: 64),
-              const SizedBox(height: 16),
-              const Text(
-                'Qurilma qulflandi',
-                style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Siz tekshiruv xabariga javob bermadingiz. Iltimos, holatingizni bildiring.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white70),
-              ),
-              const SizedBox(height: 32),
-
-              // Favqulodda raqamlar
-              Row(
-                children: [
-                  _EmergencyButton(
-                    number: Config.emergency102,
-                    label: 'Politsiya',
-                    icon: Icons.local_police,
-                    color: Colors.blue,
-                    onTap: () => _call(Config.emergency102),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF1A0A0A), AppColors.primaryDarker],
+          ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                const Spacer(),
+                // Pulsatsiyalanuvchi qulf
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.red.withOpacity(0.6), width: 2),
+                    boxShadow: [
+                      BoxShadow(color: AppColors.red.withOpacity(0.5), blurRadius: 24, spreadRadius: 2),
+                    ],
                   ),
-                  const SizedBox(width: 16),
-                  _EmergencyButton(
-                    number: Config.emergency103,
-                    label: 'Tez yordam',
-                    icon: Icons.medical_services,
-                    color: Colors.red,
-                    onTap: () => _call(Config.emergency103),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
+                  child: const Icon(Icons.lock, color: AppColors.red, size: 40),
+                ),
+                const SizedBox(height: 20),
+                const NeonText('QURILMA QULFLANDI', size: 22, color: Colors.white, align: TextAlign.center),
+                const SizedBox(height: 8),
+                const Text(
+                  'Siz tekshiruv xabariga javob bermadingiz.\nIltimos holatingizni bildiring.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 32),
 
-              // Holat tugmalari
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
+                // Favqulodda raqamlar
+                Row(
+                  children: [
+                    _Emergency(
+                      number: Config.emergency102,
+                      label: 'POLITSIYA',
+                      icon: Icons.local_police,
+                      color: AppColors.accent,
+                      onTap: () => _call(Config.emergency102),
+                    ),
+                    const SizedBox(width: 14),
+                    _Emergency(
+                      number: Config.emergency103,
+                      label: 'TEZ YORDAM',
+                      icon: Icons.medical_services,
+                      color: AppColors.red,
+                      onTap: () => _call(Config.emergency103),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                SlantButton(
+                  label: 'YAXSHIMAN',
+                  icon: Icons.check,
                   onPressed: () {
                     state.unlock();
-                    state.answerCheckin(state.checkins.isNotEmpty ? state.checkins.first.id : '', 'Yaxshiman', isBad: false);
+                    if (state.checkins.isNotEmpty) {
+                      state.answerCheckin(state.checkins.first.id, 'Yaxshiman', isBad: false);
+                    }
                   },
-                  style: FilledButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                  ),
-                  child: const Text('Yaxshiman', style: TextStyle(fontSize: 18)),
                 ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
+                const SizedBox(height: 12),
+                SlantButton(
+                  label: 'YOMONMAN — TEZ YORDAM',
+                  icon: Icons.warning,
+                  outline: true,
                   onPressed: () => _call(Config.emergency103),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                  ),
-                  child: const Text('Yomonman — tez yordam chaqirish', style: TextStyle(fontSize: 18)),
                 ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: () => state.unlock(),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    side: const BorderSide(color: Colors.white54),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                const SizedBox(height: 12),
+                Center(
+                  child: TextButton(
+                    onPressed: () => state.unlock(),
+                    child: const Text('YOPISH', style: TextStyle(color: AppColors.textMuted)),
                   ),
-                  child: const Text('Yopish'),
                 ),
-              ),
-              const Spacer(),
-              const Text(
-                'Favqulodda vaziyatda 103 ga qo\'ng\'iroq qiling.',
-                style: TextStyle(color: Colors.white38, fontSize: 12),
-              ),
-            ],
+                const Spacer(),
+                const Text(
+                  'Favqulodda vaziyatda 103 ga qo\'ng\'iroq qiling.',
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -117,14 +117,14 @@ class LockScreen extends StatelessWidget {
   }
 }
 
-class _EmergencyButton extends StatelessWidget {
+class _Emergency extends StatelessWidget {
   final String number;
   final String label;
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
 
-  const _EmergencyButton({
+  const _Emergency({
     required this.number,
     required this.label,
     required this.icon,
@@ -135,22 +135,26 @@ class _EmergencyButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: InkWell(
+      child: GestureDetector(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 24),
-          decoration: BoxDecoration(
-            color: Colors.white10,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: color.withOpacity(0.5)),
-          ),
+        child: GlassCard(
+          padding: const EdgeInsets.symmetric(vertical: 22),
+          cut: 14,
+          tint: AppColors.surface,
           child: Column(
             children: [
-              Icon(icon, color: color, size: 40),
+              Icon(icon, color: color, size: 36),
               const SizedBox(height: 8),
-              Text(number, style: TextStyle(color: color, fontSize: 28, fontWeight: FontWeight.bold)),
-              Text(label, style: const TextStyle(color: Colors.white70)),
+              Text(
+                number,
+                style: TextStyle(
+                  fontSize: 30,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                  shadows: [Shadow(color: color.withOpacity(0.6), blurRadius: 14)],
+                ),
+              ),
+              Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
             ],
           ),
         ),

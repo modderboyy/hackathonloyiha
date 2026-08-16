@@ -80,7 +80,10 @@ class _ClinicCodeScreenState extends State<ClinicCodeScreen> {
                           .map((c) => ShadOption(value: c.id, child: Text(c.name)))
                           .toList(),
                       selectedOptionBuilder: (context, v) {
-                        final c = _clinics.where((x) => x.id == v).firstOrNull;
+                        Clinic? c;
+                        for (final x in _clinics) {
+                          if (x.id == v) { c = x; break; }
+                        }
                         return Text(c?.name ?? 'Klinikani tanlang');
                       },
                       onChanged: (v) => setState(() => _selectedClinic = v),

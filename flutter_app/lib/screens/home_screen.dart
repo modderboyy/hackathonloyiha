@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../state/app_state.dart';
+import '../theme/app_theme.dart';
+import '../widgets/custom_ui.dart';
 import '../widgets/health_dashboard.dart';
 import '../widgets/typewriter.dart';
 import 'chat_screen.dart';
@@ -9,7 +11,6 @@ import 'profile_screen.dart';
 import 'reminders_screen.dart';
 import 'subscription_screen.dart';
 
-/// Bosh ekran — sog'liq holati, obuna, so'nggi tekshiruvlar va AI chatbot.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -21,7 +22,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Bloklangan holatni tekshirish
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AppState>().checkLocked();
     });
@@ -31,138 +31,258 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
 
-    // Telefon qulflangan bo'lsa — bloklash ekrani
     if (state.locked) return const LockScreen();
-
-    // Obunasiz — obuna ekraniga qaytarish (qat'iy)
     if (!state.hasSubscription) return const SubscriptionScreen();
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('CareLink'),
+        backgroundColor: AppColors.primaryDarker,
+        elevation: 0,
+        title: const Text(
+          'CareLink',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+            color: AppColors.textPrimary,
+          ),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.alarm),
+            icon: const Icon(Icons.alarm, color: AppColors.cyan),
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RemindersScreen())),
           ),
           IconButton(
-            icon: const Icon(Icons.person_outline),
+            icon: const Icon(Icons.person_outline, color: AppColors.textSecondary),
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileScreen())),
           ),
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.logout, color: AppColors.textSecondary),
             onPressed: () async => await state.logout(),
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () => state.loadAll(),
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            // Salomlashish
-            Card(
-              child: ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: Color(0xFF1E3A8A),
-                  child: Icon(Icons.person, color: Colors.white),
-                ),
-                title: Text('Salom, ${state.profile?.fullName ?? "bemor"}!'),
-                subtitle: Text(_subLabel(state)),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Dori-darmonlar (klinikadan sinxronlangan)
-            if (state.medications.isNotEmpty) ...[
-              const Text('Dori-darmonlar (shifokor buyurgan)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              ...state.medications.map((m) => Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.medication, color: Color(0xFF1E3A8A)),
-                      title: Text(m.name),
-                      subtitle: Text([m.dosage, m.frequency].whereType<String>().join(' · ')),
-                      isThreeLine: m.notes != null,
-                    ),
-                  )),
-              const SizedBox(height: 16),
-            ],
-
-            // Vizual sog'liq paneli
-            const Text('Sog\'liq holati', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            HealthDashboard(health: state.health),
-            const SizedBox(height: 16),
-
-            // AI chatbot
-            const Text('AI yordamchi', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Card(
-              child: ListTile(
-                leading: const Icon(Icons.smart_toy, color: Color(0xFF1E3A8A)),
-                title: const Text('Chatbot bilan suhbat'),
-                subtitle: const Text('Savollaringizga javob beradi, holatingizni kuzatadi'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ChatScreen())),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // So'nggi tekshiruvlar
-            const Text('So\'nggi tekshiruvlar', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            if (state.checkins.isEmpty)
-              const Card(
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text('Hozircha tekshiruvlar yo\'q. Premium obuna bilan har soatda AI sizni tekshiradi.'),
-                ),
-              )
-            else
-              ...state.checkins.take(5).map((c) => Card(
-                    child: ListTile(
-                      leading: Icon(
-                        c.status == 'answered_fine' ? Icons.check_circle : c.status == 'answered_bad' ? Icons.warning : c.status == 'locked' ? Icons.lock : Icons.hourglass_bottom,
-                        color: c.status == 'answered_fine' ? Colors.green : c.status == 'answered_bad' ? Colors.orange : c.status == 'locked' ? Colors.red : Colors.grey,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppColors.primaryDarker, AppColors.bg, AppColors.primaryDark],
+          ),
+        ),
+        child: RefreshIndicator(
+          onRefresh: () => state.loadAll(),
+          color: AppColors.cyan,
+          backgroundColor: AppColors.surface,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              // Salomlashish
+              GlassCard(
+                cut: 14,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        gradient: AppColors.primaryGradient,
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      title: Text(c.aiMessage, maxLines: 2, overflow: TextOverflow.ellipsis),
-                      subtitle: Text('${_statusLabel(c.status)} · ${c.createdAt.toString().substring(0, 16)}'),
+                      child: const Icon(Icons.person, color: Colors.white, size: 26),
                     ),
-                  )),
-
-            // Tekshiruv javobi (eng so'nggi 'sent' bo'lsa)
-            if (state.checkins.isNotEmpty && state.checkins.first.status == 'sent') ...[
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Salom, ${state.profile?.fullName ?? "bemor"}!',
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Row(
+                            children: [
+                              StatusDot(
+                                color: state.hasSubscription ? AppColors.emerald : AppColors.red,
+                                pulse: true,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                _subLabel(state),
+                                style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 16),
-              Card(
-                color: const Color(0xFFEFF6FF),
-                child: Padding(
+
+              // Dori-darmon (sinxronlangan)
+              if (state.medications.isNotEmpty) ...[
+                const NeonText('DORI-DARMONLAR', size: 16),
+                const SizedBox(height: 10),
+                ...state.medications.map((m) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: GlassCard(
+                        cut: 10,
+                        padding: const EdgeInsets.all(14),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: AppColors.accent.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.medication, color: AppColors.cyan, size: 20),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(m.name, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+                                  if (m.dosage != null || m.frequency != null)
+                                    Text(
+                                      [m.dosage, m.frequency].whereType<String>().join(' · '),
+                                      style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )),
+                const SizedBox(height: 16),
+              ],
+
+              // Sog'liq paneli
+              const NeonText('SOG\'LIQ HOLATI', size: 16),
+              const SizedBox(height: 10),
+              HealthDashboard(health: state.health),
+              const SizedBox(height: 16),
+
+              // AI chatbot
+              const NeonText('AI YORDAMCHI', size: 16),
+              const SizedBox(height: 10),
+              GestureDetector(
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ChatScreen())),
+                child: GlassCard(
+                  cut: 12,
                   padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          gradient: AppColors.neonGradient,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.smart_toy, color: Colors.white, size: 22),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Chatbot bilan suhbat', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+                            Text('Holatingizni kuzatadi, savollarga javob beradi', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, color: AppColors.textMuted),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // So'nggi tekshiruvlar
+              const NeonText('SO\'NGGI TEKSHIRUVLAR', size: 16),
+              const SizedBox(height: 10),
+              if (state.checkins.isEmpty)
+                const GlassCard(
+                  cut: 10,
+                  child: Text('Hozircha tekshiruvlar yo\'q. Premium obuna bilan har soatda AI sizni tekshiradi.', style: TextStyle(color: AppColors.textSecondary)),
+                )
+              else
+                ...state.checkins.take(5).map((c) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: GlassCard(
+                        cut: 10,
+                        padding: const EdgeInsets.all(14),
+                        child: Row(
+                          children: [
+                            Icon(_checkinIcon(c.status), color: _checkinColor(c.status), size: 22),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(c.aiMessage, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.textPrimary, fontSize: 13)),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '${_statusLabel(c.status)} · ${c.createdAt.toString().substring(0, 16)}',
+                                    style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )),
+
+              // Faol tekshiruvga javob
+              if (state.checkins.isNotEmpty && state.checkins.first.status == 'sent') ...[
+                const SizedBox(height: 12),
+                GlassCard(
+                  cut: 14,
+                  tint: AppColors.primaryDark,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Text('Oxirgi tekshiruv:', style: TextStyle(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 4),
+                      const Row(
+                        children: [
+                          Icon(Icons.notifications_active, color: AppColors.cyan, size: 18),
+                          SizedBox(width: 8),
+                          Text('OXIRGI TEKSHIRUV', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
                       Typewriter(
                         text: state.checkins.first.aiMessage,
                         speed: const Duration(milliseconds: 25),
-                        style: const TextStyle(fontSize: 14, height: 1.4),
+                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 14, height: 1.4),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 14),
                       Row(
                         children: [
                           Expanded(
-                            child: FilledButton(
+                            child: SlantButton(
+                              label: 'YAXSHIMAN',
+                              icon: Icons.check,
                               onPressed: () => state.answerCheckin(state.checkins.first.id, 'Yaxshiman', isBad: false),
-                              style: FilledButton.styleFrom(backgroundColor: Colors.green),
-                              child: const Text('Yaxshiman'),
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 10),
                           Expanded(
-                            child: FilledButton(
+                            child: SlantButton(
+                              label: 'YOMONMAN',
+                              icon: Icons.warning,
+                              outline: true,
                               onPressed: () => state.answerCheckin(state.checkins.first.id, 'Yomonman', isBad: true),
-                              style: FilledButton.styleFrom(backgroundColor: Colors.red),
-                              child: const Text('Yomonman'),
                             ),
                           ),
                         ],
@@ -170,9 +290,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 ),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -186,6 +306,24 @@ class _HomeScreenState extends State<HomeScreen> {
       return 'Klinik obuna ✓ (${days != null && days > 0 ? "$days kun qoldi" : "faol"})';
     }
     return 'Individual obuna ✓';
+  }
+
+  IconData _checkinIcon(String s) {
+    switch (s) {
+      case 'answered_fine': return Icons.check_circle;
+      case 'answered_bad': return Icons.warning;
+      case 'locked': return Icons.lock;
+      default: return Icons.hourglass_bottom;
+    }
+  }
+
+  Color _checkinColor(String s) {
+    switch (s) {
+      case 'answered_fine': return AppColors.emerald;
+      case 'answered_bad': return AppColors.amber;
+      case 'locked': return AppColors.red;
+      default: return AppColors.textMuted;
+    }
   }
 
   String _statusLabel(String s) {
