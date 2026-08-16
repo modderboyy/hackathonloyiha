@@ -194,10 +194,69 @@ class Checkin {
 }
 
 class ChatMessage {
+  final String? id;
   final String role; // 'user' yoki 'assistant'
   final String content;
+  final DateTime createdAt;
 
-  ChatMessage({required this.role, required this.content});
+  ChatMessage({
+    this.id,
+    required this.role,
+    required this.content,
+    required this.createdAt,
+  });
+
+  factory ChatMessage.fromJson(Map<String, dynamic> json) => ChatMessage(
+        id: json['id'],
+        role: json['role'] ?? 'user',
+        content: json['content'] ?? '',
+        createdAt: json['created_at'] != null
+            ? DateTime.parse(json['created_at'])
+            : DateTime.now(),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'role': role,
+        'content': content,
+        'created_at': createdAt.toIso8601String(),
+      };
+}
+
+// --- Oila a'zosi ---
+class FamilyMember {
+  final String id;
+  final String name;
+  final String phone;
+  final String? relationship;
+  final int priority;
+  final bool isActive;
+
+  FamilyMember({
+    required this.id,
+    required this.name,
+    required this.phone,
+    this.relationship,
+    this.priority = 1,
+    this.isActive = true,
+  });
+
+  factory FamilyMember.fromJson(Map<String, dynamic> json) => FamilyMember(
+        id: json['id'],
+        name: json['name'] ?? '',
+        phone: json['phone'] ?? '',
+        relationship: json['relationship'],
+        priority: json['priority'] ?? 1,
+        isActive: json['is_active'] ?? true,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'phone': phone,
+        'relationship': relationship,
+        'priority': priority,
+        'is_active': isActive,
+      };
 }
 
 // --- Eslatmalar ---

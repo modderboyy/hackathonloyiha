@@ -5,6 +5,7 @@ import '../services/supabase_service.dart';
 import '../services/openai_service.dart';
 import '../services/notification_service.dart';
 import '../services/reminder_service.dart';
+import '../services/onesignal_service.dart';
 
 /// Ilova holati — auth, sog'liq, obuna, tekshiruv va bloklash.
 class AppState extends ChangeNotifier {
@@ -12,6 +13,7 @@ class AppState extends ChangeNotifier {
   final OpenAIService ai = OpenAIService();
   final NotificationService notifications = NotificationService();
   final ReminderService reminders = ReminderService();
+  final OneSignalService oneSignal = OneSignalService();
 
   UserProfile? profile;
   HealthData? health;
@@ -19,6 +21,7 @@ class AppState extends ChangeNotifier {
   List<Checkin> checkins = [];
   List<Reminder> reminderList = [];
   List<Medication> medications = [];
+  List<FamilyMember> familyMembers = [];
   bool locked = false;
   bool loading = true;
   String? error;
@@ -30,7 +33,9 @@ class AppState extends ChangeNotifier {
   Future<void> init() async {
     try {
       await notifications.init();
+      await oneSignal.init();
       if (isLoggedIn) {
+        await _linkOneSignal();
         await loadAll();
       }
     } catch (e) {
@@ -41,6 +46,16 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  Future<void> _linkOneSignal() async {
+    final uid = db.userId;
+    if (uid == null) return;
+    await oneSignal.linkUser(uid);
+    final playerId = await oneSignal.getPlayerId();
+    if (playerId != null) {
+      await db.saveOnesignalId(playerId);
+    }
+  }
+
   Future<void> loadAll() async {
     profile = await db.getProfile();
     health = await db.getHealth();
@@ -48,6 +63,7 @@ class AppState extends ChangeNotifier {
     checkins = await db.getCheckins();
     reminderList = await db.getReminders();
     medications = await db.getMedications();
+    familyMembers = await db.getFamilyMembers();
     await checkLocked();
   }
 
@@ -99,11 +115,25 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    await oneSignal.logout();
     await db.logout();
     profile = null;
     health = null;
     subscription = null;
     locked = false;
+    notifyListeners();
+  }
+
+  // ---------- Oila a'zolari ----------
+  Future<void> addFamily(FamilyMember m) async {
+    await db.addFamilyMember(m);
+    familyMembers = await db.getFamilyMembers();
+    notifyListeners();
+  }
+
+  Future<void> removeFamily(String id) async {
+    await db.deleteFamilyMember(id);
+    familyMembers = familyMembers.where((f) => f.id != id).toList();
     notifyListeners();
   }
 

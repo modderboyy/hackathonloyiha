@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { DataProvider, useData } from "@/lib/data";
 import { Icon, Logo } from "@/components/icons";
-import { ROLE_LABELS } from "@/lib/types";
+import { ROLE_LABELS, type Notification } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Overview } from "@/components/views/overview";
 import { Patients } from "@/components/views/patients";
@@ -43,13 +43,47 @@ export default function DashboardPage() {
   );
 }
 
+// Tepadan chiqadigan realtime xabarnoma popup
+function NotificationPopup({ notification }: { notification: Notification }) {
+  const icon = (() => {
+    switch (notification.type) {
+      case "follow_up": return "clipboard";
+      case "discharge": return "bed";
+      case "alert": return "alert-triangle";
+      default: return "info";
+    }
+  })();
+
+  const tone = (() => {
+    switch (notification.type) {
+      case "follow_up": return "border-primary-300 bg-primary-50";
+      case "alert": return "border-red-300 bg-red-50";
+      default: return "border-slate-300 bg-white";
+    }
+  })();
+
+  return (
+    <div className="pointer-events-none fixed inset-x-0 top-4 z-[100] flex justify-center px-4">
+      <div className={`view-enter pointer-events-auto flex w-full max-w-md items-start gap-3 rounded-xl border shadow-lg backdrop-blur-md ${tone}`}>
+        <span className="mt-3 ml-3 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-800 text-white">
+          <Icon name={icon} size={16} />
+        </span>
+        <div className="min-w-0 flex-1 py-3 pr-4">
+          <p className="text-sm font-semibold text-slate-900">{notification.title}</p>
+          {notification.body && <p className="mt-0.5 text-sm text-slate-600 line-clamp-2">{notification.body}</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Shell() {
   const [view, setView] = useState<View>("overview");
   const [regionFilter, setRegionFilter] = useState<string | null>(null);
   const [navOpen, setNavOpen] = useState(false);
   const data = useData();
 
-  const { ready, notConfigured, profile, notifications } = data;
+  const { ready, notConfigured, profile, notifications, liveNotification } = data;
   const unread = notifications.filter((n) => !n.is_read).length;
   const isAdmin =
     profile?.role === "super_admin" ||
@@ -103,6 +137,9 @@ function Shell() {
 
   return (
     <div className="flex min-h-screen">
+      {/* Realtime xabarnoma popup (tepada) */}
+      {liveNotification && <NotificationPopup notification={liveNotification} />}
+
       {/* Overlay (mobil) */}
       {navOpen && <div className="fixed inset-0 z-30 bg-slate-900/40 backdrop-blur-sm lg:hidden" onClick={() => setNavOpen(false)} />}
 

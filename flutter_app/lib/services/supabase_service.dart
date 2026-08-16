@@ -204,6 +204,63 @@ class SupabaseService {
     await client.from('reminders').delete().eq('id', reminderId);
   }
 
+  // ---------- Chat (pagination + saqlash) ----------
+  /// Oxirgi N ta xabarni olish (pagination: offset orqali)
+  Future<List<ChatMessage>> getChatMessages({int limit = 20, int offset = 0}) async {
+    final id = userId;
+    if (id == null) return [];
+    final res = await client
+        .from('chat_messages')
+        .select()
+        .eq('client_id', id)
+        .order('created_at', ascending: false)
+        .range(offset, offset + limit - 1);
+    final list = (res as List).map((e) => ChatMessage.fromJson(e)).toList();
+    // Eng eski pastda bo'lishi uchun teskari tartibda qaytaramiz
+    return list.reversed.toList();
+  }
+
+  /// Xabarni saqlash
+  Future<ChatMessage> saveChatMessage({required String role, required String content}) async {
+    final id = userId;
+    if (id == null) throw Exception('Avtorizatsiya kerak');
+    final res = await client
+        .from('chat_messages')
+        .insert({'client_id': id, 'role': role, 'content': content})
+        .select()
+        .single();
+    return ChatMessage.fromJson(res);
+  }
+
+  // ---------- Oila a'zolari ----------
+  Future<List<FamilyMember>> getFamilyMembers() async {
+    final id = userId;
+    if (id == null) return [];
+    final res = await client
+        .from('family_members')
+        .select()
+        .eq('client_id', id)
+        .order('priority');
+    return (res as List).map((e) => FamilyMember.fromJson(e)).toList();
+  }
+
+  Future<void> addFamilyMember(FamilyMember m) async {
+    final id = userId;
+    if (id == null) return;
+    await client.from('family_members').insert({'client_id': id, ...m.toJson()});
+  }
+
+  Future<void> deleteFamilyMember(String memberId) async {
+    await client.from('family_members').delete().eq('id', memberId);
+  }
+
+  // ---------- OneSignal ----------
+  Future<void> saveOnesignalId(String onesignalId) async {
+    final id = userId;
+    if (id == null) return;
+    await client.from('profiles').update({'onesignal_id': onesignalId}).eq('id', id);
+  }
+
   /// Realtime: yangi check-in yoki bloklashni tinglash
   Stream<List<Map<String, dynamic>>> watchCheckins() {
     final id = userId;

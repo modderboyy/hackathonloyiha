@@ -66,6 +66,7 @@ interface Data {
   discharges: Discharge[];
   followUps: FollowUp[];
   notifications: Notification[];
+  liveNotification: Notification | null;
   audit: AuditEntry[];
   approvals: Approval[];
 
@@ -136,6 +137,29 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [approvals, setApprovals] = useState<Approval[]>([]);
+  const [liveNotification, setLiveNotification] = useState<Notification | null>(null);
+
+  // Realtime: yangi xabarnomalar (popup uchun)
+  useEffect(() => {
+    if (!supabase || !profile) return;
+    const channel = supabase
+      .channel("notifications-live")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "notifications", filter: `recipient_id=eq.${profile.id}` },
+        (payload) => {
+          const n = payload.new as Notification;
+          setNotifications((prev) => [n, ...prev]);
+          setLiveNotification(n);
+          // 5 soniyadan keyin popupni yopish
+          setTimeout(() => setLiveNotification(null), 5000);
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase, profile]);
 
   useEffect(() => {
     if (!supabase) {
@@ -489,7 +513,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     () => ({
       ready, notConfigured, profile, profiles, regions, districts, neighborhoods,
       streets, buildings, specialties, facilities, patients, visits, vitals, hospitalizations,
-      discharges, followUps, notifications, audit, approvals,
+      discharges, followUps, notifications, liveNotification, audit, approvals,
       addPatient, updatePatient, addVisit, addDischarge, completeFollowUp, markNotificationRead,
       deletePatient, addRegion, addDistrict, updateDistrict, deleteDistrict, addNeighborhood,
       updateNeighborhood, deleteNeighborhood, addStreet, updateStreet, deleteStreet,
@@ -498,7 +522,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     [
       ready, notConfigured, profile, profiles, regions, districts, neighborhoods,
       streets, buildings, specialties, facilities, patients, visits, vitals, hospitalizations,
-      discharges, followUps, notifications, audit, approvals,
+      discharges, followUps, notifications, liveNotification, audit, approvals,
       addPatient, updatePatient, addVisit, addDischarge, completeFollowUp, markNotificationRead,
       deletePatient, addRegion, addDistrict, updateDistrict, deleteDistrict, addNeighborhood,
       updateNeighborhood, deleteNeighborhood, addStreet, updateStreet, deleteStreet,
