@@ -1,12 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'config.dart';
 import 'state/app_state.dart';
 import 'screens/splash_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Vaqt mintaqasini sozlash (eslatmalar uchun)
+  tz.initializeTimeZones();
+  try {
+    final tzName = await FlutterTimezone.getLocalTimezone();
+    tz.setLocalLocation(tz.getLocation(tzName));
+  } catch (_) {
+    tz.setLocalLocation(tz.getLocation('Asia/Tashkent'));
+  }
 
   await Supabase.initialize(
     url: Config.supabaseUrl,

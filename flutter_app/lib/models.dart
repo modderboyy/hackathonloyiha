@@ -145,3 +145,88 @@ class ChatMessage {
 
   ChatMessage({required this.role, required this.content});
 }
+
+// --- Eslatmalar ---
+enum ReminderType { medication, appointment, measurement, other }
+
+class Reminder {
+  final String id;
+  final ReminderType type;
+  final String title;
+  final String? notes;
+  final String? timeOfDay; // '08:00'
+  final int? intervalMinutes; // har N daqiqada
+  final DateTime? remindOnceAt;
+  final bool active;
+  final DateTime? lastSentAt;
+
+  Reminder({
+    required this.id,
+    required this.type,
+    required this.title,
+    this.notes,
+    this.timeOfDay,
+    this.intervalMinutes,
+    this.remindOnceAt,
+    this.active = true,
+    this.lastSentAt,
+  });
+
+  factory Reminder.fromJson(Map<String, dynamic> json) => Reminder(
+        id: json['id'],
+        type: ReminderType.values.firstWhere(
+          (t) => t.name == json['type'],
+          orElse: () => ReminderType.other,
+        ),
+        title: json['title'] ?? '',
+        notes: json['notes'],
+        timeOfDay: json['time_of_day'],
+        intervalMinutes: json['interval_minutes'],
+        remindOnceAt: json['remind_once_at'] != null ? DateTime.parse(json['remind_once_at']) : null,
+        active: json['active'] ?? true,
+        lastSentAt: json['last_sent_at'] != null ? DateTime.parse(json['last_sent_at']) : null,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'type': type.name,
+        'title': title,
+        'notes': notes,
+        'time_of_day': timeOfDay,
+        'interval_minutes': intervalMinutes,
+        'remind_once_at': remindOnceAt?.toIso8601String(),
+        'active': active,
+      };
+
+  String get typeLabel {
+    switch (type) {
+      case ReminderType.medication: return 'Dori-darmon';
+      case ReminderType.appointment: return 'Qabul';
+      case ReminderType.measurement: return 'O\'lchov';
+      case ReminderType.other: return 'Boshqa';
+    }
+  }
+
+  String get scheduleLabel {
+    if (intervalMinutes != null) return 'Har $intervalMinutes daqiqada';
+    if (timeOfDay != null) return 'Har kuni $timeOfDay';
+    if (remindOnceAt != null) return 'Bir marta: ${remindOnceAt.toString().substring(0, 16)}';
+    return 'Belgilanmagan';
+  }
+}
+
+// --- Sog'liq muammolari (vizual tahlil) ---
+enum Severity { low, medium, high }
+
+class HealthProblem {
+  final String title;
+  final String description;
+  final Severity severity;
+  final String icon;
+
+  HealthProblem({
+    required this.title,
+    required this.description,
+    required this.severity,
+    required this.icon,
+  });
+}

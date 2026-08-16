@@ -4,18 +4,21 @@ import '../models.dart';
 import '../services/supabase_service.dart';
 import '../services/openai_service.dart';
 import '../services/notification_service.dart';
+import '../services/reminder_service.dart';
 
 /// Ilova holati — auth, sog'liq, obuna, tekshiruv va bloklash.
 class AppState extends ChangeNotifier {
   final SupabaseService db = SupabaseService();
   final OpenAIService ai = OpenAIService();
   final NotificationService notifications = NotificationService();
+  final ReminderService reminders = ReminderService();
 
   UserProfile? profile;
   HealthData? health;
   Subscription? subscription;
   List<Checkin> checkins = [];
-  bool locked = false; // telefon qulflangan holat
+  List<Reminder> reminderList = [];
+  bool locked = false;
   bool loading = true;
   String? error;
 
@@ -41,6 +44,7 @@ class AppState extends ChangeNotifier {
     health = await db.getHealth();
     subscription = await db.getSubscription();
     checkins = await db.getCheckins();
+    reminderList = await db.getReminders();
     await checkLocked();
   }
 
@@ -129,6 +133,33 @@ class AppState extends ChangeNotifier {
     locked = false;
     notifyListeners();
   }
+
+  // ---------- Eslatmalar ----------
+  Future<void> addReminder(Reminder r) async {
+    await db.addReminder(r);
+    await reminders.schedule(r);
+    reminderList = await db.getReminders();
+    notifyListeners();
+  }
+
+  Future<void> toggleReminder(String id, bool active) async {
+    await db.updateReminder(id, {'active': active});
+    reminderList = reminderList.map((r) => r.id == id ? _copyActive(r, active) : r).toList();
+    notifyListeners();
+  }
+
+  Future<void> deleteReminder(String id) async {
+    await db.deleteReminder(id);
+    await reminders.cancel(id.hashCode);
+    reminderList = reminderList.where((r) => r.id != id).toList();
+    notifyListeners();
+  }
+
+  Reminder _copyActive(Reminder r, bool active) => Reminder(
+        id: r.id, type: r.type, title: r.title, notes: r.notes,
+        timeOfDay: r.timeOfDay, intervalMinutes: r.intervalMinutes,
+        remindOnceAt: r.remindOnceAt, active: active, lastSentAt: r.lastSentAt,
+      );
 
   // ---------- AI chatbot ----------
   Future<String> askAI(String message) => ai.chat(message, health: health);

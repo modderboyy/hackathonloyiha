@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../state/app_state.dart';
+import '../widgets/health_dashboard.dart';
+import '../widgets/typewriter.dart';
 import 'chat_screen.dart';
 import 'lock_screen.dart';
 import 'profile_screen.dart';
+import 'reminders_screen.dart';
 
 /// Bosh ekran — sog'liq holati, obuna, so'nggi tekshiruvlar va AI chatbot.
 class HomeScreen extends StatefulWidget {
@@ -35,6 +38,10 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('CareLink'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.alarm),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RemindersScreen())),
+          ),
+          IconButton(
             icon: const Icon(Icons.person_outline),
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileScreen())),
           ),
@@ -62,28 +69,11 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Sog'liq holati
-            if (state.health != null) ...[
-              const Text('Sog\'liq holati', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _infoRow('Kasallik', state.health!.currentCondition ?? "Ko'rsatilmagan"),
-                      if (state.health!.avgBpSys != null)
-                        _infoRow('Qon bosimi', '${state.health!.avgBpSys}/${state.health!.avgBpDia}'),
-                      if (state.health!.avgHeartRate != null) _infoRow('Puls', '${state.health!.avgHeartRate}'),
-                      if (state.health!.avgSpo2 != null) _infoRow('SpO₂', '${state.health!.avgSpo2}%'),
-                      if (state.health!.allergies != null) _infoRow('Allergiya', state.health!.allergies!),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
+            // Vizual sog'liq paneli
+            const Text('Sog\'liq holati', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            HealthDashboard(health: state.health),
+            const SizedBox(height: 16),
 
             // AI chatbot
             const Text('AI yordamchi', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -133,7 +123,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       const Text('Oxirgi tekshiruv:', style: TextStyle(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 4),
-                      Text(state.checkins.first.aiMessage),
+                      Typewriter(
+                        text: state.checkins.first.aiMessage,
+                        speed: const Duration(milliseconds: 25),
+                        style: const TextStyle(fontSize: 14, height: 1.4),
+                      ),
                       const SizedBox(height: 12),
                       Row(
                         children: [
@@ -161,18 +155,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _infoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          SizedBox(width: 120, child: Text(label, style: const TextStyle(color: Colors.grey))),
-          Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w500))),
-        ],
       ),
     );
   }

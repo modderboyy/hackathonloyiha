@@ -139,6 +139,32 @@ class SupabaseService {
     }).eq('id', checkinId);
   }
 
+  // ---------- Eslatmalar ----------
+  Future<List<Reminder>> getReminders() async {
+    final id = userId;
+    if (id == null) return [];
+    final res = await client
+        .from('reminders')
+        .select()
+        .eq('client_id', id)
+        .order('created_at', ascending: false);
+    return (res as List).map((e) => Reminder.fromJson(e)).toList();
+  }
+
+  Future<void> addReminder(Reminder r) async {
+    final id = userId;
+    if (id == null) return;
+    await client.from('reminders').insert({'client_id': id, ...r.toJson()});
+  }
+
+  Future<void> updateReminder(String reminderId, Map<String, dynamic> patch) async {
+    await client.from('reminders').update(patch).eq('id', reminderId);
+  }
+
+  Future<void> deleteReminder(String reminderId) async {
+    await client.from('reminders').delete().eq('id', reminderId);
+  }
+
   /// Realtime: yangi check-in yoki bloklashni tinglash
   Stream<List<Map<String, dynamic>>> watchCheckins() {
     final id = userId;
