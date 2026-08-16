@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:forui/forui.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:provider/provider.dart';
 import '../models.dart';
 import '../state/app_state.dart';
@@ -54,7 +54,6 @@ class _ClinicCodeScreenState extends State<ClinicCodeScreen> {
     if (error != null) {
       setState(() => _error = error);
     } else {
-      // Muvaffaqiyatli — bemor ma'lumotlari va dori-darmonlar sinxronlandi
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Klinik obuna faollashtirildi! Ma\u2019lumotlar sinxronlandi.')),
       );
@@ -64,46 +63,42 @@ class _ClinicCodeScreenState extends State<ClinicCodeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return FScaffold(
-      header: const FHeader(title: Text('Klinik obuna')),
-      child: SingleChildScrollView(
+    return Scaffold(
+      appBar: AppBar(title: const Text('Klinik obuna'), centerTitle: true),
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            FCard(
+            ShadCard(
               title: const Text('Klinikangizni tanlang', style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: const Text('Ixtiyoriy — kodni to\u2019g\u2019ridan-to\u2019g\u2019ri kiritsangiz ham bo\u2019ladi'),
+              description: const Text('Ixtiyoriy — kodni to\u2019g\u2019ridan-to\u2019g\u2019ri kiritsangiz ham bo\u2019ladi'),
               child: _loaded
-                  ? DropdownButtonFormField<String>(
-                      initialValue: _selectedClinic,
-                      decoration: const InputDecoration(
-                        labelText: 'Klinika',
-                        hintText: 'Klinikani tanlang (ixtiyoriy)',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: _clinics
-                          .map((c) => DropdownMenuItem(value: c.id, child: Text(c.name)))
+                  ? ShadSelect<String>(
+                      placeholder: const Text('Klinikani tanlang (ixtiyoriy)'),
+                      options: _clinics
+                          .map((c) => ShadOption(value: c.id, child: Text(c.name)))
                           .toList(),
+                      selectedOptionBuilder: (context, v) {
+                        final c = _clinics.where((x) => x.id == v).firstOrNull;
+                        return Text(c?.name ?? 'Klinikani tanlang');
+                      },
                       onChanged: (v) => setState(() => _selectedClinic = v),
                     )
                   : const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator())),
             ),
             const SizedBox(height: 16),
-            FCard(
+            ShadCard(
               title: const Text('Statsionar kodi', style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: const Text('Bu kodni klinikangizdagi shifokor beradi'),
+              description: const Text('Bu kodni klinikangizdagi shifokor beradi'),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  TextField(
+                  ShadInput(
                     controller: _code,
                     textCapitalization: TextCapitalization.characters,
-                    decoration: const InputDecoration(
-                      labelText: 'Kod',
-                      hintText: 'Masalan: A1B2C3D4',
-                      border: OutlineInputBorder(),
-                    ),
+                    placeholder: const Text('Masalan: A1B2C3D4'),
+                    onChanged: (_) => setState(() => _error = null),
                   ),
                   if (_error != null) ...[
                     const SizedBox(height: 8),
@@ -113,9 +108,9 @@ class _ClinicCodeScreenState extends State<ClinicCodeScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            FButton(
-              onPress: _busy ? null : _activate,
-              child: _busy ? const Text('Faollashtirilmoqda...') : const Text('Faollashtirish'),
+            ShadButton(
+              onPressed: _busy ? null : _activate,
+              text: Text(_busy ? 'Faollashtirilmoqda...' : 'Faollashtirish'),
             ),
             const SizedBox(height: 16),
             const Text(

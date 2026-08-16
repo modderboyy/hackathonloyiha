@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:forui/forui.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:provider/provider.dart';
 import '../config.dart';
 import '../state/app_state.dart';
@@ -14,31 +14,31 @@ class SubscriptionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    return FScaffold(
-      header: const FHeader(title: Text('CareLink Premium')),
-      child: SingleChildScrollView(
+    return Scaffold(
+      appBar: AppBar(title: const Text('CareLink Premium'), centerTitle: true),
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: 8),
-            Text(
+            const Text(
               'Davom etish uchun obuna kerak',
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            Text(
+            const Text(
               'Ikki xil obuna mavjud — o\u2019zingizga mosini tanlang',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.grey, fontSize: 14),
+              style: TextStyle(color: Colors.grey, fontSize: 14),
             ),
             const SizedBox(height: 28),
 
             // --- B2C: Individual ---
-            FCard(
+            ShadCard(
               title: const Text('Individual obuna', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-              subtitle: const Text('Shaxsiy foydalanish uchun'),
+              description: const Text('Shaxsiy foydalanish uchun'),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -52,9 +52,9 @@ class SubscriptionScreen extends StatelessWidget {
                   const _Feature('Dori-darmon eslatmalari'),
                   const _Feature('24/7 AI chatbot'),
                   const SizedBox(height: 16),
-                  FButton(
-                    onPress: state.loading ? null : () => _showPayment(context),
-                    child: const Text('Sotib olish'),
+                  ShadButton(
+                    onPressed: state.loading ? null : () => _showPayment(context),
+                    text: const Text('Sotib olish'),
                   ),
                 ],
               ),
@@ -63,9 +63,9 @@ class SubscriptionScreen extends StatelessWidget {
             const SizedBox(height: 16),
 
             // --- B2B: Klinik ---
-            FCard(
+            ShadCard(
               title: const Text('Klinik obuna', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-              subtitle: const Text('Klinikangiz to\u2019laydi — siz uchun tekin'),
+              description: const Text('Klinikangiz to\u2019laydi — siz uchun tekin'),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -78,12 +78,11 @@ class SubscriptionScreen extends StatelessWidget {
                   const _Feature('Dori-darmon va bemor ma\u2019lumotlari avtomatik sinxron'),
                   const _Feature('Shifokor tavsiyalari to\u2019g\u2019ridan-to\u2019g\u2019ri keladi'),
                   const SizedBox(height: 16),
-                  FButton(
-                    onPress: state.loading
+                  ShadButton.outline(
+                    onPressed: state.loading
                         ? null
                         : () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ClinicCodeScreen())),
-                    variant: FButtonVariant.outline,
-                    child: const Text('Klinik kodni kiritish'),
+                    text: const Text('Klinik kodni kiritish'),
                   ),
                 ],
               ),

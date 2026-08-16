@@ -17,7 +17,7 @@ dependencies:
   flutter_local_notifications: ^17.1.2
   timezone: ^0.9.2
   intl: ^0.20.2
-  forui: 0.21.3
+  shadcn_ui: ^0.56.1
   cupertino_icons: ^1.0.8
 
 dev_dependencies:

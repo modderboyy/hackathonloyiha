@@ -15,5 +15,3 @@ android/app/debug
 android/app/profile
 android/app/release
 
-# Maxfiy kalitlar (commit bo'lmasligi uchun)
-lib/config.dart
