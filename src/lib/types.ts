@@ -214,6 +214,22 @@ export interface ChatMessageRow {
   created_at: string;
 }
 
+export interface ClientHealth {
+  id: string;
+  client_id: string;
+  current_condition: string | null;
+  medical_notes: string | null;
+  allergies: string | null;
+  medications: string | null;
+  avg_bp_sys: number | null;
+  avg_bp_dia: number | null;
+  avg_heart_rate: number | null;
+  avg_temperature: number | null;
+  avg_spo2: number | null;
+  avg_weight: number | null;
+  emergency_contact: string | null;
+}
+
 export interface TimelineEvent {
   id: string;
   type: "visit" | "vital" | "hospitalization" | "discharge" | "follow_up";

@@ -3,10 +3,9 @@
 import { useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useData } from "@/lib/data";
-import { StatCard } from "@/components/ui";
 import { BarChart, DonutChart, AreaChart } from "@/components/charts";
 import { Icon } from "@/components/icons";
-import { formatDate } from "@/lib/utils";
+import { formatDate, cn } from "@/lib/utils";
 
 const RegionMap = dynamic(() => import("@/components/map/RegionMap"), {
   ssr: false,
@@ -16,7 +15,55 @@ const RegionMap = dynamic(() => import("@/components/map/RegionMap"), {
 const MONTH_NAMES = ["Yan", "Fev", "Mar", "Apr", "May", "Iyn", "Iyl", "Avg", "Sen", "Okt", "Noy", "Dek"];
 
 export function Overview({ onRegionSelect }: { onRegionSelect: (regionId: string) => void }) {
-  const { regions, districts, patients, followUps, notifications, discharges, visits } = useData();
+  const { regions, districts, patients, profiles, followUps, discharges, visits, hospitalizations, clientHealth } = useData();
+
+  // ===== Sog'/kasal bemorlar =====
+  const patientStats = useMemo(() => {
+    const total = patients.length;
+    const sick = patients.filter((p) => {
+      const hasActiveHosp = hospitalizations.some((h) => h.patient_id === p.id && h.status === "active");
+      const profileRow = profiles.find((pr) => pr.patient_id === p.id);
+      const hasCondition = profileRow
+        ? clientHealth.some((ch) => ch.client_id === profileRow.id && ch.current_condition)
+        : false;
+      return hasActiveHosp || hasCondition;
+    }).length;
+    return { total, sick, healthy: total - sick };
+  }, [patients, profiles, hospitalizations, clientHealth]);
+
+  // ===== Statsionar (hospitalizatsiya) =====
+  const hospitalStats = useMemo(() => {
+    const total = hospitalizations.length;
+    let ongoing = hospitalizations.filter((h) => h.status === "active").length;
+    const discharged = hospitalizations.filter((h) => h.status === "discharged");
+
+    let success = 0;
+    let failed = 0;
+    discharged.forEach((h) => {
+      const disc = discharges.find((d) => d.hospitalization_id === h.id);
+      const fu = disc ? followUps.find((f) => f.discharge_id === disc.id) : null;
+      if (!fu) {
+        success++;
+      } else if (fu.status === "completed") {
+        success++;
+      } else if (fu.status === "overdue") {
+        failed++;
+      } else {
+        ongoing++; // kuzatuv hali davom etyabti
+      }
+    });
+
+    return { total, ongoing, success, failed };
+  }, [hospitalizations, followUps, discharges]);
+
+  // ===== Kuzatuv (follow-up) =====
+  const followUpStats = useMemo(() => {
+    const counts = { pending: 0, in_progress: 0, completed: 0, overdue: 0 };
+    followUps.forEach((f) => {
+      if (f.status in counts) counts[f.status as keyof typeof counts]++;
+    });
+    return counts;
+  }, [followUps]);
 
   const regionCounts = useMemo(() => {
     const m: Record<string, number> = {};
@@ -27,7 +74,6 @@ export function Overview({ onRegionSelect }: { onRegionSelect: (regionId: string
     return m;
   }, [regions, patients]);
 
-  // Tuman/punkt markerlari (raqam = o'sha tumandagi bemorlar)
   const districtMarkers = useMemo(() => {
     const counts: Record<string, number> = {};
     patients.forEach((p) => {
@@ -38,23 +84,13 @@ export function Overview({ onRegionSelect }: { onRegionSelect: (regionId: string
       .map((d) => ({ id: d.id, name: d.name, lat: d.lat as number, lng: d.lng as number, count: counts[d.id] ?? 0, polygon: d.polygon }));
   }, [districts, patients]);
 
-  const activeFollowUps = followUps.filter((f) => f.status === "pending" || f.status === "in_progress").length;
-  const unread = notifications.filter((n) => !n.is_read).length;
+  const followUpDist = [
+    { label: "Kutilmoqda", value: followUpStats.pending, color: "#f59e0b" },
+    { label: "Jarayonda", value: followUpStats.in_progress, color: "#3b82f6" },
+    { label: "Yakunlandi", value: followUpStats.completed, color: "#10b981" },
+    { label: "Muddati o'tdi", value: followUpStats.overdue, color: "#ef4444" },
+  ];
 
-  const followUpDist = useMemo(() => {
-    const counts = { pending: 0, in_progress: 0, completed: 0, overdue: 0 };
-    followUps.forEach((f) => {
-      if (f.status in counts) counts[f.status as keyof typeof counts]++;
-    });
-    return [
-      { label: "Kutilmoqda", value: counts.pending, color: "#f59e0b" },
-      { label: "Jarayonda", value: counts.in_progress, color: "#3b82f6" },
-      { label: "Yakunlandi", value: counts.completed, color: "#10b981" },
-      { label: "Muddati o'tdi", value: counts.overdue, color: "#ef4444" },
-    ];
-  }, [followUps]);
-
-  // So'nggi 6 oylik tashriflar
   const monthly = useMemo(() => {
     const now = new Date();
     const buckets: { key: string; label: string; value: number }[] = [];
@@ -84,15 +120,55 @@ export function Overview({ onRegionSelect }: { onRegionSelect: (regionId: string
 
   return (
     <div className="space-y-6">
-      {/* Statistika */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Jami bemorlar" value={patients.length} icon="users" tone="primary" />
-        <StatCard label="Faol kuzatuvlar" value={activeFollowUps} icon="clipboard" tone="amber" />
-        <StatCard label="O'qilmagan xabarlar" value={unread} icon="bell" tone="red" />
-        <StatCard label="Chiqarishlar" value={discharges.length} icon="bed" tone="violet" />
+      {/* ===== Sarlavha ===== */}
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900">Bosh sahifa</h1>
+        <p className="text-sm text-slate-500">Tizimning umumiy holati va statistikasi</p>
       </div>
 
-      {/* Xarita */}
+      {/* ===== Asosiy KPI kartalar ===== */}
+      <div className="grid gap-5 lg:grid-cols-3">
+        {/* Jami bemorlar */}
+        <KpiCard
+          title="Jami bemorlar"
+          icon="users"
+          value={patientStats.total}
+          gradient="from-blue-600 to-indigo-700"
+          segments={[
+            { label: "Sog'", value: patientStats.healthy, color: "bg-emerald-400" },
+            { label: "Kasal", value: patientStats.sick, color: "bg-rose-400" },
+          ]}
+        />
+
+        {/* Statsionar */}
+        <KpiCard
+          title="Statsionar"
+          icon="bed"
+          value={hospitalStats.total}
+          gradient="from-violet-600 to-purple-700"
+          segments={[
+            { label: "Davom etyabti", value: hospitalStats.ongoing, color: "bg-sky-400" },
+            { label: "Muvaffaqiyatli", value: hospitalStats.success, color: "bg-emerald-400" },
+            { label: "Muvaffaqiyatsiz", value: hospitalStats.failed, color: "bg-rose-400" },
+          ]}
+        />
+
+        {/* Kuzatuv */}
+        <KpiCard
+          title="Kuzatuvlar"
+          icon="clipboard"
+          value={followUpStats.pending + followUpStats.in_progress + followUpStats.overdue}
+          gradient="from-amber-500 to-orange-600"
+          segments={[
+            { label: "Kutilmoqda", value: followUpStats.pending, color: "bg-amber-400" },
+            { label: "Jarayonda", value: followUpStats.in_progress, color: "bg-sky-400" },
+            { label: "Yakunlangan", value: followUpStats.completed, color: "bg-emerald-400" },
+            { label: "Muddati o'tdi", value: followUpStats.overdue, color: "bg-rose-400" },
+          ]}
+        />
+      </div>
+
+      {/* ===== Xarita ===== */}
       <div className="card">
         <div className="mb-4 flex items-center justify-between">
           <div>
@@ -104,7 +180,7 @@ export function Overview({ onRegionSelect }: { onRegionSelect: (regionId: string
         <RegionMap regions={regions} counts={regionCounts} selected={null} districtMarkers={districtMarkers} onSelect={(id) => id && onRegionSelect(id)} />
       </div>
 
-      {/* Grafiklar */}
+      {/* ===== Grafiklar ===== */}
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="card">
           <h2 className="mb-4 font-semibold text-slate-900">Hududlar kesimida</h2>
@@ -125,7 +201,7 @@ export function Overview({ onRegionSelect }: { onRegionSelect: (regionId: string
         <AreaChart data={monthly.map((m) => m.value)} labels={monthly.map((m) => m.label)} height={200} />
       </div>
 
-      {/* So'nggi faollik */}
+      {/* ===== So'nggi faollik ===== */}
       <div className="card">
         <h2 className="mb-4 font-semibold text-slate-900">So'nggi faollik</h2>
         {recent.length === 0 ? (
@@ -147,6 +223,67 @@ export function Overview({ onRegionSelect }: { onRegionSelect: (regionId: string
             ))}
           </ul>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ===== Katta KPI karta (gradient + segmentlar) =====
+function KpiCard({
+  title,
+  icon,
+  value,
+  gradient,
+  segments,
+}: {
+  title: string;
+  icon: string;
+  value: number;
+  gradient: string;
+  segments: { label: string; value: number; color: string }[];
+}) {
+  const total = segments.reduce((s, seg) => s + seg.value, 0);
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md">
+      {/* Yuqori gradient qism */}
+      <div className={cn("relative bg-gradient-to-br p-5 text-white", gradient)}>
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-white/80">{title}</p>
+            <p className="mt-2 text-4xl font-bold leading-none drop-shadow-sm">{value}</p>
+          </div>
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/20 backdrop-blur">
+            <Icon name={icon} size={22} />
+          </span>
+        </div>
+        {/* dekorativ doiralar */}
+        <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10" />
+        <div className="pointer-events-none absolute -bottom-10 -right-2 h-28 w-28 rounded-full bg-white/10" />
+      </div>
+
+      {/* Segmentlar */}
+      <div className="space-y-2.5 p-4">
+        {segments.map((seg, i) => {
+          const pct = total > 0 ? Math.round((seg.value / total) * 100) : 0;
+          return (
+            <div key={i}>
+              <div className="mb-1 flex items-center justify-between text-xs">
+                <span className="flex items-center gap-1.5 text-slate-600">
+                  <span className={cn("h-2 w-2 rounded-full", seg.color)} />
+                  {seg.label}
+                </span>
+                <span className="font-semibold text-slate-800">{seg.value}</span>
+              </div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className={cn("h-full rounded-full transition-all duration-500", seg.color)}
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

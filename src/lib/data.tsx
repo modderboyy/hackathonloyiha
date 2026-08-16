@@ -17,6 +17,7 @@ import type {
   Building,
   ChatMessageRow,
   Checkin,
+  ClientHealth,
   ClinicalVisit,
   Discharge,
   District,
@@ -79,6 +80,7 @@ interface Data {
   approvals: Approval[];
   checkins: Checkin[];
   chatMessages: ChatMessageRow[];
+  clientHealth: ClientHealth[];
 
   addPatient: (p: Omit<Patient, "id" | "created_at" | "created_by">) => Promise<string | null>;
   updatePatient: (id: string, patch: Partial<Patient>) => Promise<string | null>;
@@ -150,6 +152,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [liveNotification, setLiveNotification] = useState<Notification | null>(null);
   const [checkins, setCheckins] = useState<Checkin[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessageRow[]>([]);
+  const [clientHealth, setClientHealth] = useState<ClientHealth[]>([]);
 
   // Realtime: yangi xabarnomalar (popup uchun)
   useEffect(() => {
@@ -190,7 +193,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setProfile(prof as Profile | null);
 
       const [
-        prf, reg, dist, nbh, str, bld, spec, fac, pat, vis, vit, hosp, dis, fu, notif, aud, appr, ckin, chat,
+        prf, reg, dist, nbh, str, bld, spec, fac, pat, vis, vit, hosp, dis, fu, notif, aud, appr, ckin, chat, health,
       ] = await Promise.all([
         supabase.from("profiles").select("*").order("created_at"),
         supabase.from("regions").select("*").order("name"),
@@ -211,6 +214,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         supabase.from("approvals").select("*").order("created_at", { ascending: false }),
         supabase.from("checkins").select("*").order("created_at", { ascending: false }).limit(200),
         supabase.from("chat_messages").select("*").order("created_at", { ascending: false }).limit(200),
+        supabase.from("client_health").select("*"),
       ]);
 
       if (cancelled) return;
@@ -233,6 +237,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setApprovals((appr.data as Approval[]) ?? []);
       setCheckins((ckin.data as Checkin[]) ?? []);
       setChatMessages((chat.data as ChatMessageRow[]) ?? []);
+      setClientHealth((health.data as ClientHealth[]) ?? []);
       setReady(true);
     })();
     return () => { cancelled = true; };
@@ -579,7 +584,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     () => ({
       ready, notConfigured, profile, profiles, regions, districts, neighborhoods,
       streets, buildings, specialties, facilities, patients, visits, vitals, hospitalizations,
-      discharges, followUps, notifications, liveNotification, audit, approvals, checkins, chatMessages,
+      discharges, followUps, notifications, liveNotification, audit, approvals, checkins, chatMessages, clientHealth,
       addPatient, updatePatient, addVisit, addDischarge, completeFollowUp, markNotificationRead,
       deletePatient, addRegion, addDistrict, updateDistrict, deleteDistrict, addNeighborhood,
       updateNeighborhood, deleteNeighborhood, addStreet, updateStreet, deleteStreet,
@@ -588,7 +593,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     [
       ready, notConfigured, profile, profiles, regions, districts, neighborhoods,
       streets, buildings, specialties, facilities, patients, visits, vitals, hospitalizations,
-      discharges, followUps, notifications, liveNotification, audit, approvals, checkins, chatMessages,
+      discharges, followUps, notifications, liveNotification, audit, approvals, checkins, chatMessages, clientHealth,
       addPatient, updatePatient, addVisit, addDischarge, completeFollowUp, markNotificationRead,
       deletePatient, addRegion, addDistrict, updateDistrict, deleteDistrict, addNeighborhood,
       updateNeighborhood, deleteNeighborhood, addStreet, updateStreet, deleteStreet,
