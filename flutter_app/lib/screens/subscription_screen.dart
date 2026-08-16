@@ -54,7 +54,7 @@ class SubscriptionScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   ShadButton(
                     onPressed: state.loading ? null : () => _showPayment(context),
-                    text: const Text('Sotib olish'),
+                    child: const Text('Sotib olish'),
                   ),
                 ],
               ),
@@ -82,7 +82,7 @@ class SubscriptionScreen extends StatelessWidget {
                     onPressed: state.loading
                         ? null
                         : () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ClinicCodeScreen())),
-                    text: const Text('Klinik kodni kiritish'),
+                    child: const Text('Klinik kodni kiritish'),
                   ),
                 ],
               ),

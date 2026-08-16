@@ -110,7 +110,7 @@ class _ClinicCodeScreenState extends State<ClinicCodeScreen> {
             const SizedBox(height: 20),
             ShadButton(
               onPressed: _busy ? null : _activate,
-              text: Text(_busy ? 'Faollashtirilmoqda...' : 'Faollashtirish'),
+              child: Text(_busy ? 'Faollashtirilmoqda...' : 'Faollashtirish'),
             ),
             const SizedBox(height: 16),
             const Text(
