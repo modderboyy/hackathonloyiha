@@ -11,6 +11,9 @@ export type Role =
 export interface Profile {
   id: string;
   full_name: string;
+  first_name: string | null;
+  last_name: string | null;
+  birth_date: string | null;
   role: Role;
   phone: string | null;
   facility_id: string | null;

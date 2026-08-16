@@ -38,9 +38,8 @@ export async function proxy(request: NextRequest) {
   }
 
   const isProtected = request.nextUrl.pathname.startsWith("/dashboard");
-  const isAuthPage =
-    request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/signup");
+  const isLoginPage = request.nextUrl.pathname.startsWith("/login");
+  const isSignupPage = request.nextUrl.pathname.startsWith("/signup");
 
   // Himoyalangan sahifaga kirish — login bo'lmagan bo'lsa qaytarish
   if (isProtected && !user) {
@@ -50,12 +49,17 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Login/signup sahifasiga login bo'lib kirsa — dashboardga
-  if (isAuthPage && user) {
+  // Faqat login sahifasiga kirgan foydalanuvchi avtomatik dashboardga yo'naltiriladi
+  if (isLoginPage && user) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     url.search = "";
     return NextResponse.redirect(url);
+  }
+
+  // Signup sahifasi har doim ochiq qoladi, shunda yangi hisob yaratish mumkin bo'ladi
+  if (isSignupPage && user) {
+    return response;
   }
 
   return response;
