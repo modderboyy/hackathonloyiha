@@ -16,7 +16,7 @@ const RegionMap = dynamic(() => import("@/components/map/RegionMap"), {
 const MONTH_NAMES = ["Yan", "Fev", "Mar", "Apr", "May", "Iyn", "Iyl", "Avg", "Sen", "Okt", "Noy", "Dek"];
 
 export function Overview({ onRegionSelect }: { onRegionSelect: (regionId: string) => void }) {
-  const { regions, patients, followUps, notifications, discharges, visits } = useData();
+  const { regions, districts, patients, followUps, notifications, discharges, visits } = useData();
 
   const regionCounts = useMemo(() => {
     const m: Record<string, number> = {};
@@ -26,6 +26,17 @@ export function Overview({ onRegionSelect }: { onRegionSelect: (regionId: string
     });
     return m;
   }, [regions, patients]);
+
+  // Tuman/punkt markerlari (raqam = o'sha tumandagi bemorlar)
+  const districtMarkers = useMemo(() => {
+    const counts: Record<string, number> = {};
+    patients.forEach((p) => {
+      if (p.district_id) counts[p.district_id] = (counts[p.district_id] ?? 0) + 1;
+    });
+    return districts
+      .filter((d) => d.lat !== null && d.lng !== null)
+      .map((d) => ({ id: d.id, name: d.name, lat: d.lat as number, lng: d.lng as number, count: counts[d.id] ?? 0 }));
+  }, [districts, patients]);
 
   const activeFollowUps = followUps.filter((f) => f.status === "pending" || f.status === "in_progress").length;
   const unread = notifications.filter((n) => !n.is_read).length;
@@ -90,7 +101,7 @@ export function Overview({ onRegionSelect }: { onRegionSelect: (regionId: string
           </div>
           <Icon name="map" size={22} className="text-primary-700" />
         </div>
-        <RegionMap regions={regions} counts={regionCounts} selected={null} onSelect={(id) => id && onRegionSelect(id)} />
+        <RegionMap regions={regions} counts={regionCounts} selected={null} districtMarkers={districtMarkers} onSelect={(id) => id && onRegionSelect(id)} />
       </div>
 
       {/* Grafiklar */}

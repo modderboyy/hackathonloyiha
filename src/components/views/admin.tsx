@@ -23,7 +23,7 @@ export function Admin() {
 // SUPER ADMIN — respublika: viloyatlarga admin biriktirish + hamma narsa
 // =====================================================================
 function SuperAdminView() {
-  const { regions, districts, profiles, patients, audit, setRole } = useData();
+  const { regions, districts, profiles, patients, audit, specialties, setRole } = useData();
   const [query, setQuery] = useState("");
   const [assigning, setAssigning] = useState<{ regionId: string; regionName: string } | null>(null);
 
@@ -114,7 +114,21 @@ function SuperAdminView() {
                   <p className="text-xs text-slate-500">{p.phone ?? "—"}</p>
                 </div>
               </div>
-              <Badge className={roleTone(p.role)}>{ROLE_LABELS[p.role]}</Badge>
+              <div className="flex items-center gap-2">
+                {isDoctorRole(p.role) && (
+                  <select
+                    value={p.specialty_id ?? ""}
+                    onChange={(e) => setRole(p.id, p.role, { specialty_id: e.target.value || null })}
+                    className="field max-w-[170px] py-1.5 text-xs"
+                  >
+                    <option value="">Ixtisoslik tanlang</option>
+                    {specialties.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                )}
+                <Badge className={roleTone(p.role)}>{ROLE_LABELS[p.role]}</Badge>
+              </div>
             </div>
           ))}
         </div>
@@ -341,6 +355,10 @@ function AssignAdminModal({
       </form>
     </Modal>
   );
+}
+
+function isDoctorRole(r: Role): boolean {
+  return r === "family_doctor" || r === "hospital_doctor" || r === "medical_worker";
 }
 
 function roleTone(r: Role): string {
