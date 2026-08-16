@@ -1,22 +1,22 @@
 // =====================================================================
-// CareLink — Hourly Check-in (Edge Function)
+// CareLink — Hourly Check-in (Edge Function) — Firebase V1 API bilan
 // Har soatda faol obunali bemorlarga push + template so'rov yuboradi.
-// Javob 1 soat ichida kelmasa → oila a'zolariga SMS (yaqinlik tartibida,
-// har 5 daqiqada bittadan) — javob qaytsa to'xtaydi.
+// Firebase Cloud Messaging API (V1) — OAuth2 (service account) orqali.
 // =====================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-// Firebase Cloud Messaging (FCM) — tekin push
-// Firebase Console > Project Settings > Cloud Messaging > Server key (legacy)
-// yoki Service Account (v1 HTTP API)
-const FCM_SERVER_KEY = Deno.env.get("FCM_SERVER_KEY")!;
+
+// Firebase V1 API (service account) uchun env o'zgaruvchilari
+// Firebase Console > Project Settings > Service Accounts > "Generate new private key"
+const FIREBASE_PROJECT_ID = Deno.env.get("FIREBASE_PROJECT_ID")!; // masalan: carelink-ca427
+const FIREBASE_CLIENT_EMAIL = Deno.env.get("FIREBASE_CLIENT_EMAIL")!; // ...@...gserviceaccount.com
+const FIREBASE_PRIVATE_KEY = Deno.env.get("FIREBASE_PRIVATE_KEY")!; // -----BEGIN PRIVATE KEY-----
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
 
-// Template so'rovlar (AI emas — oddiy, iliq so'zlar)
 const TEMPLATES = [
   "Ahvolingiz yaxshimi? Biror narsa bezovta qilmayabtimi?",
   "Salom! O'zingizni bugun qanday his qilyapsiz?",
@@ -25,40 +25,106 @@ const TEMPLATES = [
   "Nafas olishingiz va uyqungiz yaxshimi?",
 ];
 
-// ---------- Firebase (FCM) push ----------
+// ---------- OAuth2 access token olish (service account JWT) ----------
+let cachedToken: { token: string; expires: number } | null = null;
+
+async function getAccessToken(): Promise<string> {
+  if (cachedToken && Date.now() < cachedToken.expires) {
+    return cachedToken.token;
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  const header = { alg: "RS256", typ: "JWT" };
+  const claim = {
+    iss: FIREBASE_CLIENT_EMAIL,
+    scope: "https://www.googleapis.com/auth/firebase.messaging",
+    aud: "https://oauth2.googleapis.com/token",
+    iat: now,
+    exp: now + 3600,
+  };
+
+  const encode = (obj: object) =>
+    btoa(JSON.stringify(obj)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+  const jwt = `${encode(header)}.${encode(claim)}`;
+
+  // RS256 imzo (Web Crypto)
+  const keyData = FIREBASE_PRIVATE_KEY
+    .replace(/\\n/g, "\n")
+    .replace("-----BEGIN PRIVATE KEY-----", "")
+    .replace("-----END PRIVATE KEY-----", "")
+    .replace(/\s/g, "");
+  const binary = Uint8Array.from(atob(keyData), (c) => c.charCodeAt(0));
+
+  const cryptoKey = await crypto.subtle.importKey(
+    "pkcs8",
+    binary,
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const signature = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    cryptoKey,
+    new TextEncoder().encode(jwt)
+  );
+  const sigB64 = btoa(String.fromCharCode(...new Uint8Array(signature)))
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  const signedJwt = `${jwt}.${sigB64}`;
+
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${signedJwt}`,
+  });
+  const json = await res.json();
+  if (!json.access_token) {
+    throw new Error("OAuth2 token olinmadi: " + JSON.stringify(json));
+  }
+  cachedToken = { token: json.access_token, expires: Date.now() + (json.expires_in - 60) * 1000 };
+  return json.access_token;
+}
+
+// ---------- Firebase V1 push ----------
 async function sendPush(fcmTokens: string[], title: string, body: string, data: Record<string, string>) {
-  if (!FCM_SERVER_KEY || fcmTokens.length === 0) {
+  if (!FIREBASE_PROJECT_ID || fcmTokens.length === 0) {
     console.log("[FCM-DEMO] yuboriladi:", title, body);
     return;
   }
   try {
-    await fetch("https://fcm.googleapis.com/fcm/send", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `key=${FCM_SERVER_KEY}`,
-      },
-      body: JSON.stringify({
-        registration_ids: fcmTokens, // bir nechta qurilmaga
-        notification: { title, body },
-        data,
-      }),
-    });
+    const token = await getAccessToken();
+    const url = `https://fcm.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/messages:send`;
+
+    // Har bir tokenga alohida xabar (V1 da registration_ids yo'q, bitta token bitta xabar)
+    for (const fcmToken of fcmTokens) {
+      await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          message: {
+            token: fcmToken,
+            notification: { title, body },
+            data,
+          },
+        }),
+      });
+    }
   } catch (e) {
-    console.error("FCM error", e);
+    console.error("FCM V1 error", e);
   }
 }
 
-// ---------- SMS (demo — haqiqiy provider keyinroq) ----------
+// ---------- SMS (demo) ----------
 async function sendSms(phone: string, message: string) {
-  // Haqiqiy SMS provider (Twilio, Eskiz.uz va h.k.) shu yerga ulanadi
   console.log(`[SMS-DEMO] ${phone} ga: ${message}`);
 }
 
-// ---------- Javob berilmagan checkinlarni topish va eskalatsiya ----------
+// ---------- Eskalatsiya ----------
 async function escalateUnanswered() {
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-
   const { data: stale } = await supabase
     .from("checkins")
     .select("id, client_id, family_step, family_notified_at")
@@ -68,13 +134,11 @@ async function escalateUnanswered() {
   if (!stale) return;
 
   for (const chk of stale) {
-    // Oxirgi oila xabari 5 daqiqadan oldin bo'lsa (5 daqiqa kutish)
     if (chk.family_notified_at) {
       const lastNotified = new Date(chk.family_notified_at);
       if (Date.now() - lastNotified.getTime() < 5 * 60 * 1000) continue;
     }
 
-    // Oila a'zolarini yaqinlik tartibida olish
     const { data: family } = await supabase
       .from("family_members")
       .select("name, phone, relationship")
@@ -83,7 +147,6 @@ async function escalateUnanswered() {
       .order("priority", { ascending: true });
 
     if (!family || family.length === 0) {
-      // Oila a'zosi yo'q — bloklash
       await supabase.from("checkins").update({ status: "locked", family_step: chk.family_step }).eq("id", chk.id);
       continue;
     }
@@ -92,10 +155,7 @@ async function escalateUnanswered() {
     if (!nextMember) continue;
 
     const relation = nextMember.relationship || "qarindosh";
-    await sendSms(
-      nextMember.phone,
-      `CareLink: ${nextMember.name} (${relation})ingiz so'rovga javob bermayapti. Iltimos u bilan bog'lanib holatini so'rang.`
-    );
+    await sendSms(nextMember.phone, `CareLink: ${nextMember.name} (${relation})ingiz so'rovga javob bermayapti. Iltimos u bilan bog'lanib holatini so'rang.`);
 
     const newStep = chk.family_step + 1;
     await supabase
@@ -109,16 +169,14 @@ async function escalateUnanswered() {
   }
 }
 
-// ---------- Asosiy handler ----------
+// ---------- Handler ----------
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ ok: false, error: "POST kerak" }), { status: 405 });
   }
 
-  // 1. Eskalatsiya (javob berilmaganlar)
   await escalateUnanswered();
 
-  // 2. Yangi so'rov yuborish (faol obunachilarga)
   const { data: subs } = await supabase
     .from("subscriptions")
     .select("client_id, profiles(fcm_token)")
@@ -129,7 +187,6 @@ Deno.serve(async (req) => {
   if (subs) {
     for (const s of subs) {
       const template = TEMPLATES[Math.floor(Math.random() * TEMPLATES.length)];
-
       await supabase.from("checkins").insert({
         client_id: s.client_id,
         ai_message: template,
@@ -142,7 +199,6 @@ Deno.serve(async (req) => {
       if (fcmToken) {
         await sendPush([fcmToken], "CareLink — holatingizni so'raymiz", template, { type: "checkin" });
       }
-
       results.push({ client: s.client_id, template });
     }
   }

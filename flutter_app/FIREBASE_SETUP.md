@@ -1,55 +1,123 @@
-# Firebase Push Notification — Android sozlash (bosqichma-bosqich)
+# Firebase + Android/Web support — to'liq yo'riqnoma
 
-Push notification Android'da ishlashi uchun quyidagilarni bajarasiz.
-Men kerakli qiymatlarni olganingizdan keyin kodga joylab beraman.
+## 1. Android va Web support qo'shish (cmd)
 
-## 1. Firebase loyihasini yaratish
+Loyiha ildizida (`flutter_app` papkasida) shu buyruqni bajarasiz:
 
-1. [console.firebase.google.com](https://console.firebase.google.com) ga kiring
-2. **"Add project"** → loyihaga nom bering (masalan: `carelink`)
-3. Google Analytics ixtiyoriy (yoqish shart emas) → **Create project**
+```bash
+cd flutter_app
 
-## 2. Android ilovani qo'shish
+# Android + Web support qo'shish (package name google-services.json bilan mos)
+flutter create . --org com.modder --project-name carelink --platforms=android,web
+```
 
-1. Firebase Console → loyihangizni oching → **⚙️ Project settings**
-2. **"Add app"** → **Android** belgisini bosing
-3. **Android package name** ni kiriting:
-   ```
-   uz.carelink.carelink_patient
-   ```
-   > Muhim: bu `android/app/build.gradle` dagi `applicationId` bilan bir xil bo'lishi kerak.
-   > Agar boshqacha bo'lsa, ilova package nomini `flutter create` paytida
-   > `--org uz.carelink` deb yaratganingizni tekshiring.
+> **Muhim:** `--org com.modder` + `--project-name carelink` = package name `com.modder.carelink`,
+> bu sizning `google-services.json` dagi package name bilan bir xil. ✓
 
-4. **Register app** bosing
-5. **`google-services.json`** faylini yuklab oling
-6. Bu faylni shu joyga joylang:
-   ```
-   flutter_app/android/app/google-services.json
-   ```
+Bu buyruq `android/` va `web/` papkalarini yaratadi (mavjud `lib/`, `pubspec.yaml` saqlanadi).
 
-## 3. FCM Server Key (edge function uchun)
+## 2. Android build.gradle sozlash
 
-1. Firebase Console → **Project settings → Cloud Messaging**
-2. **"Cloud Messaging API (Legacy)"** bo'limida **Server key** ni nusxalang
-   (agar ko'rinmasa, "Cloud Messaging API" ni yoqing)
-3. Bu kalitni menga yuboring — men `hourly-check` edge function'ga joylab beraman.
+### 2a. `android/settings.gradle` — google-services plugin
 
-## 4. Menga beradigan narsalar (xulosa)
+```groovy
+pluginManagement {
+    def flutterSdkPath = {
+        def properties = new Properties()
+        file("local.properties").withInputStream { properties.load(it) }
+        def flutterSdkPath = properties.getProperty("flutter.sdk")
+        assert flutterSdkPath != null, "flutter.sdk not set in local.properties"
+        return flutterSdkPath
+    }()
 
-| Narsa | Qayerdan |
+    includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
+
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+plugins {
+    id "dev.flutter.flutter-plugin-loader" version "1.0.0"
+    id "com.android.application" version "8.3.0" apply false
+    id "org.jetbrains.kotlin.android" version "1.9.22" apply false
+    id "com.google.gms.google-services" version "4.4.1" apply false  // ← qo'shish
+}
+
+include ":app"
+```
+
+### 2b. `android/app/build.gradle` — plugin + dependency
+
+Faylning **oxiriga** (yoki plugins blokiga):
+
+```groovy
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+    id "com.google.gms.google-services"  // ← qo'shish
+}
+```
+
+va `dependencies` blokiga:
+
+```groovy
+dependencies {
+    implementation platform('com.google.firebase:firebase-bom:33.1.0')  // ← qo'shish
+    implementation 'com.google.firebase:firebase-messaging'             // ← qo'shish
+}
+```
+
+### 2c. `android/app/src/main/AndroidManifest.xml` — ruxsatlar
+
+`<manifest>` ichiga:
+
+```xml
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+<uses-permission android:name="android.permission.INTERNET"/>
+```
+
+## 3. google-services.json
+
+Fayl allaqachon joylashtirildi:
+```
+flutter_app/android/app/google-services.json
+```
+
+## 4. Firebase V1 API — service account (edge function uchun)
+
+Sizda Legacy API disabled, **V1 API enabled**. V1 API service account orqali ishlaydi.
+
+1. Firebase Console → Project settings → **Service accounts** tab
+2. **"Generate new private key"** bosing → JSON fayl yuklanadi
+3. Shu JSON'dan 3 ta qiymatni menga yuboring (yoki Supabase'ga qo'ying):
+   - `project_id` → `FIREBASE_PROJECT_ID` (sizda: `carelink-ca427`)
+   - `client_email` → `FIREBASE_CLIENT_EMAIL`
+   - `private_key` → `FIREBASE_PRIVATE_KEY`
+
+## 5. Supabase Edge Function env
+
+```bash
+supabase secrets set \
+  FIREBASE_PROJECT_ID=carelink-ca427 \
+  FIREBASE_CLIENT_EMAIL=...@...gserviceaccount.com \
+  FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----..."
+```
+
+## 6. Web (PWA) push uchun
+
+Web'da push uchun Firebase Web configuration kerak:
+- Firebase Console → Project settings → General → Web app qo'shing
+- Olingan `firebaseConfig` (apiKey, projectId, messagingSenderId...) ni menga bering
+- Keyin `web/index.html` va `firebase-messaging-sw.js` (service worker) qo'shaman
+
+## Xulosa — menga kerakli narsalar
+
+| Narsa | Holat |
 |---|---|
-| `google-services.json` | Firebase → Project settings → Android app |
-| **FCM Server Key** | Firebase → Cloud Messaging → Server key |
-
-Shu ikkitasini bersangiz, men:
-- `google-services.json` ni to'g'ri joyga qo'yaman
-- `android/app/build.gradle` ni sozlayman
-- Edge function'ga FCM server key'ni joylayman
-
-## Eslatma
-
-- Hozirgi kod `firebase_core` + `firebase_messaging` bilan tayyor.
-- `main.dart` da `FirebaseMessagingService.init()` chaqiriladi (app_state orqali).
-- Token avtomatik `profiles.fcm_token` ga saqlanadi.
-- Edge function har soatda shu tokenlarga push yuboradi.
+| `google-services.json` | ✅ Qabul qilindi va joylashtirildi |
+| Firebase **Service Account JSON** (V1 API uchun) | ❌ Kerak — yuklab yuboring |
+| Web `firebaseConfig` | ❌ Keyinroq (web push uchun) |
