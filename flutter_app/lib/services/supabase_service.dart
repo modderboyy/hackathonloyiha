@@ -289,6 +289,16 @@ class SupabaseService {
     return Reminder.fromJson(saved);
   }
 
+  Future<Reminder> updateReminderRecord(Reminder reminder) async {
+    final saved = await client
+        .from('reminders')
+        .update(reminder.toJson())
+        .eq('id', reminder.id)
+        .select()
+        .single();
+    return Reminder.fromJson(saved);
+  }
+
   Future<void> updateReminder(String reminderId, Map<String, dynamic> patch) async {
     await client.from('reminders').update(patch).eq('id', reminderId);
   }

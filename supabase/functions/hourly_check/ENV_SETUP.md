@@ -1,17 +1,17 @@
 # Supabase Edge Function — Android push, test push va beta monitoring sozlash
 
 Sizda Firebase **V1 API** enabled (Legacy disabled). V1 API service account orqali ishlaydi.
-Men hamma narsani tayyorladim — sizga faqat 1 ta qiymat qoldi: **Supabase service_role key**.
+Firebase secretlari `client_email` va `private_key` bir xil service-account JSON faylidan olinishi shart.
 
 ## Kerakli 4 ta env qiymati
 
 | Env nomi | Qiymat | Holat |
 |---|---|---|
 | `SUPABASE_URL` | `https://flpmqhditzfosvdtbqlw.supabase.co` | ✅ tayyor |
-| `SUPABASE_SERVICE_ROLE_KEY` | `eyJhbGci...` (service_role) | ❌ **sizdan kerak** |
-| `FIREBASE_PROJECT_ID` | `carelink-ca427` | ✅ tayyor |
-| `FIREBASE_CLIENT_EMAIL` | `firebase-adminsdk-fbsvc@carelink-ca427.iam.gserviceaccount.com` | ✅ tayyor |
-| `FIREBASE_PRIVATE_KEY` | `-----BEGIN PRIVATE KEY-----...` | ✅ tayyor |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Default Secret | ✅ serverda mavjud |
+| `FIREBASE_PROJECT_ID` | service-account JSON `project_id` | ✅ `carelink-ca427` |
+| `FIREBASE_CLIENT_EMAIL` | service-account JSON `client_email` | ⚠️ JSON bilan bir xil bo‘lishi shart |
+| `FIREBASE_PRIVATE_KEY` | service-account JSON `private_key` (to‘liq PEM) | ⚠️ `private_key_id` emas |
 | `SMS_WEBHOOK_URL` | SMS provider endpoint (Eskiz/Twilio/custom) | ⚠️ avtomatik SMS uchun kerak |
 | `SMS_WEBHOOK_TOKEN` | SMS provider token | ⚠️ provider talab qilsa |
 
@@ -32,32 +32,24 @@ Men hamma narsani tayyorladim — sizga faqat 1 ta qiymat qoldi: **Supabase serv
 ```
 SUPABASE_URL = https://flpmqhditzfosvdtbqlw.supabase.co
 SUPABASE_SERVICE_ROLE_KEY = eyJhbGci... (service_role key)
-FIREBASE_PROJECT_ID = carelink-ca427
-FIREBASE_CLIENT_EMAIL = firebase-adminsdk-fbsvc@carelink-ca427.iam.gserviceaccount.com
-FIREBASE_PRIVATE_KEY = -----BEGIN PRIVATE KEY-----
-...
------END PRIVATE KEY-----
+FIREBASE_PROJECT_ID = service-account JSON ichidagi project_id
+FIREBASE_CLIENT_EMAIL = service-account JSON ichidagi client_email
+FIREBASE_PRIVATE_KEY = service-account JSON ichidagi to‘liq private_key
+
+# Muhim: eaf7bd... kabi private_key_id ni FIREBASE_PRIVATE_KEY ga qo‘ymang.
 ```
 
 ### Yo'l B — Supabase CLI (tavsiya, bitta buyruq)
 
-Men `supabase/functions/hourly_check/.env` faylini tayyorlab qo'ydim (private key to'g'ri formatda).
-Unda faqat `SUPABASE_SERVICE_ROLE_KEY` ni o'zingiz to'ldiring.
+Service-account JSON dan secretlarni xatosiz olish uchun script ishlating:
 
-```bash
-# 1. .env dagi YOUR-SERVICE-ROLE-KEY ni haqiqiy service_role key bilan almashtiring
-# 2. Supabase'ga kirish
+```powershell
 supabase login
-
-# 3. Loyihani bog'lash
-supabase link --project-ref flpmqhditzfosvdtbqlw
-
-# 4. Env'ni joylash (bitta buyruq)
-supabase secrets set --env-file ./supabase/functions/hourly_check/.env
-
-# 5. Edge function'ni deploy qilish
+powershell -ExecutionPolicy Bypass -File .\supabase\functions\hourly_check\set_firebase_secrets.ps1 -JsonPath "C:\path\carelink-service-account.json"
 supabase functions deploy hourly_check
 ```
+
+Script `project_id`, `client_email` va to‘liq `private_key` ni JSON ichidan o‘qiydi. U private key ID ni secret sifatida yubormaydi.
 
 ## 3. Beta monitoring uchun har minutda ishga tushirish (cron)
 

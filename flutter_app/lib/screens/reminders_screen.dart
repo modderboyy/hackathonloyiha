@@ -13,6 +13,7 @@ class RemindersScreen extends StatefulWidget {
 
 class _RemindersScreenState extends State<RemindersScreen> {
   bool _showForm = false;
+  Reminder? _editing;
   ReminderType _type = ReminderType.medication;
   final _title = TextEditingController();
   final _notes = TextEditingController();
@@ -21,13 +22,48 @@ class _RemindersScreenState extends State<RemindersScreen> {
   int _interval = 60;
   DateTime _once = DateTime.now().add(const Duration(hours: 1));
 
+  void _startNew() {
+    setState(() {
+      _editing = null;
+      _showForm = true;
+      _type = ReminderType.medication;
+      _title.clear();
+      _notes.clear();
+      _scheduleMode = 'time';
+      _time = const TimeOfDay(hour: 8, minute: 0);
+      _interval = 60;
+      _once = DateTime.now().add(const Duration(hours: 1));
+    });
+  }
+
+  void _startEdit(Reminder reminder) {
+    setState(() {
+      _editing = reminder;
+      _showForm = true;
+      _type = reminder.type;
+      _title.text = reminder.title;
+      _notes.text = reminder.notes ?? '';
+      if (reminder.intervalMinutes != null) {
+        _scheduleMode = 'interval';
+        _interval = reminder.intervalMinutes!;
+      } else if (reminder.remindOnceAt != null) {
+        _scheduleMode = 'once';
+        _once = reminder.remindOnceAt!;
+      } else {
+        _scheduleMode = 'time';
+        final parts = (reminder.timeOfDay ?? '08:00').split(':');
+        _time = TimeOfDay(hour: int.tryParse(parts[0]) ?? 8, minute: parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     return Scaffold(
       appBar: AppBar(title: const Text('Eslatmalar')),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => setState(() => _showForm = true),
+        onPressed: _startNew,
         backgroundColor: const Color(0xFF1E3A8A),
         icon: const Icon(Icons.add),
         label: const Text('Yangi eslatma'),
@@ -52,8 +88,29 @@ class _RemindersScreenState extends State<RemindersScreen> {
                 const SizedBox(height: 16),
                 ...state.reminderList.map((r) => _ReminderCard(
                       reminder: r,
-                      onToggle: (v) => state.toggleReminder(r.id, v),
-                      onDelete: () => state.deleteReminder(r.id),
+                      onToggle: (v) async {
+                        final error = await state.toggleReminder(r.id, v);
+                        if (!mounted || error == null) return;
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error), behavior: SnackBarBehavior.floating));
+                      },
+                      onEdit: () => _startEdit(r),
+                      onDelete: () async {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: const Text('Eslatmani o‘chirish'),
+                            content: Text('"${r.title}" o‘chirilsinmi?'),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Bekor qilish')),
+                              FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('O‘chirish')),
+                            ],
+                          ),
+                        );
+                        if (confirm != true) return;
+                        final error = await state.deleteReminder(r.id);
+                        if (!mounted || error == null) return;
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error), behavior: SnackBarBehavior.floating));
+                      },
                     )),
               ],
             ),
@@ -72,9 +129,9 @@ class _RemindersScreenState extends State<RemindersScreen> {
               children: [
                 const Icon(Icons.alarm_add, color: Color(0xFF1E3A8A)),
                 const SizedBox(width: 8),
-                const Text('Yangi eslatma', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                Text(_editing == null ? 'Yangi eslatma' : 'Eslatmani tahrirlash', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 const Spacer(),
-                IconButton(icon: const Icon(Icons.close), onPressed: () => setState(() => _showForm = false)),
+                IconButton(icon: const Icon(Icons.close), onPressed: () => setState(() { _showForm = false; _editing = null; })),
               ],
             ),
             const SizedBox(height: 12),
@@ -155,7 +212,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
             FilledButton(
               onPressed: _save,
               style: FilledButton.styleFrom(backgroundColor: const Color(0xFF1E3A8A), padding: const EdgeInsets.symmetric(vertical: 14)),
-              child: const Text('Saqlash va rejalashtirish'),
+              child: Text(_editing == null ? 'Saqlash va rejalashtirish' : 'O‘zgarishlarni saqlash'),
             ),
           ],
         ),
@@ -169,19 +226,40 @@ class _RemindersScreenState extends State<RemindersScreen> {
       return;
     }
     final state = context.read<AppState>();
-    final r = Reminder(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+    final existing = _editing;
+    final reminder = Reminder(
+      id: existing?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
       type: _type,
       title: _title.text.trim(),
       notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
       timeOfDay: _scheduleMode == 'time' ? '${_time.hour.toString().padLeft(2, '0')}:${_time.minute.toString().padLeft(2, '0')}' : null,
       intervalMinutes: _scheduleMode == 'interval' ? _interval : null,
       remindOnceAt: _scheduleMode == 'once' ? _once : null,
+      active: existing?.active ?? true,
+      lastSentAt: existing?.lastSentAt,
+      medicationId: existing?.medicationId,
+      source: existing?.source ?? 'manual',
+      endsAt: existing?.endsAt,
     );
-    await state.addReminder(r);
+
+    String? error;
+    if (existing == null) {
+      try {
+        await state.addReminder(reminder);
+      } catch (e) {
+        error = 'Eslatmani saqlab bo‘lmadi: ${e.toString()}';
+      }
+    } else {
+      error = await state.editReminder(reminder);
+    }
     if (!mounted) return;
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error), behavior: SnackBarBehavior.floating));
+      return;
+    }
     setState(() {
       _showForm = false;
+      _editing = null;
       _title.clear();
       _notes.clear();
     });
@@ -200,9 +278,10 @@ class _RemindersScreenState extends State<RemindersScreen> {
 class _ReminderCard extends StatelessWidget {
   final Reminder reminder;
   final ValueChanged<bool> onToggle;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
-  const _ReminderCard({required this.reminder, required this.onToggle, required this.onDelete});
+  const _ReminderCard({required this.reminder, required this.onToggle, required this.onEdit, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -229,6 +308,8 @@ class _ReminderCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Switch(value: reminder.active, onChanged: onToggle),
+            if (!reminder.isMedicationSync)
+              IconButton(icon: const Icon(Icons.edit_outlined, color: Color(0xFF155EEF)), onPressed: onEdit),
             if (!reminder.isMedicationSync)
               IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red), onPressed: onDelete),
           ],

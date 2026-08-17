@@ -131,11 +131,20 @@ class ReminderService {
   /// Dori o'chirilganda yoki bemor o'chirganda hosil qilingan notificationlar bekor qilinadi.
   Future<void> cancelReminder(Reminder reminder) async {
     await init();
-    // Finite clinical kurs bir reminder uchun maksimal 360 ta plan hosil qiladi.
-    // platforma qo'llab-quvvatlamagan ID'larni cancel qilish xavfsiz no-op hisoblanadi.
-    for (var index = 0; index < _maxScheduledPerReminder; index++) {
-      await _plugin.cancel(_id(reminder, index));
+    // Oddiy har kunlik manual reminder faqat bitta ID ishlatadi. Avvalgi
+    // 360 ta serial cancel UI'ni sekinlashtirib, delete ishlamayotgandek ko'rsatardi.
+    if (reminder.timeOfDay != null && reminder.endsAt == null) {
+      await _plugin.cancel(_id(reminder, 0));
+      return;
     }
+    if (reminder.remindOnceAt != null) {
+      await _plugin.cancel(_id(reminder, 0));
+      return;
+    }
+
+    // Interval yoki klinik finite kurs uchun barcha oldindan schedule qilingan ID'lar.
+    final ids = List<int>.generate(_maxScheduledPerReminder, (index) => _id(reminder, index));
+    await Future.wait(ids.map(_plugin.cancel));
   }
 
   Future<void> cancel(int id) async {

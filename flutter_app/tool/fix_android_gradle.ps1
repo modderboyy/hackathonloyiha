@@ -38,6 +38,34 @@ function Backup-And-Write([string]$path) {
 # Project settings Gradle build uchun asosiy manba.
 Backup-And-Write (Join-Path $androidDir 'gradle.properties')
 
+# Android permissionlar: FCM push va SOS location olish uchun.
+$manifestPath = Join-Path $androidDir 'app\src\main\AndroidManifest.xml'
+if (Test-Path $manifestPath) {
+  $manifest = Get-Content -Raw $manifestPath
+  $neededPermissions = @(
+    'android.permission.INTERNET',
+    'android.permission.POST_NOTIFICATIONS',
+    'android.permission.ACCESS_FINE_LOCATION',
+    'android.permission.ACCESS_COARSE_LOCATION'
+  )
+  $missing = @()
+  foreach ($permission in $neededPermissions) {
+    if ($manifest -notmatch [regex]::Escape("android:name=\"$permission\"")) {
+      $missing += "<uses-permission android:name=\"$permission\" />"
+    }
+  }
+  if ($missing.Count -gt 0) {
+    Copy-Item $manifestPath "$manifestPath.bak" -Force
+    $applicationIndex = $manifest.IndexOf('<application')
+    if ($applicationIndex -ge 0) {
+      $permissionBlock = "    " + ($missing -join "`r`n    ") + "`r`n    "
+      $manifest = $manifest.Insert($applicationIndex, $permissionBlock)
+      Set-Content -Path $manifestPath -Value $manifest -Encoding UTF8
+      Write-Host "Added Android FCM + location permissions to manifest." -ForegroundColor Green
+    }
+  }
+}
+
 # User global properties eski -Xmx8G qiymatini qayta yuklamasligi uchun tozalanadi.
 $userGradleDir = Join-Path $env:USERPROFILE '.gradle'
 $userProps = Join-Path $userGradleDir 'gradle.properties'

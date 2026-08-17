@@ -355,33 +355,65 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> toggleReminder(String id, bool active) async {
+  Future<String?> toggleReminder(String id, bool active) async {
     Reminder? reminder;
     for (final item in reminderList) {
       if (item.id == id) { reminder = item; break; }
     }
-    await db.updateReminder(id, {'active': active});
-    if (reminder != null) {
+    if (reminder == null) return 'Eslatma topilmadi';
+    try {
       final updated = _copyActive(reminder, active);
+      await db.updateReminder(id, {'active': active});
       if (active) {
         await reminders.schedule(updated);
       } else {
         await reminders.cancelReminder(updated);
       }
+      reminderList = reminderList.map((item) => item.id == id ? updated : item).toList();
+      notifyListeners();
+      return null;
+    } catch (e) {
+      return 'Eslatma holatini o‘zgartirib bo‘lmadi: ${e.toString()}';
     }
-    reminderList = reminderList.map((r) => r.id == id ? _copyActive(r, active) : r).toList();
-    notifyListeners();
   }
 
-  Future<void> deleteReminder(String id) async {
+  Future<String?> editReminder(Reminder updated) async {
+    Reminder? old;
+    for (final item in reminderList) {
+      if (item.id == updated.id) { old = item; break; }
+    }
+    final existing = old;
+    if (existing == null) return 'Eslatma topilmadi';
+    try {
+      await reminders.cancelReminder(existing);
+      final saved = await db.updateReminderRecord(updated);
+      if (saved.active) await reminders.schedule(saved);
+      reminderList = reminderList.map((item) => item.id == saved.id ? saved : item).toList();
+      notifyListeners();
+      return null;
+    } catch (e) {
+      // Cancel bo'lgan eski schedule tiklanadi, shunda edit xatosi reminder'ni yo'qotmaydi.
+      if (existing.active) await reminders.schedule(existing);
+      return 'Eslatmani tahrirlab bo‘lmadi: ${e.toString()}';
+    }
+  }
+
+  Future<String?> deleteReminder(String id) async {
     Reminder? reminder;
     for (final item in reminderList) {
       if (item.id == id) { reminder = item; break; }
     }
-    await db.deleteReminder(id);
-    if (reminder != null) await reminders.cancelReminder(reminder);
-    reminderList = reminderList.where((r) => r.id != id).toList();
-    notifyListeners();
+    final existing = reminder;
+    if (existing == null) return 'Eslatma topilmadi';
+    try {
+      await db.deleteReminder(id);
+      await reminders.cancelReminder(existing);
+      reminderList = reminderList.where((item) => item.id != id).toList();
+      notifyListeners();
+      return null;
+    } catch (e) {
+      return 'Eslatmani o‘chirib bo‘lmadi: ${e.toString()}';
+    }
   }
 
   Reminder _copyActive(Reminder r, bool active) => Reminder(

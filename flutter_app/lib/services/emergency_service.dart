@@ -30,17 +30,28 @@ class EmergencyService {
   Future<EmergencyResult> trigger({required String action, String? message}) async {
     Position? position;
     try {
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
-        return const EmergencyResult(ok: false, message: 'Joylashuvni aniqlay olmadik. Iltimos, location ruxsatini yoqing.');
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        return const EmergencyResult(ok: false, message: 'Location xizmati o‘chiq. Telefon Settings → Location ni yoqing.');
       }
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.deniedForever) {
+        return const EmergencyResult(ok: false, message: 'Location ruxsati doimiy rad etilgan. Settings → Apps → CareLink → Permissions → Location ni yoqing.');
+      }
+      if (permission == LocationPermission.denied) {
+        return const EmergencyResult(ok: false, message: 'Location ruxsati berilmadi. SOS va yaqinlarga location yuborish uchun ruxsat kerak.');
+      }
+
       position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 12),
+        timeLimit: const Duration(seconds: 15),
       );
-    } catch (_) {
-      return const EmergencyResult(ok: false, message: 'Joylashuvni aniqlay olmadik. Internet va GPS yoqilganini tekshiring.');
+    } catch (e) {
+      return EmergencyResult(ok: false, message: 'Joylashuvni aniqlay olmadik: ${e.toString()}');
     }
 
     if (action == 'family') {
