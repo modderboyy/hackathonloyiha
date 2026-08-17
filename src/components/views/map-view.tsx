@@ -73,9 +73,10 @@ export function MapOverview() {
 
       <Grid container spacing={2.5}>
         <Grid size={{ xs: 12, lg: 4 }}>
-          <Card sx={{ height: "100%" }}>
-            <CardContent sx={{ p: { xs: 2, sm: 2.2 } }}>
-              <Stack spacing={1.5}>
+          <Card sx={{ height: "100%", boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}>
+            <CardContent sx={{ p: 2.5 }}>
+              <Stack spacing={2.2}>
+                {/* Search Field */}
                 <TextField
                   fullWidth
                   size="small"
@@ -85,68 +86,212 @@ export function MapOverview() {
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <SearchRounded sx={{ color: "#98A2B3" }} />
+                        <SearchRounded sx={{ color: "#6B7280", fontSize: 20 }} />
                       </InputAdornment>
                     ),
                   }}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 2,
+                      bgcolor: "#F9FAFB",
+                      "& fieldset": {
+                        borderColor: "#E5E7EB",
+                      },
+                      "&:hover fieldset": {
+                        borderColor: "#D1D5DB",
+                      },
+                    },
+                  }}
                 />
 
-                <TextField select SelectProps={{ native: true }} size="small" defaultValue="all">
+                {/* Sort Dropdown */}
+                <TextField
+                  select
+                  fullWidth
+                  SelectProps={{ native: true }}
+                  size="small"
+                  defaultValue="all"
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 2,
+                      bgcolor: "#F9FAFB",
+                      "& fieldset": {
+                        borderColor: "#E5E7EB",
+                      },
+                    },
+                  }}
+                >
                   <option value="all">Barcha klinikalar</option>
                   <option value="nearest">Eng yaqin</option>
                   <option value="rated">Yuqori reyting</option>
                 </TextField>
 
-                <Stack spacing={1.1}>
-                  <Chip label="🏥 Klinikalar" sx={{ justifyContent: "flex-start", bgcolor: "#EFF4FF", color: "#155EEF" }} />
-                  <Chip label="🚨 Tezkor xizmat" sx={{ justifyContent: "flex-start", bgcolor: "#FEF3F2", color: "#C74B49" }} />
-                  <Chip label="⏰ Faol hozir" sx={{ justifyContent: "flex-start", bgcolor: "#ECFDF3", color: "#1FA777" }} />
+                {/* Filter Chips */}
+                <Stack spacing={1.2}>
+                  <Typography variant="caption" sx={{ color: "#6B7280", fontWeight: 700, textTransform: "uppercase", fontSize: "0.7rem", letterSpacing: 0.5 }}>
+                    Filtrlash
+                  </Typography>
+                  <Stack spacing={0.8}>
+                    <Chip
+                      label="🏥 Klinikalar"
+                      sx={{
+                        justifyContent: "flex-start",
+                        bgcolor: "#EFF4FF",
+                        color: "#155EEF",
+                        fontWeight: 600,
+                        height: 36,
+                        borderRadius: 1.5,
+                        cursor: "pointer",
+                        transition: "all 0.2s ease",
+                        border: "1px solid #DBEAFE",
+                        "&:hover": { bgcolor: "#DBEAFE", boxShadow: "0 2px 8px rgba(21, 94, 239, 0.15)" },
+                      }}
+                    />
+                    <Chip
+                      label="🚨 Tezkor xizmat"
+                      sx={{
+                        justifyContent: "flex-start",
+                        bgcolor: "#FEF3F2",
+                        color: "#C74B49",
+                        fontWeight: 600,
+                        height: 36,
+                        borderRadius: 1.5,
+                        cursor: "pointer",
+                        transition: "all 0.2s ease",
+                        border: "1px solid #FECACA",
+                        "&:hover": { bgcolor: "#FDE2E2", boxShadow: "0 2px 8px rgba(199, 75, 73, 0.15)" },
+                      }}
+                    />
+                    <Chip
+                      label="⏰ Faol hozir"
+                      sx={{
+                        justifyContent: "flex-start",
+                        bgcolor: "#ECFDF3",
+                        color: "#1FA777",
+                        fontWeight: 600,
+                        height: 36,
+                        borderRadius: 1.5,
+                        cursor: "pointer",
+                        transition: "all 0.2s ease",
+                        border: "1px solid #BBFCE0",
+                        "&:hover": { bgcolor: "#CCFCE2", boxShadow: "0 2px 8px rgba(31, 167, 119, 0.15)" },
+                      }}
+                    />
+                  </Stack>
                 </Stack>
 
-                <Divider />
+                <Divider sx={{ my: 0.5 }} />
 
                 {selectedClinic && (
-                  <Card
-                    variant="outlined"
-                    sx={{ borderRadius: 3, borderColor: "rgba(15,110,92,0.3)", background: "rgba(15,110,92,0.04)", p: 1.3 }}
-                  >
-                    <Stack spacing={0.8}>
-                      <Typography variant="subtitle1" fontWeight={800}>{selectedClinic.name}</Typography>
-                      <Typography variant="caption" color="text.secondary">{selectedClinic.address || "Manzil kiritilmagan"}</Typography>
-                      <Stack direction="row" spacing={0.8} alignItems="center">
-                        <StarRounded sx={{ fontSize: 16, color: "#F4B740" }} />
-                        <Typography variant="caption" fontWeight={700}>{selectedClinic.rating}</Typography>
-                        <Chip size="small" label={selectedClinic.emergency ? "Emergency" : "Standart"} sx={{ bgcolor: selectedClinic.emergency ? "#FEF3F2" : "#EEF4FF", color: selectedClinic.emergency ? "#C74B49" : "#155EEF", height: 22 }} />
+                  <>
+                    <Typography variant="caption" sx={{ color: "#6B7280", fontWeight: 700, textTransform: "uppercase", fontSize: "0.7rem", letterSpacing: 0.5 }}>
+                      Tanlangan klinika
+                    </Typography>
+                    <Card
+                      variant="outlined"
+                      sx={{
+                        borderRadius: 2.5,
+                        border: "2px solid #0F6E5C",
+                        background: "linear-gradient(135deg, rgba(15,110,92,0.06) 0%, rgba(15,110,92,0.02) 100%)",
+                        p: 2,
+                        boxShadow: "0 4px 12px rgba(15,110,92,0.1)",
+                      }}
+                    >
+                      <Stack spacing={1.5}>
+                        <Stack>
+                          <Typography variant="body1" fontWeight={800} sx={{ color: "#1F2937", mb: 0.3 }}>
+                            {selectedClinic.name}
+                          </Typography>
+                          <Stack direction="row" spacing={0.6} alignItems="center">
+                            <LocationOnOutlined sx={{ fontSize: 16, color: "#6B7280" }} />
+                            <Typography variant="caption" sx={{ color: "#6B7280", fontWeight: 500 }}>
+                              {selectedClinic.address || "Manzil kiritilmagan"}
+                            </Typography>
+                          </Stack>
+                        </Stack>
+                        <Stack direction="row" spacing={0.8} alignItems="center">
+                          <Box sx={{ display: "flex", alignItems: "center", gap: 0.4 }}>
+                            <StarRounded sx={{ fontSize: 16, color: "#F59E0B" }} />
+                            <Typography variant="caption" fontWeight={700} sx={{ color: "#1F2937" }}>
+                              {selectedClinic.rating}
+                            </Typography>
+                          </Box>
+                          <Chip
+                            size="small"
+                            label={selectedClinic.emergency ? "🚨 Emergency" : "📋 Standart"}
+                            sx={{
+                              bgcolor: selectedClinic.emergency ? "#FEF3F2" : "#DBEAFE",
+                              color: selectedClinic.emergency ? "#C74B49" : "#155EEF",
+                              height: 24,
+                              fontWeight: 700,
+                              fontSize: "0.75rem",
+                            }}
+                          />
+                        </Stack>
+                        <Stack direction="row" spacing={1.5} sx={{ pt: 0.5 }}>
+                          <InfoPill icon={<LocationOnOutlined sx={{ fontSize: 18 }} />} value={selectedClinic.distance} />
+                          <InfoPill icon={<MedicalServicesRounded sx={{ fontSize: 18 }} />} value={String(selectedClinic.doctors)} />
+                        </Stack>
                       </Stack>
-                      <Stack direction="row" spacing={1.2}>
-                        <InfoPill icon={<LocationOnOutlined />} value={selectedClinic.distance} />
-                        <InfoPill icon={<MedicalServicesRounded />} value={String(selectedClinic.doctors)} />
-                      </Stack>
-                    </Stack>
-                  </Card>
+                    </Card>
+                  </>
                 )}
 
-                <Stack spacing={1.25}>
+                <Stack spacing={1.2}>
+                  <Typography variant="caption" sx={{ color: "#6B7280", fontWeight: 700, textTransform: "uppercase", fontSize: "0.7rem", letterSpacing: 0.5 }}>
+                    Barcha klinikalar
+                  </Typography>
                   {clinics.map((clinic) => (
                     <Card
                       key={clinic.id}
                       variant="outlined"
                       onClick={() => setSelectedClinicId(clinic.id)}
-                      sx={{ borderRadius: 3, p: 1.2, cursor: "pointer", borderColor: selectedClinic?.id === clinic.id ? "#0F6E5C" : undefined, background: selectedClinic?.id === clinic.id ? "rgba(15,110,92,0.04)" : undefined }}
+                      sx={{
+                        borderRadius: 2,
+                        p: 1.5,
+                        cursor: "pointer",
+                        border: selectedClinic?.id === clinic.id ? "2px solid #0F6E5C" : "1px solid #E5E7EB",
+                        background: selectedClinic?.id === clinic.id
+                          ? "linear-gradient(135deg, rgba(15,110,92,0.06) 0%, rgba(15,110,92,0.02) 100%)"
+                          : "#FFFFFF",
+                        transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+                        boxShadow: selectedClinic?.id === clinic.id ? "0 4px 12px rgba(15,110,92,0.1)" : "0 1px 2px rgba(0,0,0,0.05)",
+                        "&:hover": {
+                          boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                          transform: "translateY(-2px)",
+                          borderColor: selectedClinic?.id === clinic.id ? "#0F6E5C" : "#D1D5DB",
+                        },
+                      }}
                     >
-                      <Stack direction="row" justifyContent="space-between" spacing={1}>
-                        <Box>
-                          <Typography variant="body2" fontWeight={800}>{clinic.name}</Typography>
-                          <Stack direction="row" spacing={0.6} alignItems="center" sx={{ mt: 0.5 }}>
-                            <StarRounded sx={{ fontSize: 16, color: "#F4B740" }} />
-                            <Typography variant="caption" color="text.secondary">{clinic.rating}</Typography>
-                          </Stack>
-                        </Box>
-                        <Chip size="small" label={clinic.emergency ? "Emergency" : "Standart"} sx={{ bgcolor: clinic.emergency ? "#FEF3F2" : "#EEF4FF", color: clinic.emergency ? "#C74B49" : "#155EEF" }} />
-                      </Stack>
-                      <Stack direction="row" spacing={1.6} sx={{ mt: 1.25 }}>
-                        <InfoPill icon={<LocationOnOutlined />} value={clinic.distance} />
-                        <InfoPill icon={<MedicalServicesRounded />} value={String(clinic.doctors)} />
+                      <Stack spacing={1.2}>
+                        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
+                          <Box flex={1}>
+                            <Typography variant="body2" fontWeight={800} sx={{ color: "#1F2937" }}>
+                              {clinic.name}
+                            </Typography>
+                            <Stack direction="row" spacing={0.6} alignItems="center" sx={{ mt: 0.4 }}>
+                              <StarRounded sx={{ fontSize: 15, color: "#F59E0B" }} />
+                              <Typography variant="caption" sx={{ color: "#6B7280", fontWeight: 600 }}>
+                                {clinic.rating}
+                              </Typography>
+                            </Stack>
+                          </Box>
+                          <Chip
+                            size="small"
+                            label={clinic.emergency ? "🚨 Emergency" : "📋 Standart"}
+                            sx={{
+                              bgcolor: clinic.emergency ? "#FEF3F2" : "#DBEAFE",
+                              color: clinic.emergency ? "#C74B49" : "#155EEF",
+                              height: 24,
+                              fontWeight: 700,
+                              fontSize: "0.75rem",
+                            }}
+                          />
+                        </Stack>
+                        <Stack direction="row" spacing={1.5}>
+                          <InfoPill icon={<LocationOnOutlined sx={{ fontSize: 16 }} />} value={clinic.distance} />
+                          <InfoPill icon={<MedicalServicesRounded sx={{ fontSize: 16 }} />} value={String(clinic.doctors)} />
+                        </Stack>
                       </Stack>
                     </Card>
                   ))}
