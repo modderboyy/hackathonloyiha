@@ -12,6 +12,7 @@ import 'lock_screen.dart';
 import 'notifications_screen.dart';
 import 'profile_screen.dart';
 import 'reminders_screen.dart';
+import 'sos_screen.dart';
 import 'search_screen.dart';
 import 'stats_screen.dart';
 import 'subscription_screen.dart';
@@ -53,6 +54,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 tab: _tab,
                 state: state,
                 onNotifications: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationsScreen())),
+                onSos: _confirmSos,
                 onMore: _showMore,
               ),
               Expanded(
@@ -72,6 +74,23 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       bottomNavigationBar: _BottomNav(current: _tab, onTap: (i) => setState(() => _tab = i)),
     );
+  }
+
+  Future<void> _confirmSos() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('SOS yuborilsinmi?'),
+        content: const Text('Joylashuvingiz klinikaga yuboriladi va tezkor yordam navbati yaratiladi.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Bekor qilish')),
+          FilledButton(style: FilledButton.styleFrom(backgroundColor: AppColors.red), onPressed: () => Navigator.pop(dialogContext, true), child: const Text('SOS YUBORISH')),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SosScreen()));
+    }
   }
 
   void _showMore() {
@@ -121,9 +140,10 @@ class _MobileTopBar extends StatelessWidget {
   final int tab;
   final AppState state;
   final VoidCallback onNotifications;
+  final VoidCallback onSos;
   final VoidCallback onMore;
 
-  const _MobileTopBar({required this.tab, required this.state, required this.onNotifications, required this.onMore});
+  const _MobileTopBar({required this.tab, required this.state, required this.onNotifications, required this.onSos, required this.onMore});
 
   @override
   Widget build(BuildContext context) {
@@ -159,10 +179,12 @@ class _MobileTopBar extends StatelessWidget {
                 ? const SizedBox()
                 : Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 25, fontFamily: 'serif', fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
           ),
-          if (tab == 1)
+          if (tab == 0) ...[
+            _TopCircleButton(icon: Icons.sos_rounded, onTap: onSos, background: AppColors.red, iconColor: Colors.white),
+            const SizedBox(width: 8),
+            _TopCircleButton(icon: Icons.notifications_none_rounded, onTap: onNotifications, hasDot: state.unreadNotificationCount > 0),
+          ] else if (tab == 1)
             _TopCircleButton(icon: Icons.calendar_month_outlined, onTap: () {})
-          else if (tab == 0)
-            _TopCircleButton(icon: Icons.notifications_none_rounded, onTap: onNotifications, hasDot: state.unreadNotificationCount > 0)
           else
             const SizedBox(width: 42),
           const SizedBox(width: 8),
@@ -177,7 +199,9 @@ class _TopCircleButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
   final bool hasDot;
-  const _TopCircleButton({required this.icon, required this.onTap, this.hasDot = false});
+  final Color? background;
+  final Color? iconColor;
+  const _TopCircleButton({required this.icon, required this.onTap, this.hasDot = false, this.background, this.iconColor});
 
   @override
   Widget build(BuildContext context) {
@@ -189,8 +213,8 @@ class _TopCircleButton extends StatelessWidget {
           Container(
             width: 42,
             height: 42,
-            decoration: BoxDecoration(color: AppColors.bgCard, shape: BoxShape.circle, border: Border.all(color: AppColors.border)),
-            child: Icon(icon, color: AppColors.textPrimary, size: 21),
+            decoration: BoxDecoration(color: background ?? AppColors.bgCard, shape: BoxShape.circle, border: Border.all(color: background ?? AppColors.border), boxShadow: background == null ? null : [BoxShadow(color: background!.withOpacity(0.30), blurRadius: 10, offset: const Offset(0, 4))]),
+            child: Icon(icon, color: iconColor ?? AppColors.textPrimary, size: 21),
           ),
           if (hasDot)
             Positioned(right: 7, top: 7, child: Container(width: 7, height: 7, decoration: const BoxDecoration(color: AppColors.red, shape: BoxShape.circle))),
@@ -443,6 +467,23 @@ class _SafetyPanel extends StatelessWidget {
     ));
   }
 
+  Future<void> _confirmAndOpen(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('SOS yuborilsinmi?'),
+        content: const Text('Joylashuvingiz klinika navbatiga yuboriladi.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Bekor qilish')),
+          FilledButton(style: FilledButton.styleFrom(backgroundColor: AppColors.red), onPressed: () => Navigator.pop(dialogContext, true), child: const Text('SOS YUBORISH')),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SosScreen()));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = context.read<AppState>();
@@ -455,7 +496,7 @@ class _SafetyPanel extends StatelessWidget {
           const Row(children: [Icon(Icons.health_and_safety_outlined, color: AppColors.amber, size: 20), SizedBox(width: 8), Text('Tezkor yordam paneli', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w800)), Spacer(), Text('FAOL', style: TextStyle(color: AppColors.amber, fontSize: 10, fontWeight: FontWeight.w800))]),
           const SizedBox(height: 10),
           Row(children: [
-            Expanded(child: _SafetyButton(label: 'SOS', icon: Icons.sos_rounded, color: AppColors.red, onTap: () => _showResult(context, state.triggerSos))),
+            Expanded(child: _SafetyButton(label: 'SOS', icon: Icons.sos_rounded, color: AppColors.red, onTap: () => _confirmAndOpen(context))),
             const SizedBox(width: 8),
             Expanded(child: _SafetyButton(label: '103', icon: Icons.phone_in_talk_rounded, color: AppColors.primary, onTap: () { state.callEmergency103(); })),
             const SizedBox(width: 8),

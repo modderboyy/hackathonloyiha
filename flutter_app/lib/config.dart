@@ -12,6 +12,10 @@ class Config {
     'SUPABASE_ANON_KEY',
     defaultValue: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZscG1xaGRpdHpmb3N2ZHRicWx3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY4NDExMTUsImV4cCI6MjEwMjQxNzExNX0.WbJfQnbAkS346cmU7QIXP_kOauSS-HpK-y4sDxjDWJ8',
   );
+  static const String apiBaseUrl = String.fromEnvironment(
+    'CARELINK_API_URL',
+    defaultValue: 'https://hackathonloyiha.vercel.app',
+  );
   static const double premiumPriceUsd = 5.0;
   static const String emergency102 = '102';
   static const String emergency103 = '103';
