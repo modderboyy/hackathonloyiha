@@ -1,80 +1,58 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import '../config.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models.dart';
 
-/// OpenAI orqali AI chatbot (bemor bilan suhbat).
+/// AI chat endi OpenAI keyni APK ichida saqlamaydi.
+/// So'rov authenticated Supabase Edge Function (`ai-chat`) orqali yuboriladi.
 class OpenAIService {
   final List<ChatMessage> _history = [];
 
-  /// Bemorning sog'liq kontekstini berib, chatbotga savol yuborish
   Future<String> chat(String userMessage, {HealthData? health}) async {
-    _history.add(ChatMessage(role: 'user', content: userMessage, createdAt: DateTime.now()));
+    final clean = userMessage.trim();
+    if (clean.isEmpty) return 'Xabarni yozing.';
 
-    final systemPrompt = _buildSystemPrompt(health);
-    final messages = [
-      {'role': 'system', 'content': systemPrompt},
-      ..._history.map((m) => {'role': m.role, 'content': m.content}).toList(),
-    ];
-
-    // OpenAI kaliti bo'lmasa — demo javob (offline fallback)
-    if (Config.openaiApiKey == 'YOUR-OPENAI-KEY' || Config.openaiApiKey.isEmpty) {
-      return _demoReply(userMessage);
+    try {
+      final response = await Supabase.instance.client.functions.invoke(
+        'ai-chat',
+        body: {
+          'message': clean,
+          'history': _history.map((message) => {'role': message.role, 'content': message.content}).toList(),
+          'health': {
+            'currentCondition': health?.currentCondition,
+            'hospitalDiagnosis': health?.hospitalDiagnosis,
+            'treatmentSummary': health?.treatmentSummary,
+            'dischargeRecommendations': health?.dischargeRecommendations,
+            'avgBpSys': health?.avgBpSys,
+            'avgBpDia': health?.avgBpDia,
+            'avgHeartRate': health?.avgHeartRate,
+            'avgTemperature': health?.avgTemperature,
+            'avgSpo2': health?.avgSpo2,
+            'allergies': health?.allergies,
+          },
+        },
+      );
+      final data = (response.data as Map?) ?? {};
+      final reply = data['reply']?.toString().trim();
+      if (data['ok'] == true && reply != null && reply.isNotEmpty) {
+        _history.add(ChatMessage(role: 'user', content: clean, createdAt: DateTime.now()));
+        _history.add(ChatMessage(role: 'assistant', content: reply, createdAt: DateTime.now()));
+        if (_history.length > 20) _history.removeRange(0, _history.length - 20);
+        return reply;
+      }
+      return _demoReply(clean, setupHint: data['error']?.toString());
+    } catch (_) {
+      return _demoReply(clean);
     }
-
-    final res = await http.post(
-      Uri.parse('https://api.openai.com/v1/chat/completions'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ${Config.openaiApiKey}',
-      },
-      body: jsonEncode({
-        'model': 'gpt-4o-mini',
-        'messages': messages,
-        'temperature': 0.7,
-        'max_tokens': 400,
-      }),
-    );
-
-    if (res.statusCode != 200) return "Uzr, hozir javob bera olmadim. Yordam uchun 103 ga qo'ng'iroq qiling.";
-
-    final json = jsonDecode(utf8.decode(res.bodyBytes));
-    final reply = json['choices']?[0]?['message']?['content']?.toString()?.trim();
-    if (reply == null || reply.isEmpty) return "Uzr, tushunmadim.";
-    _history.add(ChatMessage(role: 'assistant', content: reply, createdAt: DateTime.now()));
-    return reply;
   }
 
-  String _buildSystemPrompt(HealthData? health) {
-    return '''
-Sen CareLink tibbiy yordamchi botisan. O'zbek tilida, iliq va g'amxo'r ohangda javob berasan.
-Bemor ma'lumotlari:
-- Hozirgi kasallik: ${health?.currentCondition ?? "noma'lum"}
-- Klinik tashxis: ${health?.hospitalDiagnosis ?? "noma'lum"}
-- Statsionar davolash yakuni: ${health?.treatmentSummary ?? "kiritilmagan"}
-- Shifokor tavsiyalari: ${health?.dischargeRecommendations ?? "kiritilmagan"}
-- O'rtacha qon bosimi: ${health?.avgBpSys ?? '—'}/${health?.avgBpDia ?? '—'}
-- Puls: ${health?.avgHeartRate ?? '—'}
-- Harorat: ${health?.avgTemperature ?? '—'}°C
-- SpO2: ${health?.avgSpo2 ?? '—'}%
-- Allergiya: ${health?.allergies ?? 'yo\'q'}
-- Dorilar: ${health?.medications ?? 'yo\'q'}
-
-Qoidalar:
-- Tibbiy tashxis qo'yma, faqat umumiy maslahat va yo'nalish ber.
-- Agar holat og'ir tuyulsa, 103 (tez tibbiy yordam) ga qo'ng'iroq qilishni tavsiya et.
-- Javoblarni qisqa va tushunarli qil.
-''';
-  }
-
-  String _demoReply(String msg) {
-    final lower = msg.toLowerCase();
+  String _demoReply(String message, {String? setupHint}) {
+    final lower = message.toLowerCase();
     if (lower.contains('yomon') || lower.contains('og\'ri') || lower.contains('yon')) {
-      return "Tushunarli, bu muhim. Iltimos darhol 103 (tez tibbiy yordam) ga qo'ng'iroq qiling. O'zingizni qanday holatda his qilyapsiz — nafas olish, og'riq darajasi?";
+      return "Tushunarli, bu muhim. Iltimos darhol 103 ga qo'ng'iroq qiling yoki shifokoringiz bilan bog'laning.";
     }
     if (lower.contains('yaxshi') || lower.contains('yaxshiman')) {
-      return "Juda yaxshi! Shunday davom eting. Dorilarni vaqtida qabul qilishni unutmang. Yana bir narsa kerak bo'lsa yozing.";
+      return "Juda yaxshi. Dorilarni belgilangan vaqtda qabul qilishni davom ettiring.";
     }
-    return "Sizni tinglayapman. Iltimos batafsilroq yozing: og'riq bormi, qayerda, qachondan beri? (Demo rejim: OpenAI kaliti kiritilgach to'liq ishlaydi)";
+    final suffix = setupHint != null ? ' AI server sozlangach batafsil javob beradi.' : ' Hozir offline yordamchi rejimi ishlayapti.';
+    return "Sizni tinglayapman. Holatingizni batafsilroq yozing: og'riq, nafas, harorat yoki bosim o'zgarishi bormi?$suffix";
   }
 }
