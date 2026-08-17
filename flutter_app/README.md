@@ -46,9 +46,9 @@ supabase/migrations/00016_clinic_first_care_model.sql
 
 Bu migratsiya uchta rol (`super_admin`, `medical_worker`, `patient`), klinika doirasi RLS, dori-reminder sync va AI care kontekstini yaratadi.
 
-### 2. Ilovani maxfiy kalitlarsiz build qiling
+### 2. Ilovani sozlang
 
-Kalitlar `lib/config.dart` ichiga yozilmaydi. Ularni build vaqtida uzating:
+Standart Supabase public URL/anon key ilovaga qo‘shilgan, shu sababli mavjud CareLink loyihasi bilan oddiy `flutter run` ham ishlaydi. Boshqa loyiha uchun yoki build konfiguratsiyasini almashtirishda quyidagi qiymatlarni build vaqtida uzating:
 
 ```bash
 cd flutter_app

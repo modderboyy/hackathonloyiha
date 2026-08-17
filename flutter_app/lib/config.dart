@@ -1,9 +1,17 @@
 /// CareLink — build-time konfiguratsiya.
-/// Maxfiy kalitlar repository ichiga yozilmaydi:
+/// Supabase URL va anon key browser/mobile uchun public konfiguratsiya hisoblanadi.
+/// Kerak bo'lsa build vaqtida quyidagilar bilan override qiling:
 /// flutter run --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=... --dart-define=OPENAI_API_KEY=...
 class Config {
-  static const String supabaseUrl = String.fromEnvironment('SUPABASE_URL');
-  static const String supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+  static const String supabaseUrl = String.fromEnvironment(
+    'SUPABASE_URL',
+    defaultValue: 'https://flpmqhditzfosvdtbqlw.supabase.co',
+  );
+  static const String supabaseAnonKey = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
+    defaultValue: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZscG1xaGRpdHpmb3N2ZHRicWx3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY4NDExMTUsImV4cCI6MjEwMjQxNzExNX0.WbJfQnbAkS346cmU7QIXP_kOauSS-HpK-y4sDxjDWJ8';',
+  );
+  // OpenAI kalitini repositoryga yozmang. Kalit yo'q bo'lsa bot offline demo rejimida ishlaydi.
   static const String openaiApiKey = String.fromEnvironment('OPENAI_API_KEY');
 
   static const double premiumPriceUsd = 5.0;

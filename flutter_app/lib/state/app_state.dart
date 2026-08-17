@@ -99,7 +99,7 @@ class AppState extends ChangeNotifier {
     try {
       final res = await db.register(email: email, password: password, fullName: fullName, phone: phone);
       if (res.session == null) {
-        error = 'Ro\'yxatdan o\'tishda xato. Email tasdiqlanishi kerak bo\'lishi mumkin.';
+        error = 'Hisob yaratildi. Emailingizga yuborilgan tasdiqlash havolasini bosing, keyin tizimga kiring.';
       } else {
         await db.ensureClientRole();
         await _initFcm();
@@ -123,8 +123,21 @@ class AppState extends ChangeNotifier {
       await _initFcm();
       await loadAll();
       _startRealtime();
-    } catch (e) {
-      error = 'Email yoki parol noto\'g\'ri.';
+    } on AuthException catch (e) {
+      // Avval barcha xatoni “parol noto‘g‘ri” deb ko‘rsatardik. Bu email
+      // tasdiqlanmagan yoki internet/server muammosini yashirib qo‘yardi.
+      final message = e.message.toLowerCase();
+      if (message.contains('email not confirmed') || message.contains('email_not_confirmed')) {
+        error = 'Email hali tasdiqlanmagan. Pochtangizdagi tasdiqlash havolasini bosing, so‘ng qayta kiring.';
+      } else if (message.contains('invalid login') || message.contains('invalid credentials')) {
+        error = 'Email yoki parol noto‘g‘ri. Parol katta-kichik harflarga sezgir.';
+      } else if (message.contains('rate limit')) {
+        error = 'Juda ko‘p urinish bo‘ldi. Bir necha daqiqadan keyin qayta urinib ko‘ring.';
+      } else {
+        error = 'Kirishda xatolik: ${e.message}';
+      }
+    } catch (_) {
+      error = 'Serverga ulanib bo‘lmadi. Internetni tekshiring va ilovani qayta oching.';
     } finally {
       loading = false;
       notifyListeners();
