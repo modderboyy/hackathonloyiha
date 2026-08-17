@@ -340,9 +340,27 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setPatients((prev) => [row, ...prev]);
       return null;
     }
-    const { data, error } = await supabase.from("patients").insert({ ...payload, created_by: profile.id }).select().single();
-    if (error) return error.message;
-    setPatients((prev) => [data as Patient, ...prev]);
+    // RPC klinika doirasini server tomonda tekshiradi. Shunday qilib RLS
+    // eski facility_id/clinic_id ma'lumotlari sabab insertni bloklamaydi.
+    const { data, error } = await supabase.rpc("create_clinic_patient", {
+      p_full_name: payload.full_name,
+      p_pinfl: payload.pinfl,
+      p_birth_date: payload.birth_date,
+      p_gender: payload.gender,
+      p_phone: payload.phone,
+      p_address: payload.address,
+      p_emergency_contact: payload.emergency_contact,
+      p_clinic_id: clinicId,
+    });
+    if (error) {
+      if (error.message.toLowerCase().includes("create_clinic_patient")) {
+        return "Bemor qo‘shish migratsiyasi topilmadi. Supabase SQL Editor’da 00017_fix_patient_insert_rls.sql faylini ishga tushiring.";
+      }
+      return error.message;
+    }
+    const result = data as { ok?: boolean; error?: string; patient?: Patient } | null;
+    if (!result?.ok || !result.patient) return result?.error ?? "Bemor saqlanmadi.";
+    setPatients((prev) => [result.patient as Patient, ...prev]);
     return null;
   }, [supabase, profile]);
 
