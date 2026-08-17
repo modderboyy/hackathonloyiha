@@ -7,6 +7,8 @@ import '../services/notification_service.dart';
 import '../services/reminder_service.dart';
 import '../services/fcm_service.dart';
 
+enum FcmInitStatus { idle, initializing, ready, tokenPending, webPreview, error }
+
 /// Ilova holati — auth, sog'liq, obuna, tekshiruv va bloklash.
 class AppState extends ChangeNotifier {
   final SupabaseService db = SupabaseService();
@@ -29,6 +31,12 @@ class AppState extends ChangeNotifier {
   bool loading = true;
   String? error;
   bool _realtimeStarted = false;
+
+  // Profil → Beta AI sozlamalarida ko'rinadigan FCM diagnostikasi.
+  FcmInitStatus fcmInitStatus = FcmInitStatus.idle;
+  String? fcmStatusMessage;
+  String? fcmTokenPreview;
+  String? fcmPermissionStatus;
 
   bool get isLoggedIn => db.userId != null;
   bool get isPremium => subscription?.isActive ?? false;
@@ -54,17 +62,31 @@ class AppState extends ChangeNotifier {
     // Web build uchun FirebaseOptions/VAPID sozlanmagan. Android push oqimi
     // web previewdan mustaqil ishlaydi, shuning uchun webda FCM init qilmaymiz.
     if (kIsWeb) {
-      debugPrint('FCM web previewda o‘chirilgan; Android buildda faol bo‘ladi.');
+      fcmInitStatus = FcmInitStatus.webPreview;
+      fcmStatusMessage = 'Web preview: Firebase Web/VAPID sozlanmagan. Android buildda FCM ishlaydi.';
+      fcmPermissionStatus = 'web disabled';
+      notifyListeners();
       return;
     }
-    // FCM token Supabase'ga saqlanadi (login'da ham chaqiriladi)
+
+    fcmInitStatus = FcmInitStatus.initializing;
+    fcmStatusMessage = 'Firebase SDK ishga tushirilmoqda…';
+    notifyListeners();
+
     FirebaseMessagingService.setTokenCallback((token) async {
+      fcmTokenPreview = _tokenPreview(token);
       if (db.userId != null) {
         await db.saveFcmToken(token);
         profile = await db.getProfile();
-        notifyListeners();
+        fcmInitStatus = FcmInitStatus.ready;
+        fcmStatusMessage = 'FCM token olindi va Supabase profiliga saqlandi.';
+      } else {
+        fcmInitStatus = FcmInitStatus.ready;
+        fcmStatusMessage = 'FCM token olindi. Login qilingach profilga saqlanadi.';
       }
+      notifyListeners();
     });
+
     FirebaseMessagingService.setMessageCallback((message) async {
       final title = message.notification?.title ?? message.data['title'] ?? 'CareLink xabari';
       final body = message.notification?.body ?? message.data['body'] ?? 'Yangi bildirishnoma keldi.';
@@ -74,19 +96,37 @@ class AppState extends ChangeNotifier {
         notifyListeners();
       }
     });
+
     try {
       await FirebaseMessagingService.init();
-      // FCM init login'dan oldin bo'lgan bo'lsa ham, login'dan keyin token
-      // profile.fcm_token ga albatta yoziladi. Test push shu qiymatdan foydalanadi.
+      fcmPermissionStatus = await FirebaseMessagingService.permissionStatus();
       final token = await FirebaseMessagingService.currentToken();
-      if (token != null && db.userId != null) {
-        await db.saveFcmToken(token);
-        profile = await db.getProfile();
-        notifyListeners();
+      if (token == null || token.isEmpty) {
+        fcmInitStatus = FcmInitStatus.tokenPending;
+        fcmStatusMessage = 'Firebase ishga tushdi, ammo qurilma tokeni hali olinmadi.';
+      } else {
+        fcmTokenPreview = _tokenPreview(token);
+        if (db.userId != null) {
+          await db.saveFcmToken(token);
+          profile = await db.getProfile();
+          fcmInitStatus = FcmInitStatus.ready;
+          fcmStatusMessage = 'FCM token olindi va Supabase profiliga saqlandi.';
+        } else {
+          fcmInitStatus = FcmInitStatus.ready;
+          fcmStatusMessage = 'FCM token olindi. Login qilingach profilga saqlanadi.';
+        }
       }
     } catch (e) {
-      debugPrint('FCM init xato: $e');
+      fcmInitStatus = FcmInitStatus.error;
+      fcmStatusMessage = 'FCM init xato: ${e.toString()}';
+      debugPrint(fcmStatusMessage);
     }
+    notifyListeners();
+  }
+
+  String _tokenPreview(String token) {
+    if (token.length <= 18) return token;
+    return '${token.substring(0, 9)}…${token.substring(token.length - 7)}';
   }
 
   Future<void> loadAll() async {

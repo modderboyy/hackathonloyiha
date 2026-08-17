@@ -52,6 +52,12 @@ class FirebaseMessagingService {
     return FirebaseMessaging.instance.getToken();
   }
 
+  static Future<String> permissionStatus() async {
+    await init();
+    final settings = await FirebaseMessaging.instance.getNotificationSettings();
+    return settings.authorizationStatus.name;
+  }
+
   static void setTokenCallback(FutureOr<void> Function(String token) callback) => _onTokenReceived = callback;
   static void setMessageCallback(FutureOr<void> Function(RemoteMessage) callback) => _onMessage = callback;
   static void setMessageOpenedCallback(FutureOr<void> Function(RemoteMessage) callback) => _onMessageOpened = callback;

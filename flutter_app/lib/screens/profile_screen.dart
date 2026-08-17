@@ -211,6 +211,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               intervalMinutes: state.monitoringSettings.intervalMinutes,
               testing: _testingPush,
               pushReady: profile?.fcmToken?.isNotEmpty ?? false,
+              fcmStatus: state.fcmInitStatus,
+              fcmMessage: state.fcmStatusMessage,
+              fcmPermission: state.fcmPermissionStatus,
+              fcmTokenPreview: state.fcmTokenPreview,
               onEnabledChanged: (value) => _saveMonitoring(value, state.monitoringSettings.intervalMinutes),
               onIntervalChanged: (value) => _saveMonitoring(state.monitoringSettings.enabled, value),
               onTestPush: _testPush,
@@ -283,6 +287,10 @@ class _BetaMonitoringCard extends StatelessWidget {
   final int intervalMinutes;
   final bool testing;
   final bool pushReady;
+  final FcmInitStatus fcmStatus;
+  final String? fcmMessage;
+  final String? fcmPermission;
+  final String? fcmTokenPreview;
   final ValueChanged<bool> onEnabledChanged;
   final ValueChanged<int> onIntervalChanged;
   final VoidCallback onTestPush;
@@ -292,6 +300,10 @@ class _BetaMonitoringCard extends StatelessWidget {
     required this.intervalMinutes,
     required this.testing,
     required this.pushReady,
+    required this.fcmStatus,
+    required this.fcmMessage,
+    required this.fcmPermission,
+    required this.fcmTokenPreview,
     required this.onEnabledChanged,
     required this.onIntervalChanged,
     required this.onTestPush,
@@ -301,6 +313,7 @@ class _BetaMonitoringCard extends StatelessWidget {
   Widget build(BuildContext context) {
     const options = [1, 5, 10, 15, 30, 60];
     final selected = options.contains(intervalMinutes) ? intervalMinutes : 60;
+    final tone = _fcmTone();
     return GlassCard(
       cut: 16,
       tint: const Color(0xFFEFF4FF),
@@ -333,12 +346,22 @@ class _BetaMonitoringCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(pushReady ? Icons.check_circle_rounded : Icons.error_outline_rounded, color: pushReady ? AppColors.emerald : AppColors.amber, size: 16),
-                const SizedBox(width: 6),
-                Text(pushReady ? 'Android FCM token saqlandi — testga tayyor' : 'FCM token kutilmoqda — ruxsatni bering va ilovani qayta oching', style: TextStyle(color: pushReady ? AppColors.emerald : AppColors.amber, fontSize: 11, fontWeight: FontWeight.w600)),
-              ],
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: tone.$1, borderRadius: BorderRadius.circular(13), border: Border.all(color: tone.$2.withOpacity(0.20))),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [Icon(tone.$3, color: tone.$2, size: 18), const SizedBox(width: 7), Text('FCM INIT: ${_fcmLabel()}', style: TextStyle(color: tone.$2, fontSize: 12, fontWeight: FontWeight.w800))]),
+                  const SizedBox(height: 5),
+                  Text(fcmMessage ?? 'FCM holati aniqlanmoqda…', style: const TextStyle(color: AppColors.textSecondary, fontSize: 11, height: 1.35)),
+                  const SizedBox(height: 7),
+                  Wrap(spacing: 6, runSpacing: 5, children: [
+                    _FcmInfoChip(label: 'Ruxsat: ${fcmPermission ?? '—'}'),
+                    _FcmInfoChip(label: 'Token: ${fcmTokenPreview ?? (pushReady ? 'saqlangan' : 'yo‘q')}'),
+                  ]),
+                ],
+              ),
             ),
             const SizedBox(height: 10),
             OutlinedButton.icon(
@@ -354,6 +377,44 @@ class _BetaMonitoringCard extends StatelessWidget {
       ),
     );
   }
+
+  (Color, Color, IconData) _fcmTone() {
+    switch (fcmStatus) {
+      case FcmInitStatus.ready:
+        return (const Color(0xFFECFDF3), AppColors.emerald, Icons.check_circle_rounded);
+      case FcmInitStatus.error:
+        return (const Color(0xFFFEF3F2), AppColors.red, Icons.error_outline_rounded);
+      case FcmInitStatus.webPreview:
+        return (const Color(0xFFFFFAEB), AppColors.amber, Icons.language_rounded);
+      case FcmInitStatus.initializing:
+        return (const Color(0xFFEFF8FF), AppColors.accent, Icons.sync_rounded);
+      case FcmInitStatus.tokenPending:
+      case FcmInitStatus.idle:
+        return (const Color(0xFFFFFAEB), AppColors.amber, Icons.hourglass_top_rounded);
+    }
+  }
+
+  String _fcmLabel() {
+    switch (fcmStatus) {
+      case FcmInitStatus.ready: return pushReady ? 'TAYYOR' : 'TOKEN OLINDI';
+      case FcmInitStatus.error: return 'XATO';
+      case FcmInitStatus.webPreview: return 'WEB PREVIEW';
+      case FcmInitStatus.initializing: return 'ISHGA TUSHMOQDA';
+      case FcmInitStatus.tokenPending: return 'TOKEN KUTILMOQDA';
+      case FcmInitStatus.idle: return 'KUTILMOQDA';
+    }
+  }
+}
+
+class _FcmInfoChip extends StatelessWidget {
+  final String label;
+  const _FcmInfoChip({required this.label});
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+    decoration: BoxDecoration(color: AppColors.bgCard, borderRadius: BorderRadius.circular(8), border: Border.all(color: AppColors.border)),
+    child: Text(label, style: const TextStyle(color: AppColors.textMuted, fontSize: 10, fontFamily: 'monospace')),
+  );
 }
 
 class _ClinicalLine extends StatelessWidget {
