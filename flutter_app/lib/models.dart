@@ -236,6 +236,24 @@ class Checkin {
 }
 
 /// Supabase notifications jadvalidagi bemor uchun push/bildirishnoma tarixi.
+class MonitoringSettings {
+  final bool enabled;
+  final int intervalMinutes;
+  final DateTime? lastCheckinAt;
+
+  const MonitoringSettings({
+    this.enabled = true,
+    this.intervalMinutes = 60,
+    this.lastCheckinAt,
+  });
+
+  factory MonitoringSettings.fromJson(Map<String, dynamic> json) => MonitoringSettings(
+        enabled: json['enabled'] ?? true,
+        intervalMinutes: (json['interval_minutes'] as num?)?.toInt() ?? 60,
+        lastCheckinAt: json['last_checkin_at'] != null ? DateTime.tryParse(json['last_checkin_at'].toString()) : null,
+      );
+}
+
 class CareNotification {
   final String id;
   final String type;

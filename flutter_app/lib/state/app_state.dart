@@ -22,6 +22,7 @@ class AppState extends ChangeNotifier {
   List<Medication> medications = [];
   List<FamilyMember> familyMembers = [];
   List<CareNotification> notificationHistory = [];
+  MonitoringSettings monitoringSettings = const MonitoringSettings();
 
   int get unreadNotificationCount => notificationHistory.where((item) => !item.isRead).length;
   bool locked = false;
@@ -56,7 +57,10 @@ class AppState extends ChangeNotifier {
         await db.saveFcmToken(token);
       }
     });
-    FirebaseMessagingService.setMessageCallback((_) async {
+    FirebaseMessagingService.setMessageCallback((message) async {
+      final title = message.notification?.title ?? message.data['title'] ?? 'CareLink xabari';
+      final body = message.notification?.body ?? message.data['body'] ?? 'Yangi bildirishnoma keldi.';
+      await notifications.showCheckin(title, body);
       if (db.userId != null) {
         notificationHistory = await db.getNotifications();
         notifyListeners();
@@ -76,6 +80,7 @@ class AppState extends ChangeNotifier {
     checkins = await db.getCheckins();
     reminderList = await db.getReminders();
     notificationHistory = await db.getNotifications();
+    monitoringSettings = await db.getMonitoringSettings();
     // Klinikadan kelgan dori rejasi shu yerda telefonning local notifications'iga yoziladi.
     await reminders.syncAll(reminderList);
     medications = await db.getMedications();
@@ -161,6 +166,7 @@ class AppState extends ChangeNotifier {
     health = null;
     subscription = null;
     notificationHistory = [];
+    monitoringSettings = const MonitoringSettings();
     locked = false;
     _realtimeStarted = false;
     notifyListeners();
@@ -185,6 +191,20 @@ class AppState extends ChangeNotifier {
     health = data;
     notifyListeners();
   }
+
+  // ---------- Beta AI monitoring sozlamalari ----------
+  Future<String?> updateMonitoringSettings({required bool enabled, required int intervalMinutes}) async {
+    try {
+      await db.saveMonitoringSettings(enabled: enabled, intervalMinutes: intervalMinutes);
+      monitoringSettings = MonitoringSettings(enabled: enabled, intervalMinutes: intervalMinutes);
+      notifyListeners();
+      return null;
+    } catch (e) {
+      return 'Sozlamalarni saqlab bo‘lmadi: ${e.toString()}';
+    }
+  }
+
+  Future<String?> sendTestPush() async => db.sendTestPush();
 
   // ---------- Obuna ----------
   Future<void> buyIndividual() async {

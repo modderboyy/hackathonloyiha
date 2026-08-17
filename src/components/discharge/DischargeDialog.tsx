@@ -35,7 +35,7 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import { useData, type MedicationScheduleInput } from "@/lib/data";
+import { useData, type MedicationScheduleInput, type VitalInput } from "@/lib/data";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -44,6 +44,18 @@ type MedicationDraft = Required<Pick<MedicationScheduleInput, "name" | "dosage" 
 function freshMedication(): MedicationDraft {
   return { name: "", dosage: "", frequencyType: "daily", timesPerDay: 2, intervalHours: 8, durationDays: 30, startDate: today(), times: ["08:00", "20:00"], notes: "" };
 }
+
+type VitalDraft = { bp_sys: string; bp_dia: string; heart_rate: string; temperature: string; spo2: string; weight: string };
+const blankVitals = (): VitalDraft => ({ bp_sys: "", bp_dia: "", heart_rate: "", temperature: "", spo2: "", weight: "" });
+const asOptionalNumber = (value: string) => value.trim() === "" ? null : Number(value);
+const normalizeVitals = (draft: VitalDraft): VitalInput => ({
+  bp_sys: asOptionalNumber(draft.bp_sys),
+  bp_dia: asOptionalNumber(draft.bp_dia),
+  heart_rate: asOptionalNumber(draft.heart_rate),
+  temperature: asOptionalNumber(draft.temperature),
+  spo2: asOptionalNumber(draft.spo2),
+  weight: asOptionalNumber(draft.weight),
+});
 
 export default function DischargeDialog(props: {
   open: boolean;
@@ -77,6 +89,7 @@ function DischargeDialogInner({
   const [diagnosis, setDiagnosis] = useState("");
   const [summary, setSummary] = useState("");
   const [recommendations, setRecommendations] = useState("");
+  const [vitals, setVitals] = useState<VitalDraft>(blankVitals());
   const [requiresFollowUp, setRequiresFollowUp] = useState(true);
   const [followUpDays, setFollowUpDays] = useState(14);
   const [medications, setMedications] = useState<MedicationDraft[]>([freshMedication()]);
@@ -115,6 +128,7 @@ function DischargeDialogInner({
       requiresFollowUp,
       followUpDays,
       familyDoctorId: null,
+      vitals: normalizeVitals(vitals),
       medications: medications.filter((medicine) => medicine.name.trim()).map((medicine) => ({
         name: medicine.name,
         dosage: medicine.dosage,
@@ -142,7 +156,7 @@ function DischargeDialogInner({
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1, lineHeight: 1.65 }}>{selectedPatient?.full_name ?? "Bemor"} uchun klinik obuna kodi yaratildi. Kod faqat klinika obunasi faol bo‘lganda ishlaydi.</Typography>
         <Box sx={{ mt: 3, p: 2.1, borderRadius: 3, bgcolor: "#101828", color: "#fff", fontFamily: "monospace", fontSize: { xs: 24, sm: 29 }, letterSpacing: ".2em", fontWeight: 800 }}>{code}</Box>
         <Button startIcon={<ContentCopyRounded />} variant="text" onClick={() => navigator.clipboard?.writeText(code)} sx={{ mt: 1.2 }}>Kodni nusxalash</Button>
-        <Alert severity="success" icon={<NotificationsActiveRounded />} sx={{ mt: 2.5, textAlign: "left", borderRadius: 2.5 }}>Tashxis, xulosa, tavsiyalar va dori rejasi bemor profiliga va mobile reminders tizimiga sinxronlandi.</Alert>
+        <Alert severity="success" icon={<NotificationsActiveRounded />} sx={{ mt: 2.5, textAlign: "left", borderRadius: 2.5 }}>Tashxis, xulosa, tavsiyalar, hayotiy ko‘rsatkichlar va dori rejasi bemor profiliga hamda AI/reminders tizimiga sinxronlandi.</Alert>
         <Button fullWidth variant="contained" size="large" sx={{ mt: 3 }} onClick={onClose}>Tayyor</Button>
       </DialogContent>
     </Dialog>;
@@ -179,6 +193,7 @@ function DischargeDialogInner({
               <TextField fullWidth required label="Tashxis" placeholder="Masalan: arterial gipertoniya, II daraja" value={diagnosis} onChange={(event) => setDiagnosis(event.target.value)} />
               <TextField fullWidth required multiline minRows={3} label="Davolash yakuni / xulosa" placeholder="Statsionardagi davolash natijasi va bemorning chiqarilish paytidagi holati…" value={summary} onChange={(event) => setSummary(event.target.value)} helperText="Bu ma’lumot bemor mobile ilovasidagi AI kontekstiga yuboriladi." />
               <TextField fullWidth multiline minRows={3} label="Tavsiyalar" placeholder="Uy sharoitidagi parvarish, ovqatlanish, faollik va nazorat bo‘yicha tavsiyalar…" value={recommendations} onChange={(event) => setRecommendations(event.target.value)} />
+              <VitalsCapture value={vitals} onChange={setVitals} />
             </Stack>
           </Box>
 
@@ -209,6 +224,22 @@ function DischargeDialogInner({
       </DialogActions>
     </Dialog>
   );
+}
+
+function VitalsCapture({ value, onChange }: { value: VitalDraft; onChange: (next: VitalDraft) => void }) {
+  const patch = (key: keyof VitalDraft, next: string) => onChange({ ...value, [key]: next });
+  const fields: { key: keyof VitalDraft; label: string; hint: string; unit: string }[] = [
+    { key: "bp_sys", label: "AB sistolik", hint: "120", unit: "mmHg" },
+    { key: "bp_dia", label: "AB diastolik", hint: "80", unit: "mmHg" },
+    { key: "heart_rate", label: "Puls", hint: "72", unit: "bpm" },
+    { key: "temperature", label: "Harorat", hint: "36.6", unit: "°C" },
+    { key: "spo2", label: "SpO₂", hint: "98", unit: "%" },
+    { key: "weight", label: "Vazn", hint: "70", unit: "kg" },
+  ];
+  return <Box sx={{ p: 1.75, borderRadius: 2.5, bgcolor: "#F8FAFC", border: "1px solid #EAECF0" }}>
+    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.25 }}><Box sx={{ display: "grid", placeItems: "center", width: 30, height: 30, bgcolor: "#EFF4FF", color: "#155EEF", borderRadius: 2 }}><NotificationsActiveRounded fontSize="small" /></Box><Box><Typography variant="body2" fontWeight={800}>Hayotiy ko‘rsatkichlar</Typography><Typography variant="caption" color="text.secondary">Ixtiyoriy — bemor AI profiliga avtomatik sinxronlanadi.</Typography></Box></Stack>
+    <Grid container spacing={1.2}>{fields.map((field) => <Grid key={field.key} size={{ xs: 6, sm: 4 }}><TextField fullWidth size="small" type="number" label={field.label} placeholder={field.hint} value={value[field.key]} onChange={(event) => patch(field.key, event.target.value)} InputProps={{ endAdornment: <Typography variant="caption" color="text.secondary">{field.unit}</Typography> }} /></Grid>)}</Grid>
+  </Box>;
 }
 
 function MedicationEditor({ medicine, onChange, onTimesChange, onRemove, removable }: { medicine: MedicationDraft; onChange: (patch: Partial<MedicationDraft>) => void; onTimesChange: (count: number) => void; onRemove: () => void; removable: boolean }) {

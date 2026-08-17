@@ -70,6 +70,19 @@ const DEMO_FOLLOWUPS: FollowUp[] = [
 const DEMO_CHECKINS: Checkin[] = [{ id: "check-1", client_id: "client-1", scheduled_at: "2026-08-17T08:00:00Z", ai_message: "Bugun o'zingizni qanday his qilyapsiz?", status: "answered_fine", response: "Yaxshiman", responded_at: "2026-08-17T08:03:00Z", escalation: 0, family_step: 0, created_at: "2026-08-17T08:00:00Z" }];
 const DEMO_MEDICATIONS: Medication[] = [{ id: "med-1", patient_id: "patient-1", name: "Bisoprolol", dosage: "5 mg", frequency: "Kuniga 2 mahal", notes: null, frequency_type: "daily", times_per_day: 2, duration_days: 30, start_date: "2026-08-14", times: ["08:00", "20:00"] }];
 
+export interface VitalInput {
+  bp_sys?: number | null;
+  bp_dia?: number | null;
+  heart_rate?: number | null;
+  temperature?: number | null;
+  spo2?: number | null;
+  weight?: number | null;
+}
+
+function hasVitalValues(vitals?: VitalInput | null) {
+  return Boolean(vitals && Object.values(vitals).some((value) => value !== null && value !== undefined));
+}
+
 export interface MedicationScheduleInput {
   name: string;
   dosage?: string;
@@ -94,6 +107,7 @@ export interface DischargeInput {
   followUpDays: number;
   familyDoctorId: string | null;
   medications: MedicationScheduleInput[];
+  vitals?: VitalInput;
 }
 
 export interface DischargeResult {
@@ -142,7 +156,7 @@ interface Data {
   clientHealth: ClientHealth[];
   medications: Medication[];
 
-  addPatient: (p: Omit<Patient, "id" | "created_at" | "created_by">) => Promise<string | null>;
+  addPatient: (p: Omit<Patient, "id" | "created_at" | "created_by">, vitals?: VitalInput) => Promise<string | null>;
   updatePatient: (id: string, patch: Partial<Patient>) => Promise<string | null>;
   addVisit: (
     v: Omit<ClinicalVisit, "id" | "visit_date" | "doctor_id" | "specialty" | "routed_to" | "status">,
@@ -330,7 +344,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     return () => { cancelled = true; };
   }, [supabase, router]);
 
-  const addPatient = useCallback(async (p: Omit<Patient, "id" | "created_at" | "created_by">): Promise<string | null> => {
+  const addPatient = useCallback(async (p: Omit<Patient, "id" | "created_at" | "created_by">, vitals?: VitalInput): Promise<string | null> => {
     if (!profile) return "Tizimga ulanmagan";
     const clinicId = p.clinic_id ?? profile.clinic_id ?? null;
     if (!clinicId) return profile.role === "super_admin" ? "Bemorni saqlash uchun klinikani tanlang." : "Sizning profilingiz klinikaga biriktirilmagan.";
@@ -338,6 +352,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (!supabase) {
       const row = { ...payload, id: `demo-patient-${Date.now()}`, created_at: new Date().toISOString() } as Patient;
       setPatients((prev) => [row, ...prev]);
+      if (hasVitalValues(vitals)) {
+        setVitals((prev) => [{
+          id: `demo-vital-${Date.now()}`,
+          patient_id: row.id,
+          bp_sys: vitals?.bp_sys ?? null,
+          bp_dia: vitals?.bp_dia ?? null,
+          heart_rate: vitals?.heart_rate ?? null,
+          temperature: vitals?.temperature ?? null,
+          spo2: vitals?.spo2 ?? null,
+          weight: vitals?.weight ?? null,
+          measured_at: new Date().toISOString(),
+        }, ...prev]);
+      }
       return null;
     }
     // RPC klinika doirasini server tomonda tekshiradi. Shunday qilib RLS
@@ -351,16 +378,23 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       p_address: payload.address,
       p_emergency_contact: payload.emergency_contact,
       p_clinic_id: clinicId,
+      p_bp_sys: vitals?.bp_sys ?? null,
+      p_bp_dia: vitals?.bp_dia ?? null,
+      p_heart_rate: vitals?.heart_rate ?? null,
+      p_temperature: vitals?.temperature ?? null,
+      p_spo2: vitals?.spo2 ?? null,
+      p_weight: vitals?.weight ?? null,
     });
     if (error) {
       if (error.message.toLowerCase().includes("create_clinic_patient")) {
-        return "Bemor qo‘shish migratsiyasi topilmadi. Supabase SQL Editor’da 00017_fix_patient_insert_rls.sql faylini ishga tushiring.";
+        return "Bemor va vital ko‘rsatkichlar migratsiyasi topilmadi. Supabase SQL Editor’da 00020_vitals_push_beta_settings.sql faylini ishga tushiring.";
       }
       return error.message;
     }
-    const result = data as { ok?: boolean; error?: string; patient?: Patient } | null;
+    const result = data as { ok?: boolean; error?: string; patient?: Patient; vital?: Vital } | null;
     if (!result?.ok || !result.patient) return result?.error ?? "Bemor saqlanmadi.";
     setPatients((prev) => [result.patient as Patient, ...prev]);
+    if (result.vital) setVitals((prev) => [result.vital as Vital, ...prev]);
     return null;
   }, [supabase, profile]);
 
@@ -490,6 +524,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         ...medsPayload.map((m, i) => ({ ...m, id: `demo-med-${Date.now()}-${i}`, created_at: new Date().toISOString() } as Medication)),
         ...prev,
       ]);
+      if (hasVitalValues(d.vitals)) {
+        setVitals((prev) => [{
+          id: `demo-vital-${Date.now()}`,
+          patient_id: d.patientId,
+          bp_sys: d.vitals?.bp_sys ?? null,
+          bp_dia: d.vitals?.bp_dia ?? null,
+          heart_rate: d.vitals?.heart_rate ?? null,
+          temperature: d.vitals?.temperature ?? null,
+          spo2: d.vitals?.spo2 ?? null,
+          weight: d.vitals?.weight ?? null,
+          measured_at: new Date().toISOString(),
+        }, ...prev]);
+      }
       return { error: null, code };
     }
 
@@ -530,6 +577,26 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       .single();
     if (e2) return { error: e2.message, code: null };
     setDischarges((prev) => [disc as Discharge, ...prev]);
+
+    if (hasVitalValues(d.vitals)) {
+      const { data: vital, error: vitalError } = await supabase
+        .from("vitals")
+        .insert({
+          patient_id: d.patientId,
+          recorded_by: profile.id,
+          bp_sys: d.vitals?.bp_sys ?? null,
+          bp_dia: d.vitals?.bp_dia ?? null,
+          heart_rate: d.vitals?.heart_rate ?? null,
+          temperature: d.vitals?.temperature ?? null,
+          spo2: d.vitals?.spo2 ?? null,
+          weight: d.vitals?.weight ?? null,
+          measured_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+      if (vitalError) return { error: `Chiqarish saqlandi, ammo hayotiy ko‘rsatkichlar: ${vitalError.message}`, code };
+      if (vital) setVitals((prev) => [vital as Vital, ...prev]);
+    }
 
     if (medsPayload.length > 0) {
       const { data: savedMeds, error: medError } = await supabase.from("medications").insert(medsPayload).select();

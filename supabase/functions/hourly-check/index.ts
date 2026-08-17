@@ -86,18 +86,25 @@ async function getAccessToken(): Promise<string> {
 }
 
 // ---------- Firebase V1 push ----------
-async function sendPush(fcmTokens: string[], title: string, body: string, data: Record<string, string>) {
-  if (!FIREBASE_PROJECT_ID || fcmTokens.length === 0) {
-    console.log("[FCM-DEMO] yuboriladi:", title, body);
-    return;
+type PushResult = { ok: boolean; error?: string };
+
+async function sendPush(fcmTokens: string[], title: string, body: string, data: Record<string, string>): Promise<PushResult> {
+  if (!FIREBASE_PROJECT_ID || !FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY) {
+    console.log("[FCM-NOT-CONFIGURED]", title, body);
+    return { ok: false, error: "Firebase service account sozlanmagan" };
   }
+  if (fcmTokens.length === 0) {
+    return { ok: false, error: "Qurilma FCM tokeni topilmadi" };
+  }
+
   try {
     const token = await getAccessToken();
     const url = `https://fcm.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/messages:send`;
+    let sent = 0;
+    let lastError = "";
 
-    // Har bir tokenga alohida xabar (V1 da registration_ids yo'q, bitta token bitta xabar)
     for (const fcmToken of fcmTokens) {
-      await fetch(url, {
+      const response = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -108,12 +115,21 @@ async function sendPush(fcmTokens: string[], title: string, body: string, data: 
             token: fcmToken,
             notification: { title, body },
             data,
+            android: {
+              priority: "HIGH",
+              notification: { channel_id: "carelink_checkin", sound: "default" },
+            },
           },
         }),
       });
+      if (response.ok) sent += 1;
+      else lastError = await response.text();
     }
+
+    return sent > 0 ? { ok: true } : { ok: false, error: lastError || "FCM yuborishni rad etdi" };
   } catch (e) {
     console.error("FCM V1 error", e);
+    return { ok: false, error: "FCM ulanish xatosi" };
   }
 }
 
@@ -169,51 +185,116 @@ async function escalateUnanswered() {
   }
 }
 
+// ---------- Monitoring / push helpers ----------
+const CHECKIN_TITLE = "CareLink — holatingizni so'raymiz";
+
+async function savePushHistory(clientId: string, title: string, body: string, source = "push") {
+  await supabase.from("notifications").insert({
+    recipient_id: clientId,
+    type: "info",
+    title,
+    body,
+    source,
+  });
+}
+
+async function runMonitoring() {
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const { data: subs } = await supabase
+    .from("subscriptions")
+    .select("client_id, profiles(fcm_token)")
+    .eq("status", "active")
+    .or(`expires_at.is.null,expires_at.gte.${nowIso}`);
+
+  if (!subs || subs.length === 0) return [];
+  const clientIds = subs.map((sub) => sub.client_id);
+  const { data: settings } = await supabase
+    .from("patient_monitoring_settings")
+    .select("client_id, enabled, interval_minutes, last_checkin_at")
+    .in("client_id", clientIds);
+  const settingsMap = new Map((settings ?? []).map((setting) => [setting.client_id, setting]));
+  const results: { client: string; push: boolean }[] = [];
+
+  for (const sub of subs) {
+    const setting = settingsMap.get(sub.client_id);
+    const enabled = setting?.enabled ?? true;
+    const intervalMinutes = Math.min(Math.max(setting?.interval_minutes ?? 60, 1), 1440);
+    const lastCheckin = setting?.last_checkin_at ? new Date(setting.last_checkin_at) : null;
+    const due = !lastCheckin || now.getTime() - lastCheckin.getTime() >= intervalMinutes * 60_000;
+    if (!enabled || !due) continue;
+
+    const template = TEMPLATES[Math.floor(Math.random() * TEMPLATES.length)];
+    await supabase.from("checkins").insert({
+      client_id: sub.client_id,
+      ai_message: template,
+      status: "sent",
+      escalation: 0,
+      family_step: 0,
+    });
+    await savePushHistory(sub.client_id, CHECKIN_TITLE, template);
+
+    const fcmToken = (sub as any).profiles?.fcm_token as string | undefined;
+    const push = await sendPush(fcmToken ? [fcmToken] : [], CHECKIN_TITLE, template, { type: "checkin" });
+    if (!push.ok) console.log(`[PUSH-SKIPPED] ${sub.client_id}: ${push.error}`);
+
+    await supabase.from("patient_monitoring_settings").upsert({
+      client_id: sub.client_id,
+      enabled,
+      interval_minutes: intervalMinutes,
+      last_checkin_at: nowIso,
+      updated_at: nowIso,
+    });
+    results.push({ client: sub.client_id, push: push.ok });
+  }
+
+  return results;
+}
+
+async function handleTestPush(req: Request) {
+  const authorization = req.headers.get("Authorization") ?? "";
+  const jwt = authorization.replace(/^Bearer\s+/i, "").trim();
+  if (!jwt) return new Response(JSON.stringify({ ok: false, error: "Avtorizatsiya kerak" }), { status: 401 });
+
+  const { data: userData, error: userError } = await supabase.auth.getUser(jwt);
+  const user = userData.user;
+  if (userError || !user) return new Response(JSON.stringify({ ok: false, error: "Session topilmadi" }), { status: 401 });
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("fcm_token")
+    .eq("id", user.id)
+    .maybeSingle();
+  const fcmToken = profile?.fcm_token as string | null;
+  if (!fcmToken) {
+    return new Response(JSON.stringify({ ok: false, error: "FCM token topilmadi. Android notification ruxsatini bering va ilovani qayta oching." }), { status: 400 });
+  }
+
+  const title = "CareLink test push";
+  const body = "Test muvaffaqiyatli: Android push notification kanali ishlayapti.";
+  await savePushHistory(user.id, title, body, "push_test");
+  const result = await sendPush([fcmToken], title, body, { type: "test_push" });
+  if (!result.ok) {
+    return new Response(JSON.stringify({ ok: false, error: result.error ?? "Push yuborilmadi" }), { status: 400 });
+  }
+  return new Response(JSON.stringify({ ok: true, message: "Test push yuborildi" }), {
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
 // ---------- Handler ----------
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ ok: false, error: "POST kerak" }), { status: 405 });
   }
 
+  let body: { action?: string } = {};
+  try { body = await req.json(); } catch { /* cron request body bo'sh bo'lishi mumkin */ }
+  if (body.action === "test_push") return handleTestPush(req);
+
   await escalateUnanswered();
-
-  const { data: subs } = await supabase
-    .from("subscriptions")
-    .select("client_id, profiles(fcm_token)")
-    .eq("status", "active")
-    .gte("expires_at", new Date().toISOString());
-
-  const results = [];
-  if (subs) {
-    for (const s of subs) {
-      const template = TEMPLATES[Math.floor(Math.random() * TEMPLATES.length)];
-      const title = "CareLink — holatingizni so'raymiz";
-      await supabase.from("checkins").insert({
-        client_id: s.client_id,
-        ai_message: template,
-        status: "sent",
-        escalation: 0,
-        family_step: 0,
-      });
-
-      // Top bar'dagi notification tarixi uchun push serverda ham saqlanadi.
-      await supabase.from("notifications").insert({
-        recipient_id: s.client_id,
-        type: "info",
-        title,
-        body: template,
-        source: "push",
-      });
-
-      const fcmToken = (s as any).profiles?.fcm_token;
-      if (fcmToken) {
-        await sendPush([fcmToken], title, template, { type: "checkin" });
-      }
-      results.push({ client: s.client_id, template });
-    }
-  }
-
-  return new Response(JSON.stringify({ ok: true, sent: results.length }), {
+  const results = await runMonitoring();
+  return new Response(JSON.stringify({ ok: true, sent: results.length, push_sent: results.filter((item) => item.push).length }), {
     headers: { "Content-Type": "application/json" },
   });
 });

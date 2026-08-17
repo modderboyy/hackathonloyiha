@@ -114,6 +114,18 @@ Web'da push uchun Firebase Web configuration kerak:
 - Olingan `firebaseConfig` (apiKey, projectId, messagingSenderId...) ni menga bering
 - Keyin `web/index.html` va `firebase-messaging-sw.js` (service worker) qo'shaman
 
+## 7. Android test push
+
+Ilovani haqiqiy Android telefonda ishga tushiring, notification ruxsatini bering va login qiling. So‘ng **Profil → Beta AI sozlamalari → Test push yuborish** tugmasini bosing.
+
+Test push faqat quyidagilar tayyor bo‘lganda qurilmaga aniq keladi:
+
+- `flutter create . --platforms=android` orqali Android platforma yaratilgan;
+- `google-services.json` package name bilan mos;
+- `POST_NOTIFICATIONS` ruxsati berilgan;
+- Edge Function deploy qilingan va Firebase service account secrets o‘rnatilgan;
+- bemorning `profiles.fcm_token` qiymati Supabase’da saqlangan.
+
 ## Xulosa — menga kerakli narsalar
 
 | Narsa | Holat |

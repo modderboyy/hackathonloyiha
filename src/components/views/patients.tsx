@@ -44,7 +44,7 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import { useData } from "@/lib/data";
+import { useData, type VitalInput } from "@/lib/data";
 import type { Facility, Patient } from "@/lib/types";
 import { ageFromBirthDate, formatDate, formatDateTime } from "@/lib/utils";
 import DischargeDialog from "@/components/discharge/DischargeDialog";
@@ -99,6 +99,17 @@ function PatientAvatar({ name }: { name: string }) { const initials = name.split
 function Head({ children, align }: { children: React.ReactNode; align?: "right" }) { return <TableCell align={align} sx={{ color: "#667085", fontSize: 12, fontWeight: 750, textTransform: "uppercase", letterSpacing: ".04em", borderBottom: "1px solid #EAECF0" }}>{children}</TableCell>; }
 function Empty() { return <Box sx={{ py: 5, textAlign: "center" }}><SearchRounded sx={{ color: "#98A2B3", fontSize: 30 }} /><Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>Bu filtr bo‘yicha bemor topilmadi.</Typography></Box>; }
 
+type NewPatientVitalDraft = { bp_sys: string; bp_dia: string; heart_rate: string; temperature: string; spo2: string; weight: string };
+const emptyPatientVitals = (): NewPatientVitalDraft => ({ bp_sys: "", bp_dia: "", heart_rate: "", temperature: "", spo2: "", weight: "" });
+const toPatientVitals = (draft: NewPatientVitalDraft): VitalInput => ({
+  bp_sys: draft.bp_sys ? Number(draft.bp_sys) : null,
+  bp_dia: draft.bp_dia ? Number(draft.bp_dia) : null,
+  heart_rate: draft.heart_rate ? Number(draft.heart_rate) : null,
+  temperature: draft.temperature ? Number(draft.temperature) : null,
+  spo2: draft.spo2 ? Number(draft.spo2) : null,
+  weight: draft.weight ? Number(draft.weight) : null,
+});
+
 function NewPatientDialog({
   profileRole,
   fixedClinicId,
@@ -110,7 +121,7 @@ function NewPatientDialog({
   fixedClinicId: string | null | undefined;
   facilities: Facility[];
   onClose: () => void;
-  onSave: (patient: Omit<Patient, "id" | "created_at" | "created_by">) => Promise<string | null>;
+  onSave: (patient: Omit<Patient, "id" | "created_at" | "created_by">, vitals?: VitalInput) => Promise<string | null>;
 }) {
   const isSuperAdmin = profileRole === "super_admin";
   const [form, setForm] = useState({
@@ -123,10 +134,12 @@ function NewPatientDialog({
     emergency_contact: "",
     clinic_id: fixedClinicId ?? "",
   });
+  const [vitals, setVitals] = useState<NewPatientVitalDraft>(emptyPatientVitals());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const set = (key: keyof typeof form, value: string) => setForm((current) => ({ ...current, [key]: value }));
   const clinicName = facilities.find((clinic) => clinic.id === fixedClinicId)?.name ?? "Klinika biriktirilmagan";
+  const patchVital = (key: keyof NewPatientVitalDraft, value: string) => setVitals((current) => ({ ...current, [key]: value }));
 
   async function save() {
     if (!form.full_name.trim()) { setError("Bemorning to‘liq ism-familiyasi majburiy."); return; }
@@ -146,7 +159,7 @@ function NewPatientDialog({
       region_id: null,
       district_id: null,
       neighborhood_id: null,
-    });
+    }, toPatientVitals(vitals));
     setBusy(false);
     if (result) { setError(result); return; }
     onClose();
@@ -161,6 +174,18 @@ function NewPatientDialog({
       <Grid container spacing={1.5}><Grid size={{ xs: 12, sm: 6 }}><TextField select fullWidth label="Jinsi" value={form.gender} onChange={(event) => set("gender", event.target.value)}><MenuItem value="">Ko‘rsatilmagan</MenuItem><MenuItem value="male">Erkak</MenuItem><MenuItem value="female">Ayol</MenuItem><MenuItem value="other">Boshqa</MenuItem></TextField></Grid><Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth label="Telefon" placeholder="+998 90 000 00 00" value={form.phone} onChange={(event) => set("phone", event.target.value)} /></Grid></Grid>
       <TextField fullWidth label="Manzil" placeholder="Turar joy manzili" value={form.address} onChange={(event) => set("address", event.target.value)} />
       <TextField fullWidth label="Favqulodda aloqa" placeholder="Qarindosh telefoni" value={form.emergency_contact} onChange={(event) => set("emergency_contact", event.target.value)} />
+      <Box sx={{ p: 1.5, bgcolor: "#F8FAFC", border: "1px solid #EAECF0", borderRadius: 2.5 }}>
+        <Typography variant="body2" fontWeight={800}>Hayotiy ko‘rsatkichlar <Typography component="span" variant="caption" color="text.secondary">(ixtiyoriy)</Typography></Typography>
+        <Typography variant="caption" color="text.secondary">Saqlansa bemorning AI sog‘liq profiliga avtomatik tushadi.</Typography>
+        <Grid container spacing={1.1} sx={{ mt: .75 }}>
+          <Grid size={{ xs: 6, sm: 4 }}><TextField fullWidth size="small" type="number" label="AB sistolik" placeholder="120" value={vitals.bp_sys} onChange={(event) => patchVital("bp_sys", event.target.value)} /></Grid>
+          <Grid size={{ xs: 6, sm: 4 }}><TextField fullWidth size="small" type="number" label="AB diastolik" placeholder="80" value={vitals.bp_dia} onChange={(event) => patchVital("bp_dia", event.target.value)} /></Grid>
+          <Grid size={{ xs: 6, sm: 4 }}><TextField fullWidth size="small" type="number" label="Puls" placeholder="72" value={vitals.heart_rate} onChange={(event) => patchVital("heart_rate", event.target.value)} /></Grid>
+          <Grid size={{ xs: 6, sm: 4 }}><TextField fullWidth size="small" type="number" label="Harorat °C" placeholder="36.6" value={vitals.temperature} onChange={(event) => patchVital("temperature", event.target.value)} /></Grid>
+          <Grid size={{ xs: 6, sm: 4 }}><TextField fullWidth size="small" type="number" label="SpO₂ %" placeholder="98" value={vitals.spo2} onChange={(event) => patchVital("spo2", event.target.value)} /></Grid>
+          <Grid size={{ xs: 6, sm: 4 }}><TextField fullWidth size="small" type="number" label="Vazn kg" placeholder="70" value={vitals.weight} onChange={(event) => patchVital("weight", event.target.value)} /></Grid>
+        </Grid>
+      </Box>
       <Alert severity="info" icon={<ShieldRounded />}>Bemor yozuvi klinikaga biriktiriladi. Tibbiyot xodimi faqat o‘z klinikasidagi bemorlarni ko‘ra oladi.</Alert>
       {error && <Alert severity="error">{error}</Alert>}
     </Stack></DialogContent>

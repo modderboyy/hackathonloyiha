@@ -1,4 +1,4 @@
-# Supabase Edge Function — env sozlash (qanday qilish)
+# Supabase Edge Function — Android push, test push va beta monitoring sozlash
 
 Sizda Firebase **V1 API** enabled (Legacy disabled). V1 API service account orqali ishlaydi.
 Men hamma narsani tayyorladim — sizga faqat 1 ta qiymat qoldi: **Supabase service_role key**.
@@ -57,15 +57,15 @@ supabase secrets set --env-file ./supabase/functions/hourly-check/.env
 supabase functions deploy hourly-check
 ```
 
-## 3. Har soatda ishga tushirish (cron)
+## 3. Beta monitoring uchun har minutda ishga tushirish (cron)
 
-Edge function'ni har soatda chaqirish uchun `pg_cron` (yoki tashqi cron):
+Bemor Profil → Beta AI sozlamalarida `1, 5, 10, 15, 30 yoki 60 minut` interval tanlaydi. Shuning uchun Edge Function cron orqali **har minutda** chaqiriladi; function faqat intervali yetgan bemorlarga push yuboradi:
 
 ```sql
 -- Supabase SQL editor'da:
 select cron.schedule(
-  'hourly-check',
-  '0 * * * *',
+  'carelink-beta-monitoring',
+  '* * * * *',
   $$
   select net.http_post(
     url := 'https://flpmqhditzfosvdtbqlw.supabase.co/functions/v1/hourly-check',
@@ -81,15 +81,25 @@ select cron.schedule(
 > create extension if not exists pg_net;
 > ```
 
-## 4. Tekshirish
+## 4. Test push tekshirish
+
+Eng oson yo‘l: Android ilovada **Profil → Beta AI sozlamalari → Test push yuborish** tugmasini bosing.
+
+Tugma ishlashi uchun quyidagilar tayyor bo‘lishi shart:
+
+1. Android notification ruxsati berilgan;
+2. `profiles.fcm_token` bemor profiliga saqlangan;
+3. Firebase service account secrets Edge Function’da mavjud;
+4. `00019_notification_history.sql` va `00020_vitals_push_beta_settings.sql` migratsiyalari ishga tushirilgan.
+
+Qo‘lda monitoringni ishga tushirish:
 
 ```bash
-# Edge function'ni qo'lda chaqirib test qilish
 curl -X POST https://flpmqhditzfosvdtbqlw.supabase.co/functions/v1/hourly-check \
   -H "Authorization: Bearer YOUR-SERVICE-ROLE-KEY"
 ```
 
-Javob: `{"ok":true,"sent":N}` — N = faol obunachilar soni.
+Javob: `{"ok":true,"sent":N,"push_sent":N}`.
 
 ## Muhim eslatma
 

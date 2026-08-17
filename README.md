@@ -60,6 +60,8 @@ Keyin Supabase SQL editor’da migratsiyalarni ketma-ket ishga tushiring, shu ju
 supabase/migrations/00016_clinic_first_care_model.sql
 supabase/migrations/00017_fix_patient_insert_rls.sql
 supabase/migrations/00018_lock_active_subscriptions.sql
+supabase/migrations/00019_notification_history.sql
+supabase/migrations/00020_vitals_push_beta_settings.sql
 ```
 
 ## Flutter

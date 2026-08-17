@@ -180,6 +180,45 @@ class SupabaseService {
     }).eq('id', checkinId);
   }
 
+  // ---------- Beta AI monitoring sozlamalari ----------
+  Future<MonitoringSettings> getMonitoringSettings() async {
+    final id = userId;
+    if (id == null) return const MonitoringSettings();
+    try {
+      final row = await client
+          .from('patient_monitoring_settings')
+          .select()
+          .eq('client_id', id)
+          .maybeSingle();
+      return row == null ? const MonitoringSettings() : MonitoringSettings.fromJson(row);
+    } catch (_) {
+      // Migration hali ishga tushmagan eski ilova loginini buzmasin.
+      return const MonitoringSettings();
+    }
+  }
+
+  Future<void> saveMonitoringSettings({required bool enabled, required int intervalMinutes}) async {
+    final id = userId;
+    if (id == null) return;
+    await client.from('patient_monitoring_settings').upsert({
+      'client_id': id,
+      'enabled': enabled,
+      'interval_minutes': intervalMinutes.clamp(1, 1440).toInt(),
+      'updated_at': DateTime.now().toIso8601String(),
+    });
+  }
+
+  Future<String?> sendTestPush() async {
+    try {
+      final response = await client.functions.invoke('hourly-check', body: {'action': 'test_push'});
+      final data = (response.data as Map?) ?? {};
+      if (data['ok'] == true) return null;
+      return data['error']?.toString() ?? 'Test push yuborilmadi';
+    } catch (e) {
+      return 'Test push xatosi: ${e.toString()}';
+    }
+  }
+
   // ---------- Push notification tarixi ----------
   Future<List<CareNotification>> getNotifications() async {
     final id = userId;

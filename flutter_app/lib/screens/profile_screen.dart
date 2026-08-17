@@ -26,6 +26,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _spo2 = TextEditingController();
   final _weight = TextEditingController();
   bool _loaded = false;
+  bool _testingPush = false;
 
   @override
   void initState() {
@@ -89,6 +90,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   String? _value(TextEditingController controller) => controller.text.trim().isEmpty ? null : controller.text.trim();
+
+  Future<void> _saveMonitoring(bool enabled, int minutes) async {
+    final error = await context.read<AppState>().updateMonitoringSettings(enabled: enabled, intervalMinutes: minutes);
+    if (!mounted || error == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error), behavior: SnackBarBehavior.floating));
+  }
+
+  Future<void> _testPush() async {
+    setState(() => _testingPush = true);
+    final error = await context.read<AppState>().sendTestPush();
+    if (!mounted) return;
+    setState(() => _testingPush = false);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(error ?? 'Test push yuborildi. Notification tarixini tekshiring.'),
+      backgroundColor: error == null ? AppColors.emerald : AppColors.red,
+      behavior: SnackBarBehavior.floating,
+    ));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -184,6 +203,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
+            const SizedBox(height: 20),
+            const _SectionHeader(title: 'Beta AI sozlamalari', icon: Icons.psychology_outlined),
+            const SizedBox(height: 10),
+            _BetaMonitoringCard(
+              enabled: state.monitoringSettings.enabled,
+              intervalMinutes: state.monitoringSettings.intervalMinutes,
+              testing: _testingPush,
+              onEnabledChanged: (value) => _saveMonitoring(value, state.monitoringSettings.intervalMinutes),
+              onIntervalChanged: (value) => _saveMonitoring(state.monitoringSettings.enabled, value),
+              onTestPush: _testPush,
+            ),
             const SizedBox(height: 18),
             SlantButton(label: 'O‘ZGARISHLARNI SAQLASH', icon: Icons.check_rounded, loading: state.loading, onPressed: _save),
           ],
@@ -245,6 +275,74 @@ class _SectionHeader extends StatelessWidget {
   const _SectionHeader({required this.title, required this.icon});
   @override
   Widget build(BuildContext context) => Row(children: [Icon(icon, color: AppColors.primary, size: 19), const SizedBox(width: 8), Text(title, style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'serif', fontSize: 20, fontWeight: FontWeight.w600))]);
+}
+
+class _BetaMonitoringCard extends StatelessWidget {
+  final bool enabled;
+  final int intervalMinutes;
+  final bool testing;
+  final ValueChanged<bool> onEnabledChanged;
+  final ValueChanged<int> onIntervalChanged;
+  final VoidCallback onTestPush;
+
+  const _BetaMonitoringCard({
+    required this.enabled,
+    required this.intervalMinutes,
+    required this.testing,
+    required this.onEnabledChanged,
+    required this.onIntervalChanged,
+    required this.onTestPush,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const options = [1, 5, 10, 15, 30, 60];
+    final selected = options.contains(intervalMinutes) ? intervalMinutes : 60;
+    return GlassCard(
+      cut: 16,
+      tint: const Color(0xFFEFF4FF),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(width: 42, height: 42, decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.10), borderRadius: BorderRadius.circular(13)), child: const Icon(Icons.auto_awesome_outlined, color: AppColors.primary)),
+              const SizedBox(width: 12),
+              const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('AI holat tekshiruvi', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w800)), SizedBox(height: 3), Text('Beta rejimida belgilangan intervalda check-in yuboradi.', style: TextStyle(color: AppColors.textSecondary, fontSize: 12))])),
+              Switch(value: enabled, onChanged: onEnabledChanged),
+            ],
+          ),
+          if (enabled) ...[
+            const SizedBox(height: 16),
+            const Text('QANCHADA BIR TEKSHIRISH', style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.4)),
+            const SizedBox(height: 7),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(color: AppColors.bgCard, borderRadius: BorderRadius.circular(13), border: Border.all(color: AppColors.border)),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<int>(
+                  isExpanded: true,
+                  value: selected,
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                  items: options.map((minutes) => DropdownMenuItem(value: minutes, child: Text(minutes == 1 ? 'Har 1 minutda — test' : 'Har $minutes minutda'))).toList(),
+                  onChanged: (value) { if (value != null) onIntervalChanged(value); },
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: testing ? null : onTestPush,
+              icon: testing ? const SizedBox(width: 17, height: 17, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.notifications_active_outlined),
+              label: Text(testing ? 'TEST PUSH YUBORILMOQDA…' : 'TEST PUSH YUBORISH'),
+              style: OutlinedButton.styleFrom(foregroundColor: AppColors.primary, side: const BorderSide(color: AppColors.primary), padding: const EdgeInsets.symmetric(vertical: 13), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13))),
+            ),
+            const SizedBox(height: 8),
+            const Text('Test push kelishi uchun Android notification ruxsati, FCM token va Edge Function sozlangan bo‘lishi kerak.', style: TextStyle(color: AppColors.textMuted, fontSize: 11, height: 1.35)),
+          ],
+        ],
+      ),
+    );
+  }
 }
 
 class _ClinicalLine extends StatelessWidget {
