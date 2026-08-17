@@ -6,7 +6,9 @@ import 'package:timezone/timezone.dart' as tz;
 import 'config.dart';
 import 'state/app_state.dart';
 import 'theme/app_theme.dart';
-import 'screens/splash_screen.dart';
+import 'screens/auth/login_screen.dart';
+import 'screens/home_screen.dart';
+import 'screens/subscription_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -61,7 +63,33 @@ class CareLinkApp extends StatelessWidget {
           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12)), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
         ),
       ),
-      home: const SplashScreen(),
+      // Splash animatsiyasi va kutish ekranisiz darhol kerakli sahifani ochadi.
+      home: const AppEntryGate(),
     );
+  }
+}
+
+/// Ilova ochilganda ortiqcha splash/delay ishlatmasdan auth va obuna holatini tekshiradi.
+class AppEntryGate extends StatelessWidget {
+  const AppEntryGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    if (state.loading) {
+      return const Scaffold(
+        backgroundColor: AppColors.bg,
+        body: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+          ),
+        ),
+      );
+    }
+    if (!state.isLoggedIn) return const LoginScreen();
+    if (!state.hasSubscription) return const SubscriptionScreen();
+    return const HomeScreen();
   }
 }

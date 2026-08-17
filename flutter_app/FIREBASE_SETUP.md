@@ -49,7 +49,67 @@ plugins {
 include ":app"
 ```
 
-### 2b. `android/app/build.gradle` — plugin + dependency
+### 2b. Core library desugaring — `flutter_local_notifications` release build fix
+
+Agar `:app:checkReleaseAarMetadata` xatosi va `requires core library desugaring` chiqsa, `android/app/build.gradle.kts` ichiga qo‘shing:
+
+```kotlin
+android {
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+        isCoreLibraryDesugaringEnabled = true
+    }
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
+}
+```
+
+Groovy `build.gradle` uchun:
+
+```gradle
+android {
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+        coreLibraryDesugaringEnabled true
+    }
+}
+
+dependencies {
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
+}
+```
+
+### 2c. Gradle daemon crash (Windows / release build)
+
+Agar `Gradle build daemon disappeared` yoki `hs_err_pid*.log` chiqsa, `android/gradle.properties` ga quyidagilarni yozing yoki mavjud qiymatlarni almashtiring:
+
+```properties
+org.gradle.jvmargs=-Xmx4G -XX:MaxMetaspaceSize=1G -Dfile.encoding=UTF-8
+org.gradle.daemon=false
+org.gradle.parallel=false
+org.gradle.workers.max=2
+org.gradle.internal.instrumentation.agent=false
+```
+
+Keyin Windows terminalda:
+
+```powershell
+cd android
+.\gradlew --stop
+.\gradlew clean --no-daemon
+cd ..
+flutter clean
+flutter pub get
+flutter build apk --release
+```
+
+`hs_err_pid*.log` yana chiqsa, aynan o‘sha faylning yuqori 50 qatorini yuboring — JVM native crash sababini aniq ko‘rish mumkin bo‘ladi.
+
+### 2d. `android/app/build.gradle` — plugin + dependency
 
 Faylning **oxiriga** (yoki plugins blokiga):
 
@@ -71,7 +131,7 @@ dependencies {
 }
 ```
 
-### 2c. `android/app/src/main/AndroidManifest.xml` — ruxsatlar
+### 2e. `android/app/src/main/AndroidManifest.xml` — ruxsatlar
 
 `<manifest>` ichiga:
 

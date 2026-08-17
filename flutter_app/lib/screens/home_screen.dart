@@ -6,6 +6,7 @@ import '../theme/app_theme.dart';
 import '../widgets/custom_ui.dart';
 import '../widgets/health_dashboard.dart';
 import '../widgets/typewriter.dart';
+import 'auth/login_screen.dart';
 import 'chat_screen.dart';
 import 'lock_screen.dart';
 import 'notifications_screen.dart';
@@ -37,6 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
 
+    if (!state.isLoggedIn) return const LoginScreen();
     if (state.locked) return const LockScreen();
     if (!state.hasSubscription) return const SubscriptionScreen();
 
