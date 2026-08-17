@@ -52,12 +52,24 @@ async function getAccessToken(): Promise<string> {
 
   const jwt = `${encode(header)}.${encode(claim)}`;
 
-  // RS256 imzo (Web Crypto)
-  const keyData = FIREBASE_PRIVATE_KEY
-    .replace(/\\n/g, "\n")
+  // RS256 imzo (Web Crypto). Secret ba'zan literal \n yoki to'liq
+  // service-account JSON ko'rinishida saqlanadi; ikkalasini ham qabul qilamiz.
+  let privateKey = FIREBASE_PRIVATE_KEY.trim();
+  if (privateKey.startsWith("{")) {
+    try {
+      privateKey = JSON.parse(privateKey).private_key ?? privateKey;
+    } catch (_) {
+      throw new Error("FIREBASE_PRIVATE_KEY JSON formati noto‘g‘ri");
+    }
+  }
+  privateKey = privateKey.replace(/^['"]|['"]$/g, "").replace(/\\n/g, "\n");
+  const keyData = privateKey
     .replace("-----BEGIN PRIVATE KEY-----", "")
     .replace("-----END PRIVATE KEY-----", "")
     .replace(/\s/g, "");
+  if (!/^[A-Za-z0-9+/=]+$/.test(keyData)) {
+    throw new Error("FIREBASE_PRIVATE_KEY base64 formati noto‘g‘ri");
+  }
   const binary = Uint8Array.from(atob(keyData), (c) => c.charCodeAt(0));
 
   const cryptoKey = await crypto.subtle.importKey(
@@ -90,15 +102,24 @@ async function getAccessToken(): Promise<string> {
 }
 
 // ---------- Firebase V1 push ----------
-type PushResult = { ok: boolean; error?: string };
+type PushResult = { ok: boolean; error?: string; detail?: string; stage?: "config" | "oauth" | "send" };
+
+function safeFcmDetail(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  // Private key/tokenni qaytarmasdan faqat tashxis uchun qisqa izoh beramiz.
+  return message
+    .replace(/Bearer\s+[^\s]+/g, "Bearer [redacted]")
+    .replace(/-----BEGIN[\s\S]*?END[^-]*-----/g, "[private-key-redacted]")
+    .slice(0, 240);
+}
 
 async function sendPush(fcmTokens: string[], title: string, body: string, data: Record<string, string>): Promise<PushResult> {
   if (!FIREBASE_PROJECT_ID || !FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY) {
     console.log("[FCM-NOT-CONFIGURED]", title, body);
-    return { ok: false, error: "Firebase service account sozlanmagan" };
+    return { ok: false, error: "Firebase service account sozlanmagan", stage: "config" };
   }
   if (fcmTokens.length === 0) {
-    return { ok: false, error: "Qurilma FCM tokeni topilmadi" };
+    return { ok: false, error: "Qurilma FCM tokeni topilmadi", stage: "config" };
   }
 
   try {
@@ -130,10 +151,19 @@ async function sendPush(fcmTokens: string[], title: string, body: string, data: 
       else lastError = await response.text();
     }
 
-    return sent > 0 ? { ok: true } : { ok: false, error: lastError || "FCM yuborishni rad etdi" };
+    return sent > 0
+      ? { ok: true }
+      : { ok: false, error: "Firebase FCM xabari rad etildi", detail: lastError || "FCM javobi bo‘sh", stage: "send" };
   } catch (e) {
-    console.error("FCM V1 error", e);
-    return { ok: false, error: "FCM ulanish xatosi" };
+    const detail = safeFcmDetail(e);
+    console.error("FCM V1 error", detail);
+    const oauth = detail.includes("OAuth2") || detail.includes("pkcs8") || detail.includes("base64") || detail.includes("InvalidCharacter");
+    return {
+      ok: false,
+      error: oauth ? "Firebase OAuth/private key xatosi" : "FCM ulanish xatosi",
+      detail,
+      stage: oauth ? "oauth" : "send",
+    };
   }
 }
 
@@ -304,7 +334,12 @@ async function handleTestPush(req: Request) {
   await savePushHistory(user.id, title, body, "push_test");
   const result = await sendPush([fcmToken], title, body, { type: "test_push" });
   if (!result.ok) {
-    return new Response(JSON.stringify({ ok: false, error: result.error ?? "Push yuborilmadi" }), { status: 400 });
+    return new Response(JSON.stringify({
+      ok: false,
+      error: result.error ?? "Push yuborilmadi",
+      detail: result.detail ?? null,
+      stage: result.stage ?? null,
+    }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
   return new Response(JSON.stringify({ ok: true, message: "Test push yuborildi" }), {
     headers: { "Content-Type": "application/json" },

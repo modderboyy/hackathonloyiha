@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models.dart';
 
@@ -216,6 +217,19 @@ class SupabaseService {
       if (data['ok'] == true) return null;
       return data['error']?.toString() ?? 'Test push yuborilmadi';
     } catch (e) {
+      // FunctionsHttpException details ichidagi Edge Function JSON xatosini
+      // foydalanuvchiga aniq ko'rsatamiz.
+      final dynamic exception = e;
+      final details = exception.details;
+      Map? payload;
+      if (details is Map) {
+        payload = details;
+      } else if (details is String) {
+        try { payload = jsonDecode(details) as Map; } catch (_) {}
+      }
+      final error = payload?['error']?.toString();
+      final detail = payload?['detail']?.toString();
+      if (error != null) return detail == null || detail.isEmpty ? error : '$error: $detail';
       return 'Test push xatosi: ${e.toString()}';
     }
   }
