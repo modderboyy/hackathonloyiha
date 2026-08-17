@@ -29,6 +29,17 @@ Web panelda faqat amaliy oqim qoldirilgan:
 
 > Klinika login paroli hech qachon jadvalga ochiq matnda yozilmaydi. `POST /api/admin/clinics` server-only `SUPABASE_SERVICE_ROLE_KEY` yordamida Supabase Auth hisobini yaratadi yoki yangilaydi.
 
+## Demo checkout va klinika obunasi
+
+Super admin **Klinikalar** sahifasida har bir klinikaning `Obuna faol`, `Sinov`, `Faol emas` yoki `Muddati tugagan` holatini ko‘radi. Faol bo‘lmagan klinikani **Demo to‘lov bilan faollashtirish** tugmasi `/pay?target=clinic&clinicId=...` checkoutiga olib boradi.
+
+- Demo karta: `8600 0000 0000 0000`
+- Klinik demo obunasi: `$29 / 30 kun`
+- Individual demo obunasi: `$5 / 30 kun`
+- Demo checkout haqiqiy mablag‘ yechmaydi; faqat subscription statusini faollashtiradi.
+
+Flutter ilovasida individual obuna uchun shu uslubdagi native demo karta ekrani ishlaydi. Klinik kod esa faqat klinika obunasi faol bo‘lsa bemorga tekin ulanish beradi.
+
 ## Dori → mobile reminder sync
 
 Dori yozuvida kuniga necha mahal, aniq vaqtlar, har necha soatda va necha kun qabul qilinishi saqlanadi. `00016_clinic_first_care_model.sql` avtomatik ravishda bemor reminders’ini yaratadi. Flutter ilovasi realtime orqali ularni telefonning local notifications tizimiga rejalashtiradi.

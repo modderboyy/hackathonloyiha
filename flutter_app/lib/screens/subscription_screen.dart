@@ -5,7 +5,7 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_ui.dart';
 import 'clinic_code_screen.dart';
-import 'home_screen.dart';
+import 'demo_payment_screen.dart';
 
 /// Obuna ekrani — obunasiz ilovani ishlatish mumkin emas.
 class SubscriptionScreen extends StatelessWidget {
@@ -129,7 +129,8 @@ class SubscriptionScreen extends StatelessWidget {
                       ),
                       const Text('Klinikangiz to\'laydi', style: TextStyle(color: AppColors.textSecondary)),
                       const SizedBox(height: 16),
-                      const _Feature('Statsionar davolash davomida faol'),
+                      const _Feature('Faol klinika obunasi bilan tekin'),
+                      const _Feature('Klinika obunasi holati kod kiritilganda tekshiriladi'),
                       const _Feature('Dori-darmon va ma\'lumotlar avtomatik sinxron'),
                       const _Feature('Shifokor tavsiyalari to\'g\'ridan keladi'),
                       const SizedBox(height: 20),
@@ -160,47 +161,11 @@ class SubscriptionScreen extends StatelessWidget {
   }
 
   Future<void> _showPayment(BuildContext context) async {
-    final state = context.read<AppState>();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.bgCard,
-        title: const Text('To\'lov (demo)', style: TextStyle(color: AppColors.textPrimary)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Premium obuna — 1 oy', style: TextStyle(color: AppColors.textSecondary)),
-            const SizedBox(height: 8),
-            Text(
-              '\$${Config.premiumPriceUsd.toStringAsFixed(2)}',
-              style: const TextStyle(
-                fontSize: 36,
-                fontWeight: FontWeight.bold,
-                color: AppColors.accent,
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text('Demo rejim: haqiqiy to\'lov olinmaydi.', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Bekor', style: TextStyle(color: AppColors.textMuted))),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: AppColors.accent),
-            child: const Text('To\'lash'),
-          ),
-        ],
-      ),
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const DemoPaymentScreen()),
     );
-
-    if (confirmed == true && context.mounted) {
-      await state.buyIndividual();
-      if (context.mounted) {
-        Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
-      }
-    }
   }
+
 }
 
 class _Feature extends StatelessWidget {

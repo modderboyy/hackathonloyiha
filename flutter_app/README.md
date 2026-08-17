@@ -15,8 +15,8 @@ Ro‘yxatdan o‘tish / klinik kod
 
 ### Ikki obuna turi
 
-- **Individual** — $5 / oy. Klinikaga bog‘lanmasdan AI yordamchi, health dashboard va reminders.
-- **Klinik kod** — bemor statsionardan chiqarilganda berilgan kod bilan aktivlashadi. Klinika obunasi `active` yoki `trial` bo‘lsa bepul ishlaydi.
+- **Individual** — $5 / oy. Klinikaga bog‘lanmasdan AI yordamchi, health dashboard va reminders. Mobil ilovadagi **Demo karta bilan to‘lash** ekrani hozircha haqiqiy pul yechmaydi, faqat 30 kunlik obunani sinov uchun faollashtiradi.
+- **Klinik kod** — bemor statsionardan chiqarilganda berilgan kod bilan aktivlashadi. Klinika obunasi `active` yoki `trial` bo‘lsa bepul ishlaydi. Klinikani faollashtirish Super adminning webdagi `/pay` demo checkouti orqali amalga oshadi.
 
 ## Auto-reminders qanday ishlaydi
 

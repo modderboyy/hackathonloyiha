@@ -217,6 +217,31 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [clientHealth, setClientHealth] = useState<ClientHealth[]>([]);
   const [medications, setMedications] = useState<Medication[]>(notConfigured ? DEMO_MEDICATIONS : []);
 
+  // /pay previewdagi demo checkout qaytganda klinika kartasi darhol faol ko‘rinadi.
+  useEffect(() => {
+    if (!notConfigured || typeof window === "undefined") return;
+    const timer = window.setTimeout(() => {
+      const raw = window.sessionStorage.getItem("carelink-demo-payment");
+      if (!raw) return;
+      try {
+        const payment = JSON.parse(raw) as { target?: string; clinicId?: string | null; expiresAt?: string };
+        if (payment.target === "clinic" && payment.clinicId) {
+          setFacilities((current) => current.map((clinic) => clinic.id === payment.clinicId ? {
+            ...clinic,
+            is_active: true,
+            subscription_status: "active",
+            subscription_expires_at: payment.expiresAt ?? new Date(Date.now() + 30 * 86400000).toISOString(),
+          } : clinic));
+        }
+      } catch {
+        // Noto‘g‘ri preview ma’lumotini jim tozalaymiz.
+      } finally {
+        window.sessionStorage.removeItem("carelink-demo-payment");
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [notConfigured]);
+
   // Realtime: yangi xabarnomalar (popup uchun)
   useEffect(() => {
     if (!supabase || !profile) return;
