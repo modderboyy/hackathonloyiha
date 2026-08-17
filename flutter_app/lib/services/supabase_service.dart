@@ -210,7 +210,8 @@ class SupabaseService {
 
   Future<String?> sendTestPush() async {
     try {
-      final response = await client.functions.invoke('hourly-check', body: {'action': 'test_push'});
+      // Supabase Function URL hozir hourly_check (underscore) nomida deploy qilingan.
+      final response = await client.functions.invoke('hourly_check', body: {'action': 'test_push'});
       final data = (response.data as Map?) ?? {};
       if (data['ok'] == true) return null;
       return data['error']?.toString() ?? 'Test push yuborilmadi';

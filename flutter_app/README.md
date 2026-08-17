@@ -70,7 +70,7 @@ flutter run \
 ### 3. Push / soatlik check-in (ixtiyoriy)
 
 ```bash
-supabase functions deploy hourly-check
+supabase functions deploy hourly_check
 ```
 
 Edge Function uchun `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY` va FCM sozlamalarini Supabase secret sifatida kiriting.

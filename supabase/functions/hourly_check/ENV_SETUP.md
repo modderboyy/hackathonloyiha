@@ -23,7 +23,7 @@ Men hamma narsani tayyorladim — sizga faqat 1 ta qiymat qoldi: **Supabase serv
 
 ### Yo'l A — Supabase Dashboard (oson)
 
-1. Supabase Dashboard → **Edge Functions** → `hourly-check` ni tanlang (avval deploy qilgan bo'lsangiz)
+1. Supabase Dashboard → **Edge Functions** → `hourly_check` ni tanlang (avval deploy qilgan bo'lsangiz)
 2. **Settings → Edge Function Secrets** bo'limi
 3. Quyidagilarni qo'shing (birma-bir "Add secret"):
 
@@ -39,7 +39,7 @@ FIREBASE_PRIVATE_KEY = -----BEGIN PRIVATE KEY-----
 
 ### Yo'l B — Supabase CLI (tavsiya, bitta buyruq)
 
-Men `supabase/functions/hourly-check/.env` faylini tayyorlab qo'ydim (private key to'g'ri formatda).
+Men `supabase/functions/hourly_check/.env` faylini tayyorlab qo'ydim (private key to'g'ri formatda).
 Unda faqat `SUPABASE_SERVICE_ROLE_KEY` ni o'zingiz to'ldiring.
 
 ```bash
@@ -51,10 +51,10 @@ supabase login
 supabase link --project-ref flpmqhditzfosvdtbqlw
 
 # 4. Env'ni joylash (bitta buyruq)
-supabase secrets set --env-file ./supabase/functions/hourly-check/.env
+supabase secrets set --env-file ./supabase/functions/hourly_check/.env
 
 # 5. Edge function'ni deploy qilish
-supabase functions deploy hourly-check
+supabase functions deploy hourly_check
 ```
 
 ## 3. Beta monitoring uchun har minutda ishga tushirish (cron)
@@ -68,7 +68,7 @@ select cron.schedule(
   '* * * * *',
   $$
   select net.http_post(
-    url := 'https://flpmqhditzfosvdtbqlw.supabase.co/functions/v1/hourly-check',
+    url := 'https://flpmqhditzfosvdtbqlw.supabase.co/functions/v1/hourly_check',
     headers := '{"Authorization":"Bearer YOUR-SERVICE-ROLE-KEY"}'::jsonb
   )
   $$
@@ -95,7 +95,7 @@ Tugma ishlashi uchun quyidagilar tayyor bo‘lishi shart:
 Qo‘lda monitoringni ishga tushirish:
 
 ```bash
-curl -X POST https://flpmqhditzfosvdtbqlw.supabase.co/functions/v1/hourly-check \
+curl -X POST https://flpmqhditzfosvdtbqlw.supabase.co/functions/v1/hourly_check \
   -H "Authorization: Bearer YOUR-SERVICE-ROLE-KEY"
 ```
 
