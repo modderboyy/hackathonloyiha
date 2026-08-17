@@ -85,7 +85,16 @@ dependencies {
 
 ### 2c. Gradle daemon crash (Windows / release build)
 
-Agar `Gradle build daemon disappeared` yoki `hs_err_pid*.log` chiqsa, `android/gradle.properties` ga quyidagilarni yozing yoki mavjud qiymatlarni almashtiring:
+Agar `Gradle build daemon disappeared` yoki `hs_err_pid*.log` chiqsa, eng tez usul:
+
+```powershell
+cd flutter_app
+powershell -ExecutionPolicy Bypass -File .\tool\fix_android_gradle.ps1
+```
+
+Script project va global Gradle `-Xmx8G` sozlamalarini xavfsiz `-Xmx2G` ga almashtiradi, daemonni to‘xtatadi va Android Gradle cache’ni tozalaydi.
+
+Qo‘lda qilish uchun `android/gradle.properties` ga quyidagilarni yozing yoki mavjud qiymatlarni almashtiring:
 
 ```properties
 org.gradle.jvmargs=-Xmx4G -XX:MaxMetaspaceSize=1G -Dfile.encoding=UTF-8
