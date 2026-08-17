@@ -9,7 +9,7 @@ class Config {
   );
   static const String supabaseAnonKey = String.fromEnvironment(
     'SUPABASE_ANON_KEY',
-    defaultValue: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZscG1xaGRpdHpmb3N2ZHRicWx3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY4NDExMTUsImV4cCI6MjEwMjQxNzExNX0.WbJfQnbAkS346cmU7QIXP_kOauSS-HpK-y4sDxjDWJ8';',
+    defaultValue: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXAiLCJyZWYiOiJmbHBtcWhkaXR6Zm9zdmR0YnFsdzIiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTc4Njg0MTE5MSwiZXhwIjoyMTAyNDE3MTExfQ.WbJfQnbAkS346cmU7QIXP_kOauSS-HpK-y4sDxjDWJ8',
   );
   // OpenAI kalitini repositoryga yozmang. Kalit yo'q bo'lsa bot offline demo rejimida ishlaydi.
   static const String openaiApiKey = String.fromEnvironment('OPENAI_API_KEY');
