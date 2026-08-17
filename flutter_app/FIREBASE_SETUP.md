@@ -102,6 +102,8 @@ org.gradle.daemon=false
 org.gradle.parallel=false
 org.gradle.workers.max=2
 org.gradle.internal.instrumentation.agent=false
+android.useAndroidX=true
+android.enableJetifier=true
 ```
 
 Keyin Windows terminalda:

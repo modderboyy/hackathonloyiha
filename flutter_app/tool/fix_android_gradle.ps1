@@ -18,6 +18,8 @@ org.gradle.daemon=false
 org.gradle.parallel=false
 org.gradle.workers.max=1
 org.gradle.internal.instrumentation.agent=false
+android.useAndroidX=true
+android.enableJetifier=true
 "@
 
 function Backup-And-Write([string]$path) {
@@ -25,7 +27,7 @@ function Backup-And-Write([string]$path) {
   if (Test-Path $path) {
     Copy-Item $path "$path.bak" -Force
     $existing = Get-Content $path | Where-Object {
-      $_ -notmatch '^org\.gradle\.(jvmargs|daemon|parallel|workers\.max|internal\.instrumentation\.agent)='
+      $_ -notmatch '^(org\.gradle\.(jvmargs|daemon|parallel|workers\.max|internal\.instrumentation\.agent)|android\.(useAndroidX|enableJetifier))='
     }
   }
   $existing += $safeProperties.Trim().Split("`n")
@@ -42,7 +44,7 @@ $userProps = Join-Path $userGradleDir 'gradle.properties'
 if (Test-Path $userProps) {
   Copy-Item $userProps "$userProps.bak" -Force
   $lines = Get-Content $userProps | Where-Object {
-    $_ -notmatch '^org\.gradle\.(jvmargs|daemon|parallel|workers\.max|internal\.instrumentation\.agent)='
+    $_ -notmatch '^(org\.gradle\.(jvmargs|daemon|parallel|workers\.max|internal\.instrumentation\.agent)|android\.(useAndroidX|enableJetifier))='
   }
   $lines += $safeProperties.Trim().Split("`n")
   Set-Content -Path $userProps -Value $lines -Encoding UTF8
