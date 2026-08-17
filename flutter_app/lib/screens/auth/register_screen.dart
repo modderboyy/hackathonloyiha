@@ -19,6 +19,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _phone = TextEditingController();
 
   Future<void> _submit() async {
+    if (_password.text.length < 8) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Parol kamida 8 belgidan iborat bo\'lsin')));
+      return;
+    }
     final state = context.read<AppState>();
     await state.register(
       email: _email.text.trim(),
@@ -76,7 +80,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       const SizedBox(height: 18),
                       GlassInput(label: 'EMAIL', controller: _email, keyboardType: TextInputType.emailAddress, hint: 'siz@mail.uz'),
                       const SizedBox(height: 18),
-                      GlassInput(label: 'PAROL (kamida 6 belgi)', controller: _password, obscure: true, hint: '••••••••'),
+                      GlassInput(label: 'PAROL (kamida 8 belgi)', controller: _password, obscure: true, hint: '••••••••'),
                       const SizedBox(height: 18),
                       GlassInput(label: 'TELEFON (SMS uchun, ixtiyoriy)', controller: _phone, keyboardType: TextInputType.phone, hint: '+998 90 000 00 00'),
                       const SizedBox(height: 24),

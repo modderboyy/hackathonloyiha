@@ -42,10 +42,24 @@ class CareLinkApp extends StatelessWidget {
         scaffoldBackgroundColor: AppColors.bg,
         colorScheme: const ColorScheme.light(
           primary: AppColors.primary,
-          secondary: AppColors.accent,
+          secondary: AppColors.cyan,
           surface: AppColors.bgCard,
+          error: AppColors.red,
         ),
         fontFamily: 'Roboto',
+        appBarTheme: const AppBarTheme(
+          backgroundColor: AppColors.bgCard,
+          foregroundColor: AppColors.textPrimary,
+          elevation: 0,
+          surfaceTintColor: Colors.transparent,
+        ),
+        inputDecorationTheme: const InputDecorationTheme(
+          filled: true,
+          fillColor: AppColors.bgCard,
+          border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12)), borderSide: BorderSide(color: AppColors.border)),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12)), borderSide: BorderSide(color: AppColors.border)),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12)), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
+        ),
       ),
       home: const SplashScreen(),
     );

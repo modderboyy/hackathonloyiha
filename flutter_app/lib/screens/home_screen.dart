@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_ui.dart';
@@ -142,6 +143,14 @@ class _HomeTab extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
+          // Klinikadan discharge vaqtida kelgan AI-safe care context.
+          if (state.health?.hospitalDiagnosis != null || state.health?.treatmentSummary != null || state.health?.dischargeRecommendations != null) ...[
+            const NeonText('KLINIK CARE REJASI', size: 16),
+            const SizedBox(height: 10),
+            _ClinicalCarePlan(health: state.health!),
+            const SizedBox(height: 16),
+          ],
+
           // Dori-darmon (sinxronlangan)
           if (state.medications.isNotEmpty) ...[
             const NeonText('DORI-DARMONLAR', size: 16),
@@ -168,11 +177,10 @@ class _HomeTab extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(m.name, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
-                              if (m.dosage != null || m.frequency != null)
-                                Text(
-                                  [m.dosage, m.frequency].whereType<String>().join(' · '),
-                                  style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
-                                ),
+                              Text(
+                                [if (m.dosage != null) m.dosage!, m.scheduleLabel].join(' · '),
+                                style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+                              ),
                             ],
                           ),
                         ),
@@ -315,6 +323,52 @@ class _HomeTab extends StatelessWidget {
       case 'escalated': return 'Kuchaytirildi';
       default: return s;
     }
+  }
+}
+
+class _ClinicalCarePlan extends StatelessWidget {
+  final HealthData health;
+  const _ClinicalCarePlan({required this.health});
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <(IconData, String, String?)>[
+      (Icons.medical_information_outlined, 'Tashxis', health.hospitalDiagnosis),
+      (Icons.description_outlined, 'Davolash yakuni', health.treatmentSummary),
+      (Icons.lightbulb_outline, 'Tavsiyalar', health.dischargeRecommendations),
+    ].where((row) => row.$3 != null && row.$3!.trim().isNotEmpty).toList();
+
+    return GlassCard(
+      cut: 14,
+      tint: AppColors.primary.withOpacity(0.035),
+      child: Column(
+        children: rows.map((row) => Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.10), borderRadius: BorderRadius.circular(10)),
+                child: Icon(row.$1, color: AppColors.primary, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(row.$2, style: const TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 2),
+                    Text(row.$3!, style: const TextStyle(color: AppColors.textPrimary, fontSize: 13, height: 1.35)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        )).toList(),
+      ),
+    );
   }
 }
 

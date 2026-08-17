@@ -50,6 +50,9 @@ class OpenAIService {
 Sen CareLink tibbiy yordamchi botisan. O'zbek tilida, iliq va g'amxo'r ohangda javob berasan.
 Bemor ma'lumotlari:
 - Hozirgi kasallik: ${health?.currentCondition ?? "noma'lum"}
+- Klinik tashxis: ${health?.hospitalDiagnosis ?? "noma'lum"}
+- Statsionar davolash yakuni: ${health?.treatmentSummary ?? "kiritilmagan"}
+- Shifokor tavsiyalari: ${health?.dischargeRecommendations ?? "kiritilmagan"}
 - O'rtacha qon bosimi: ${health?.avgBpSys ?? '—'}/${health?.avgBpDia ?? '—'}
 - Puls: ${health?.avgHeartRate ?? '—'}
 - Harorat: ${health?.avgTemperature ?? '—'}°C

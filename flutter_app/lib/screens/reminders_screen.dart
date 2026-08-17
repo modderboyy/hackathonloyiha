@@ -214,12 +214,23 @@ class _ReminderCard extends StatelessWidget {
           child: Text(_icon(reminder.type)),
         ),
         title: Text(reminder.title, style: TextStyle(decoration: reminder.active ? null : TextDecoration.lineThrough, color: reminder.active ? Colors.black : Colors.grey)),
-        subtitle: Text(reminder.scheduleLabel),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(reminder.scheduleLabel),
+            if (reminder.isMedicationSync)
+              const Padding(
+                padding: EdgeInsets.only(top: 3),
+                child: Text('Klinikadan sinxronlangan', style: TextStyle(color: Color(0xFF155EEF), fontSize: 11, fontWeight: FontWeight.w600)),
+              ),
+          ],
+        ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Switch(value: reminder.active, onChanged: onToggle),
-            IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red), onPressed: onDelete),
+            if (!reminder.isMedicationSync)
+              IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red), onPressed: onDelete),
           ],
         ),
       ),

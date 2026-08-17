@@ -22,7 +22,7 @@ class UserProfile {
   factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
         id: json['id'],
         fullName: json['full_name'] ?? '',
-        role: json['role'] ?? 'client',
+        role: json['role'] ?? 'patient',
         phone: json['phone'],
         regionId: json['region_id'],
         districtId: json['district_id'],
@@ -80,6 +80,12 @@ class Medication {
   final String? dosage;
   final String? frequency;
   final String? notes;
+  final String frequencyType; // daily | hourly | as_needed
+  final int? timesPerDay;
+  final int? intervalHours;
+  final int? durationDays;
+  final DateTime? startDate;
+  final List<String> times;
 
   Medication({
     required this.id,
@@ -87,6 +93,12 @@ class Medication {
     this.dosage,
     this.frequency,
     this.notes,
+    this.frequencyType = 'daily',
+    this.timesPerDay,
+    this.intervalHours,
+    this.durationDays,
+    this.startDate,
+    this.times = const [],
   });
 
   factory Medication.fromJson(Map<String, dynamic> json) => Medication(
@@ -95,7 +107,20 @@ class Medication {
         dosage: json['dosage'],
         frequency: json['frequency'],
         notes: json['notes'],
+        frequencyType: json['frequency_type'] ?? 'daily',
+        timesPerDay: json['times_per_day'],
+        intervalHours: json['interval_hours'],
+        durationDays: json['duration_days'],
+        startDate: json['start_date'] != null ? DateTime.tryParse(json['start_date']) : null,
+        times: (json['times'] as List?)?.map((item) => item.toString()).toList() ?? const [],
       );
+
+  String get scheduleLabel {
+    if (frequencyType == 'hourly') return 'Har ${intervalHours ?? 1} soatda · ${durationDays ?? '—'} kun';
+    if (frequencyType == 'as_needed') return 'Zaruratga ko\'ra';
+    final schedule = times.isNotEmpty ? times.join(' · ') : 'Kuniga ${timesPerDay ?? 1} mahal';
+    return '$schedule · ${durationDays ?? '—'} kun';
+  }
 }
 
 // --- Klinika ---
@@ -125,6 +150,11 @@ class HealthData {
   final int? avgSpo2;
   final double? avgWeight;
   final String? emergencyContact;
+  // Klinikadan discharge vaqtida sinxronlanadigan AI konteksti.
+  final String? hospitalDiagnosis;
+  final String? treatmentSummary;
+  final String? dischargeRecommendations;
+  final DateTime? clinicalUpdatedAt;
 
   HealthData({
     this.currentCondition,
@@ -138,6 +168,10 @@ class HealthData {
     this.avgSpo2,
     this.avgWeight,
     this.emergencyContact,
+    this.hospitalDiagnosis,
+    this.treatmentSummary,
+    this.dischargeRecommendations,
+    this.clinicalUpdatedAt,
   });
 
   Map<String, dynamic> toJson() => {
@@ -152,6 +186,10 @@ class HealthData {
         'avg_spo2': avgSpo2,
         'avg_weight': avgWeight,
         'emergency_contact': emergencyContact,
+        // Klinik kontekstini bemor profilidan saqlashda tasodifan null qilib yubormaymiz.
+        if (hospitalDiagnosis != null) 'hospital_diagnosis': hospitalDiagnosis,
+        if (treatmentSummary != null) 'treatment_summary': treatmentSummary,
+        if (dischargeRecommendations != null) 'discharge_recommendations': dischargeRecommendations,
       };
 
   factory HealthData.fromJson(Map<String, dynamic> json) => HealthData(
@@ -166,6 +204,10 @@ class HealthData {
         avgSpo2: json['avg_spo2'],
         avgWeight: (json['avg_weight'] as num?)?.toDouble(),
         emergencyContact: json['emergency_contact'],
+        hospitalDiagnosis: json['hospital_diagnosis'],
+        treatmentSummary: json['treatment_summary'],
+        dischargeRecommendations: json['discharge_recommendations'],
+        clinicalUpdatedAt: json['clinical_updated_at'] != null ? DateTime.tryParse(json['clinical_updated_at']) : null,
       );
 }
 
@@ -272,6 +314,9 @@ class Reminder {
   final DateTime? remindOnceAt;
   final bool active;
   final DateTime? lastSentAt;
+  final String? medicationId;
+  final String source; // manual | medication
+  final DateTime? endsAt;
 
   Reminder({
     required this.id,
@@ -283,7 +328,12 @@ class Reminder {
     this.remindOnceAt,
     this.active = true,
     this.lastSentAt,
+    this.medicationId,
+    this.source = 'manual',
+    this.endsAt,
   });
+
+  bool get isMedicationSync => source == 'medication' || medicationId != null;
 
   factory Reminder.fromJson(Map<String, dynamic> json) => Reminder(
         id: json['id'],
@@ -298,6 +348,9 @@ class Reminder {
         remindOnceAt: json['remind_once_at'] != null ? DateTime.parse(json['remind_once_at']) : null,
         active: json['active'] ?? true,
         lastSentAt: json['last_sent_at'] != null ? DateTime.parse(json['last_sent_at']) : null,
+        medicationId: json['medication_id'],
+        source: json['source'] ?? 'manual',
+        endsAt: json['ends_at'] != null ? DateTime.tryParse(json['ends_at']) : null,
       );
 
   Map<String, dynamic> toJson() => {
@@ -320,8 +373,9 @@ class Reminder {
   }
 
   String get scheduleLabel {
-    if (intervalMinutes != null) return 'Har $intervalMinutes daqiqada';
-    if (timeOfDay != null) return 'Har kuni $timeOfDay';
+    final ending = endsAt != null ? ' · ${endsAt!.toString().substring(0, 10)} gacha' : '';
+    if (intervalMinutes != null) return 'Har $intervalMinutes daqiqada$ending';
+    if (timeOfDay != null) return 'Har kuni $timeOfDay$ending';
     if (remindOnceAt != null) return 'Bir marta: ${remindOnceAt.toString().substring(0, 16)}';
     return 'Belgilanmagan';
   }

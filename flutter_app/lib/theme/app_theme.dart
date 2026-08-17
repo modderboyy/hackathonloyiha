@@ -1,46 +1,40 @@
 import 'package:flutter/material.dart';
 
-/// CareLink — light dizayn tizimi
-/// Deep blue primary, oq/och fon, shaffof kartalar.
-
+/// CareLink design tokenlari — webdagi Material UI light interfeysi bilan bir xil palitra.
 class AppColors {
-  // Deep blue palitra (primary saqlanadi)
-  static const Color primary = Color(0xFF1E3A8A); // deep blue
-  static const Color primaryDark = Color(0xFF1D4ED8);
-  static const Color primaryDarker = Color(0xFF172554);
-  static const Color accent = Color(0xFF2563EB); // electric blue
-  static const Color cyan = Color(0xFF0891B2);
-  static const Color emerald = Color(0xFF10B981);
-  static const Color amber = Color(0xFFF59E0B);
-  static const Color red = Color(0xFFEF4444);
+  static const Color primary = Color(0xFF155EEF);
+  static const Color primaryDark = Color(0xFF004EEB);
+  static const Color primaryDarker = Color(0xFF0B1F4A);
+  static const Color accent = Color(0xFF2E90FA);
+  static const Color cyan = Color(0xFF0E9384);
+  static const Color emerald = Color(0xFF12B76A);
+  static const Color amber = Color(0xFFF79009);
+  static const Color red = Color(0xFFF04438);
 
-  // Fon (LIGHT)
-  static const Color bg = Color(0xFFF4F6FA);
+  static const Color bg = Color(0xFFF7F9FC);
   static const Color bgCard = Color(0xFFFFFFFF);
-  static const Color surface = Color(0xFFEDF1F7);
+  static const Color surface = Color(0xFFF2F4F7);
 
-  // Matn (LIGHT)
-  static const Color textPrimary = Color(0xFF0F172A);
-  static const Color textSecondary = Color(0xFF475569);
-  static const Color textMuted = Color(0xFF94A3B8);
+  static const Color textPrimary = Color(0xFF101828);
+  static const Color textSecondary = Color(0xFF475467);
+  static const Color textMuted = Color(0xFF98A2B3);
+  static const Color border = Color(0xFFEAECF0);
 
-  // Gradientlar
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF3B82F6), Color(0xFF1E3A8A), Color(0xFF172554)],
+    colors: [Color(0xFF528BFF), Color(0xFF155EEF), Color(0xFF004EEB)],
   );
 
   static const LinearGradient neonGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF0891B2), Color(0xFF2563EB), Color(0xFF7C3AED)],
+    colors: [Color(0xFF2E90FA), Color(0xFF155EEF), Color(0xFF7A5AF8)],
   );
 
-  // Och fon gradienti (light mode)
   static const LinearGradient bgGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFFEEF2FF), Color(0xFFF4F6FA), Color(0xFFE0E7FF)],
+    colors: [Color(0xFFF8FAFC), Color(0xFFF7F9FC), Color(0xFFEFF4FF)],
   );
 }

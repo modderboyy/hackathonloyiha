@@ -24,6 +24,7 @@ class AppState extends ChangeNotifier {
   bool locked = false;
   bool loading = true;
   String? error;
+  bool _realtimeStarted = false;
 
   bool get isLoggedIn => db.userId != null;
   bool get isPremium => subscription?.isActive ?? false;
@@ -35,6 +36,7 @@ class AppState extends ChangeNotifier {
       await _initFcm();
       if (isLoggedIn) {
         await loadAll();
+        _startRealtime();
       }
     } catch (e) {
       error = e.toString();
@@ -64,6 +66,8 @@ class AppState extends ChangeNotifier {
     subscription = await db.getSubscription();
     checkins = await db.getCheckins();
     reminderList = await db.getReminders();
+    // Klinikadan kelgan dori rejasi shu yerda telefonning local notifications'iga yoziladi.
+    await reminders.syncAll(reminderList);
     medications = await db.getMedications();
     familyMembers = await db.getFamilyMembers();
     await checkLocked();
@@ -73,6 +77,13 @@ class AppState extends ChangeNotifier {
     final lockedCheckin = await db.getLatestLockedCheckin();
     locked = lockedCheckin != null;
     notifyListeners();
+  }
+
+  void _startRealtime() {
+    if (_realtimeStarted) return;
+    _realtimeStarted = true;
+    watchCheckins();
+    watchReminders();
   }
 
   // ---------- Auth ----------
@@ -93,6 +104,7 @@ class AppState extends ChangeNotifier {
         await db.ensureClientRole();
         await _initFcm();
         await loadAll();
+        _startRealtime();
       }
     } catch (e) {
       error = e.toString();
@@ -110,6 +122,7 @@ class AppState extends ChangeNotifier {
       await db.login(email, password);
       await _initFcm();
       await loadAll();
+      _startRealtime();
     } catch (e) {
       error = 'Email yoki parol noto\'g\'ri.';
     } finally {
@@ -124,6 +137,7 @@ class AppState extends ChangeNotifier {
     health = null;
     subscription = null;
     locked = false;
+    _realtimeStarted = false;
     notifyListeners();
   }
 
@@ -184,21 +198,37 @@ class AppState extends ChangeNotifier {
 
   // ---------- Eslatmalar ----------
   Future<void> addReminder(Reminder r) async {
-    await db.addReminder(r);
-    await reminders.schedule(r);
+    final saved = await db.addReminder(r);
+    if (saved != null) await reminders.schedule(saved);
     reminderList = await db.getReminders();
     notifyListeners();
   }
 
   Future<void> toggleReminder(String id, bool active) async {
+    Reminder? reminder;
+    for (final item in reminderList) {
+      if (item.id == id) { reminder = item; break; }
+    }
     await db.updateReminder(id, {'active': active});
+    if (reminder != null) {
+      final updated = _copyActive(reminder, active);
+      if (active) {
+        await reminders.schedule(updated);
+      } else {
+        await reminders.cancelReminder(updated);
+      }
+    }
     reminderList = reminderList.map((r) => r.id == id ? _copyActive(r, active) : r).toList();
     notifyListeners();
   }
 
   Future<void> deleteReminder(String id) async {
+    Reminder? reminder;
+    for (final item in reminderList) {
+      if (item.id == id) { reminder = item; break; }
+    }
     await db.deleteReminder(id);
-    await reminders.cancel(id.hashCode);
+    if (reminder != null) await reminders.cancelReminder(reminder);
     reminderList = reminderList.where((r) => r.id != id).toList();
     notifyListeners();
   }
@@ -207,6 +237,7 @@ class AppState extends ChangeNotifier {
         id: r.id, type: r.type, title: r.title, notes: r.notes,
         timeOfDay: r.timeOfDay, intervalMinutes: r.intervalMinutes,
         remindOnceAt: r.remindOnceAt, active: active, lastSentAt: r.lastSentAt,
+        medicationId: r.medicationId, source: r.source, endsAt: r.endsAt,
       );
 
   // ---------- AI chatbot ----------
@@ -228,6 +259,14 @@ class AppState extends ChangeNotifier {
           locked = true;
         }
       }
+      notifyListeners();
+    });
+  }
+
+  void watchReminders() {
+    db.watchReminders().listen((_) async {
+      reminderList = await db.getReminders();
+      await reminders.syncAll(reminderList);
       notifyListeners();
     });
   }

@@ -24,6 +24,7 @@ import type {
   Facility,
   FollowUp,
   Hospitalization,
+  Medication,
   Neighborhood,
   Notification,
   Patient,
@@ -38,6 +39,50 @@ import type {
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+// Faqat kalitlar kiritilmaganda UI ni ko'rish uchun lokal preview.
+// Haqiqiy ma'lumotlar bo'lsa Supabase RLS ushbu ma'lumotlarni to'liq almashtiradi.
+const DEMO_CLINICS: Facility[] = [
+  { id: "clinic-tashkent", name: "Toshkent shahar OVaBMU", type: "hospital", email: "toshkent@carelink.uz", phone: "+998 71 205 10 30", address: "Toshkent shahri, Shifokorlar ko'chasi 12", lat: 41.3111, lng: 69.2797, radius_km: 5, is_active: true, subscription_status: "active", subscription_expires_at: "2026-12-31T00:00:00.000Z", region_id: null },
+  { id: "clinic-samarkand", name: "Samarqand viloyat klinikasi", type: "hospital", email: "samarkand@carelink.uz", phone: "+998 66 233 42 20", address: "Samarqand, Universitet xiyoboni 4", lat: 39.6542, lng: 66.9597, radius_km: 4, is_active: true, subscription_status: "trial", subscription_expires_at: "2026-09-20T00:00:00.000Z", region_id: null },
+  { id: "clinic-andijan", name: "Andijon yurak markazi", type: "family_clinic", email: "andijon@carelink.uz", phone: "+998 74 225 11 02", address: "Andijon, Bobur shoh ko'chasi 88", lat: 40.7821, lng: 72.3442, radius_km: 3, is_active: false, subscription_status: "inactive", region_id: null },
+];
+
+const DEMO_PROFILE: Profile = {
+  id: "demo-super-admin", full_name: "Nodira Xasanova", first_name: "Nodira", last_name: "Xasanova", birth_date: null,
+  role: "super_admin", phone: "+998 90 123 45 67", facility_id: null, clinic_id: null, region_id: null, district_id: null, neighborhood_id: null, specialty_id: null, patient_id: null,
+};
+
+const DEMO_PATIENTS: Patient[] = [
+  { id: "patient-1", full_name: "Aziza Mirzayeva", pinfl: "51403041230012", birth_date: "1971-03-04", gender: "female", phone: "+998 90 445 36 60", clinic_id: "clinic-tashkent", region_id: null, district_id: null, neighborhood_id: null, address: "Toshkent shahri", emergency_contact: "+998 90 111 23 45", created_at: "2026-08-10T09:00:00Z" },
+  { id: "patient-2", full_name: "Jasur Abdullayev", pinfl: "50712231220045", birth_date: "1966-12-23", gender: "male", phone: "+998 93 112 74 20", clinic_id: "clinic-tashkent", region_id: null, district_id: null, neighborhood_id: null, address: "Toshkent shahri", emergency_contact: "+998 90 908 80 10", created_at: "2026-08-12T11:00:00Z" },
+  { id: "patient-3", full_name: "Muhammadali Karimov", pinfl: "51004011230012", birth_date: "1984-04-01", gender: "male", phone: "+998 91 333 66 50", clinic_id: "clinic-samarkand", region_id: null, district_id: null, neighborhood_id: null, address: "Samarqand shahri", emergency_contact: null, created_at: "2026-08-14T08:30:00Z" },
+  { id: "patient-4", full_name: "Malika Toirova", pinfl: "50808161210089", birth_date: "1958-08-16", gender: "female", phone: "+998 97 681 11 54", clinic_id: "clinic-tashkent", region_id: null, district_id: null, neighborhood_id: null, address: "Toshkent shahri", emergency_contact: "+998 93 300 20 90", created_at: "2026-08-15T10:10:00Z" },
+];
+const DEMO_HOSPITALIZATIONS: Hospitalization[] = [{ id: "hosp-1", patient_id: "patient-2", facility_id: "clinic-tashkent", clinic_id: "clinic-tashkent", doctor_id: "demo-super-admin", admission_date: "2026-08-15", diagnosis: "O'tkir pnevmoniya", status: "active" }];
+const DEMO_DISCHARGES: Discharge[] = [
+  { id: "disc-1", hospitalization_id: "hosp-0", patient_id: "patient-1", clinic_id: "clinic-tashkent", doctor_id: "demo-super-admin", discharge_date: "2026-08-14", diagnosis: "Yurak yetishmovchiligi", summary: "Holati barqarorlashdi. Uy sharoitida davomiy davo belgilandi.", recommendations: "Bosimni har kuni kuzating, tuzni cheklang.", requires_follow_up: true, follow_up_days: 14, assigned_family_doctor_id: null },
+  { id: "disc-2", hospitalization_id: "hosp-2", patient_id: "patient-4", clinic_id: "clinic-tashkent", doctor_id: "demo-super-admin", discharge_date: "2026-08-10", diagnosis: "Gipertoniya", summary: "Davolash kursi muvaffaqiyatli yakunlandi.", recommendations: "Dori jadvaliga amal qiling.", requires_follow_up: true, follow_up_days: 7, assigned_family_doctor_id: null },
+];
+const DEMO_FOLLOWUPS: FollowUp[] = [
+  { id: "follow-1", patient_id: "patient-1", discharge_id: "disc-1", clinic_id: "clinic-tashkent", family_doctor_id: "demo-super-admin", due_date: "2026-08-28", status: "in_progress", result_notes: null, next_step: "3 kundan so'ng qon bosimi monitoringi", completed_at: null },
+  { id: "follow-2", patient_id: "patient-4", discharge_id: "disc-2", clinic_id: "clinic-tashkent", family_doctor_id: "demo-super-admin", due_date: "2026-08-17", status: "completed", result_notes: "Bemorning holati yaxshi, dori qabul qilmoqda.", next_step: null, completed_at: "2026-08-17T09:00:00Z" },
+];
+const DEMO_CHECKINS: Checkin[] = [{ id: "check-1", client_id: "client-1", scheduled_at: "2026-08-17T08:00:00Z", ai_message: "Bugun o'zingizni qanday his qilyapsiz?", status: "answered_fine", response: "Yaxshiman", responded_at: "2026-08-17T08:03:00Z", escalation: 0, family_step: 0, created_at: "2026-08-17T08:00:00Z" }];
+const DEMO_MEDICATIONS: Medication[] = [{ id: "med-1", patient_id: "patient-1", name: "Bisoprolol", dosage: "5 mg", frequency: "Kuniga 2 mahal", notes: null, frequency_type: "daily", times_per_day: 2, duration_days: 30, start_date: "2026-08-14", times: ["08:00", "20:00"] }];
+
+export interface MedicationScheduleInput {
+  name: string;
+  dosage?: string;
+  frequency?: string;
+  notes?: string;
+  frequencyType?: "daily" | "hourly" | "weekly" | "as_needed";
+  timesPerDay?: number | null;
+  intervalHours?: number | null;
+  durationDays?: number | null;
+  startDate?: string | null;
+  times?: string[];
+}
+
 export interface DischargeInput {
   patientId: string;
   admissionDate: string;
@@ -48,12 +93,26 @@ export interface DischargeInput {
   requiresFollowUp: boolean;
   followUpDays: number;
   familyDoctorId: string | null;
-  medications: { name: string; dosage: string; frequency: string }[];
+  medications: MedicationScheduleInput[];
 }
 
 export interface DischargeResult {
   error: string | null;
   code: string | null;
+}
+
+export interface ClinicInput {
+  name: string;
+  email: string;
+  password?: string;
+  phone?: string;
+  address?: string;
+  lat?: number | null;
+  lng?: number | null;
+  radius_km?: number | null;
+  subscription_status?: "active" | "inactive" | "expired" | "trial";
+  subscription_expires_at?: string | null;
+  type?: Facility["type"];
 }
 
 interface Data {
@@ -81,6 +140,7 @@ interface Data {
   checkins: Checkin[];
   chatMessages: ChatMessageRow[];
   clientHealth: ClientHealth[];
+  medications: Medication[];
 
   addPatient: (p: Omit<Patient, "id" | "created_at" | "created_by">) => Promise<string | null>;
   updatePatient: (id: string, patch: Partial<Patient>) => Promise<string | null>;
@@ -92,6 +152,8 @@ interface Data {
   completeFollowUp: (id: string, notes: string, next: string) => Promise<string | null>;
   markNotificationRead: (id: string) => Promise<string | null>;
   deletePatient: (id: string) => Promise<string | null>;
+  addClinic: (input: ClinicInput) => Promise<string | null>;
+  updateClinic: (id: string, input: Partial<ClinicInput>) => Promise<string | null>;
 
   addRegion: (name: string, code: string) => Promise<string | null>;
   addDistrict: (name: string, regionId: string, lat?: number | null, lng?: number | null) => Promise<string | null>;
@@ -130,29 +192,30 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     return createClient();
   }, [notConfigured]);
 
-  const [ready, setReady] = useState(false);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [ready, setReady] = useState(notConfigured);
+  const [profile, setProfile] = useState<Profile | null>(notConfigured ? DEMO_PROFILE : null);
+  const [profiles, setProfiles] = useState<Profile[]>(notConfigured ? [DEMO_PROFILE] : []);
   const [regions, setRegions] = useState<Region[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
   const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>([]);
   const [streets, setStreets] = useState<Street[]>([]);
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [specialties, setSpecialties] = useState<Specialty[]>([]);
-  const [facilities, setFacilities] = useState<Facility[]>([]);
-  const [patients, setPatients] = useState<Patient[]>([]);
+  const [facilities, setFacilities] = useState<Facility[]>(notConfigured ? DEMO_CLINICS : []);
+  const [patients, setPatients] = useState<Patient[]>(notConfigured ? DEMO_PATIENTS : []);
   const [visits, setVisits] = useState<ClinicalVisit[]>([]);
   const [vitals, setVitals] = useState<Vital[]>([]);
-  const [hospitalizations, setHospitalizations] = useState<Hospitalization[]>([]);
-  const [discharges, setDischarges] = useState<Discharge[]>([]);
-  const [followUps, setFollowUps] = useState<FollowUp[]>([]);
+  const [hospitalizations, setHospitalizations] = useState<Hospitalization[]>(notConfigured ? DEMO_HOSPITALIZATIONS : []);
+  const [discharges, setDischarges] = useState<Discharge[]>(notConfigured ? DEMO_DISCHARGES : []);
+  const [followUps, setFollowUps] = useState<FollowUp[]>(notConfigured ? DEMO_FOLLOWUPS : []);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [liveNotification, setLiveNotification] = useState<Notification | null>(null);
-  const [checkins, setCheckins] = useState<Checkin[]>([]);
+  const [checkins, setCheckins] = useState<Checkin[]>(notConfigured ? DEMO_CHECKINS : []);
   const [chatMessages, setChatMessages] = useState<ChatMessageRow[]>([]);
   const [clientHealth, setClientHealth] = useState<ClientHealth[]>([]);
+  const [medications, setMedications] = useState<Medication[]>(notConfigured ? DEMO_MEDICATIONS : []);
 
   // Realtime: yangi xabarnomalar (popup uchun)
   useEffect(() => {
@@ -177,10 +240,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, [supabase, profile]);
 
   useEffect(() => {
-    if (!supabase) {
-      setReady(true);
-      return;
-    }
+    if (!supabase) return;
     let cancelled = false;
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -193,7 +253,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setProfile(prof as Profile | null);
 
       const [
-        prf, reg, dist, nbh, str, bld, spec, fac, pat, vis, vit, hosp, dis, fu, notif, aud, appr, ckin, chat, health,
+        prf, reg, dist, nbh, str, bld, spec, fac, pat, vis, vit, hosp, dis, fu, notif, aud, appr, ckin, chat, health, meds,
       ] = await Promise.all([
         supabase.from("profiles").select("*").order("created_at"),
         supabase.from("regions").select("*").order("name"),
@@ -215,6 +275,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         supabase.from("checkins").select("*").order("created_at", { ascending: false }).limit(200),
         supabase.from("chat_messages").select("*").order("created_at", { ascending: false }).limit(200),
         supabase.from("client_health").select("*"),
+        supabase.from("medications").select("*").order("created_at", { ascending: false }),
       ]);
 
       if (cancelled) return;
@@ -238,22 +299,29 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setCheckins((ckin.data as Checkin[]) ?? []);
       setChatMessages((chat.data as ChatMessageRow[]) ?? []);
       setClientHealth((health.data as ClientHealth[]) ?? []);
+      setMedications((meds.data as Medication[]) ?? []);
       setReady(true);
     })();
     return () => { cancelled = true; };
   }, [supabase, router]);
 
   const addPatient = useCallback(async (p: Omit<Patient, "id" | "created_at" | "created_by">): Promise<string | null> => {
-    if (!supabase || !profile) return "Tizimga ulanmagan";
-    const { data, error } = await supabase.from("patients").insert({ ...p, created_by: profile.id }).select().single();
+    if (!profile) return "Tizimga ulanmagan";
+    const payload = { ...p, clinic_id: p.clinic_id ?? profile.clinic_id ?? null };
+    if (!supabase) {
+      const row = { ...payload, id: `demo-patient-${Date.now()}`, created_at: new Date().toISOString() } as Patient;
+      setPatients((prev) => [row, ...prev]);
+      return null;
+    }
+    const { data, error } = await supabase.from("patients").insert({ ...payload, created_by: profile.id }).select().single();
     if (error) return error.message;
     setPatients((prev) => [data as Patient, ...prev]);
     return null;
   }, [supabase, profile]);
 
   const updatePatient = useCallback(async (id: string, patch: Partial<Patient>): Promise<string | null> => {
-    if (!supabase) return "Tizimga ulanmagan";
     setPatients((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+    if (!supabase) return null;
     const { error } = await supabase.from("patients").update(patch).eq("id", id);
     if (error) return error.message;
     return null;
@@ -287,6 +355,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         .from("clinical_visits")
         .insert({
           ...v,
+          clinic_id: v.clinic_id ?? profile.clinic_id ?? null,
           doctor_id: profile.id,
           visit_date: new Date().toISOString(),
           specialty: triage.code,
@@ -333,21 +402,58 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, [supabase]);
 
   const addDischarge = useCallback(async (d: DischargeInput): Promise<DischargeResult> => {
-    if (!supabase || !profile) return { error: "Tizimga ulanmagan", code: null };
+    if (!profile) return { error: "Tizimga ulanmagan", code: null };
 
-    // Klinik kod generatsiya (bemor mobil ilovada shu bilan kiradi)
+    const patient = patients.find((p) => p.id === d.patientId);
+    const clinicId = patient?.clinic_id ?? profile.clinic_id ?? profile.facility_id ?? null;
+    if (!clinicId && profile.role !== "super_admin") {
+      return { error: "Xodim klinikaga biriktirilmagan.", code: null };
+    }
+
+    // Klinik kod bemor mobil ilovasida bepul klinik obunani bog'laydi.
     const code = Array.from({ length: 8 }, () =>
       "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random() * 32)]
     ).join("");
-
-    // Statsionar tugash sanasi (klinik obuna muddati)
-    const endDate = new Date(d.dischargeDate);
+    const endDate = new Date(`${d.dischargeDate}T00:00:00`);
     endDate.setDate(endDate.getDate() + (d.requiresFollowUp ? d.followUpDays : 0));
+    const medsPayload = d.medications.filter((m) => m.name.trim()).map((m) => ({
+      patient_id: d.patientId,
+      name: m.name.trim(),
+      dosage: m.dosage?.trim() || null,
+      frequency: m.frequency?.trim() || null,
+      notes: m.notes?.trim() || null,
+      frequency_type: m.frequencyType ?? "daily",
+      times_per_day: m.timesPerDay ?? null,
+      interval_hours: m.intervalHours ?? null,
+      duration_days: m.durationDays ?? null,
+      start_date: m.startDate || d.dischargeDate,
+      times: m.times?.filter(Boolean) ?? null,
+      prescribed_by: profile.id,
+    }));
+
+    if (!supabase) {
+      const hospitalId = `demo-hosp-${Date.now()}`;
+      const dischargeId = `demo-disc-${Date.now()}`;
+      setHospitalizations((prev) => [{ id: hospitalId, patient_id: d.patientId, facility_id: clinicId, clinic_id: clinicId, doctor_id: profile.id, admission_date: d.admissionDate, diagnosis: d.diagnosis || null, status: "discharged", code, end_date: endDate.toISOString().slice(0, 10) }, ...prev]);
+      setDischarges((prev) => [{ id: dischargeId, hospitalization_id: hospitalId, patient_id: d.patientId, clinic_id: clinicId, doctor_id: profile.id, discharge_date: d.dischargeDate, diagnosis: d.diagnosis || null, summary: d.summary || null, recommendations: d.recommendations || null, requires_follow_up: d.requiresFollowUp, follow_up_days: d.requiresFollowUp ? d.followUpDays : null, assigned_family_doctor_id: null }, ...prev]);
+      if (d.requiresFollowUp) {
+        const due = new Date(`${d.dischargeDate}T00:00:00`);
+        due.setDate(due.getDate() + d.followUpDays);
+        setFollowUps((prev) => [{ id: `demo-follow-${Date.now()}`, patient_id: d.patientId, discharge_id: dischargeId, clinic_id: clinicId, family_doctor_id: profile.id, due_date: due.toISOString().slice(0, 10), status: "pending", result_notes: null, next_step: null, completed_at: null }, ...prev]);
+      }
+      setMedications((prev) => [
+        ...medsPayload.map((m, i) => ({ ...m, id: `demo-med-${Date.now()}-${i}`, created_at: new Date().toISOString() } as Medication)),
+        ...prev,
+      ]);
+      return { error: null, code };
+    }
 
     const { data: hosp, error: e1 } = await supabase
       .from("hospitalizations")
       .insert({
         patient_id: d.patientId,
+        facility_id: clinicId,
+        clinic_id: clinicId,
         doctor_id: profile.id,
         admission_date: d.admissionDate,
         diagnosis: d.diagnosis || null,
@@ -365,8 +471,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       .insert({
         hospitalization_id: hosp.id,
         patient_id: d.patientId,
+        clinic_id: clinicId,
         doctor_id: profile.id,
         discharge_date: d.dischargeDate,
+        diagnosis: d.diagnosis || null,
         summary: d.summary || null,
         recommendations: d.recommendations || null,
         requires_follow_up: d.requiresFollowUp,
@@ -378,27 +486,23 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (e2) return { error: e2.message, code: null };
     setDischarges((prev) => [disc as Discharge, ...prev]);
 
-    // Dori-darmonlarni bemorga bog'lash (mobil ilovada sinxron bo'ladi)
-    if (d.medications.length > 0) {
-      const meds = d.medications.map((m) => ({
-        patient_id: d.patientId,
-        name: m.name,
-        dosage: m.dosage || null,
-        frequency: m.frequency || null,
-        prescribed_by: profile.id,
-      }));
-      await supabase.from("medications").insert(meds);
+    if (medsPayload.length > 0) {
+      const { data: savedMeds, error: medError } = await supabase.from("medications").insert(medsPayload).select();
+      if (medError) return { error: `Chiqarish saqlandi, ammo dorilar: ${medError.message}`, code };
+      setMedications((prev) => [...((savedMeds as Medication[]) ?? []), ...prev]);
     }
 
     await refreshFollowupsAndNotifications();
     return { error: null, code };
-  }, [supabase, profile, refreshFollowupsAndNotifications]);
+  }, [supabase, profile, patients, refreshFollowupsAndNotifications]);
 
   const completeFollowUp = useCallback(async (id: string, notes: string, next: string): Promise<string | null> => {
-    if (!supabase) return "Tizimga ulanmagan";
-    const { error } = await supabase.from("follow_ups").update({ status: "completed", result_notes: notes || null, next_step: next || null, completed_at: new Date().toISOString() }).eq("id", id);
-    if (error) return error.message;
-    setFollowUps((prev) => prev.map((f) => (f.id === id ? { ...f, status: "completed", result_notes: notes || null, next_step: next || null, completed_at: new Date().toISOString() } : f)));
+    const completedAt = new Date().toISOString();
+    if (supabase) {
+      const { error } = await supabase.from("follow_ups").update({ status: "completed", result_notes: notes || null, next_step: next || null, completed_at: completedAt }).eq("id", id);
+      if (error) return error.message;
+    }
+    setFollowUps((prev) => prev.map((f) => (f.id === id ? { ...f, status: "completed", result_notes: notes || null, next_step: next || null, completed_at: completedAt } : f)));
     return null;
   }, [supabase]);
 
@@ -410,12 +514,74 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, [supabase]);
 
   const deletePatient = useCallback(async (id: string): Promise<string | null> => {
-    if (!supabase) return "Tizimga ulanmagan";
-    const { error } = await supabase.from("patients").delete().eq("id", id);
-    if (error) return error.message;
+    if (supabase) {
+      const { error } = await supabase.from("patients").delete().eq("id", id);
+      if (error) return error.message;
+    }
     setPatients((prev) => prev.filter((p) => p.id !== id));
     return null;
   }, [supabase]);
+
+  const addClinic = useCallback(async (input: ClinicInput): Promise<string | null> => {
+    if (profile?.role !== "super_admin") return "Klinikani faqat super admin boshqara oladi.";
+    if (!supabase) {
+      const row: Facility = {
+        id: `demo-clinic-${Date.now()}`,
+        name: input.name,
+        email: input.email,
+        phone: input.phone ?? null,
+        address: input.address ?? null,
+        lat: input.lat ?? 41.3111,
+        lng: input.lng ?? 69.2797,
+        radius_km: input.radius_km ?? 3,
+        subscription_status: input.subscription_status ?? "inactive",
+        is_active: input.subscription_status === "active" || input.subscription_status === "trial",
+        subscription_expires_at: input.subscription_expires_at ?? null,
+        type: input.type ?? "hospital",
+        region_id: null,
+      };
+      setFacilities((prev) => [row, ...prev]);
+      return null;
+    }
+    try {
+      const response = await fetch("/api/admin/clinics", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      const payload = await response.json() as { error?: string; facility?: Facility };
+      if (!response.ok) return payload.error ?? "Klinika yaratilmadi.";
+      if (payload.facility) setFacilities((prev) => [payload.facility as Facility, ...prev]);
+      return null;
+    } catch {
+      return "Klinikani yaratish xizmatiga ulanib bo'lmadi.";
+    }
+  }, [profile, supabase]);
+
+  const updateClinic = useCallback(async (id: string, input: Partial<ClinicInput>): Promise<string | null> => {
+    if (profile?.role !== "super_admin") return "Klinikani faqat super admin boshqara oladi.";
+    if (!supabase) {
+      setFacilities((prev) => prev.map((f) => f.id === id ? {
+        ...f,
+        ...input,
+        is_active: input.subscription_status ? ["active", "trial"].includes(input.subscription_status) : f.is_active,
+      } : f));
+      return null;
+    }
+    try {
+      const response = await fetch("/api/admin/clinics", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, ...input }),
+      });
+      const payload = await response.json() as { error?: string; facility?: Facility };
+      if (!response.ok) return payload.error ?? "Klinika yangilanmadi.";
+      if (payload.facility) setFacilities((prev) => prev.map((f) => f.id === id ? payload.facility as Facility : f));
+      return null;
+    } catch {
+      return "Klinikani yangilash xizmatiga ulanib bo'lmadi.";
+    }
+  }, [profile, supabase]);
 
   const addRegion = useCallback(async (name: string, code: string): Promise<string | null> => {
     if (!supabase) {
@@ -584,18 +750,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     () => ({
       ready, notConfigured, profile, profiles, regions, districts, neighborhoods,
       streets, buildings, specialties, facilities, patients, visits, vitals, hospitalizations,
-      discharges, followUps, notifications, liveNotification, audit, approvals, checkins, chatMessages, clientHealth,
+      discharges, followUps, notifications, liveNotification, audit, approvals, checkins, chatMessages, clientHealth, medications,
       addPatient, updatePatient, addVisit, addDischarge, completeFollowUp, markNotificationRead,
-      deletePatient, addRegion, addDistrict, updateDistrict, deleteDistrict, addNeighborhood,
+      deletePatient, addClinic, updateClinic, addRegion, addDistrict, updateDistrict, deleteDistrict, addNeighborhood,
       updateNeighborhood, deleteNeighborhood, addStreet, updateStreet, deleteStreet,
       addBuilding, updateBuilding, deleteBuilding, setRole, submitApproval, decideApproval,
     }),
     [
       ready, notConfigured, profile, profiles, regions, districts, neighborhoods,
       streets, buildings, specialties, facilities, patients, visits, vitals, hospitalizations,
-      discharges, followUps, notifications, liveNotification, audit, approvals, checkins, chatMessages, clientHealth,
+      discharges, followUps, notifications, liveNotification, audit, approvals, checkins, chatMessages, clientHealth, medications,
       addPatient, updatePatient, addVisit, addDischarge, completeFollowUp, markNotificationRead,
-      deletePatient, addRegion, addDistrict, updateDistrict, deleteDistrict, addNeighborhood,
+      deletePatient, addClinic, updateClinic, addRegion, addDistrict, updateDistrict, deleteDistrict, addNeighborhood,
       updateNeighborhood, deleteNeighborhood, addStreet, updateStreet, deleteStreet,
       addBuilding, updateBuilding, deleteBuilding, setRole, submitApproval, decideApproval,
     ]

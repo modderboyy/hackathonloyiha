@@ -1,10 +1,13 @@
 // CareLink — umumiy tiplar
-
+// Ishchi mahsulotdagi ro'llar: super_admin, medical_worker, patient.
+// Quyidagi legacy qiymatlar faqat oldingi ma'lumotlarni migratsiya qilish uchun turda qoldirilgan.
 export type Role =
   | "super_admin"
+  | "medical_worker"
+  | "patient"
   | "admin"
   | "district_admin"
-  | "medical_worker"
+  | "clinic_admin"
   | "hospital_doctor"
   | "family_doctor"
   | "client";
@@ -18,11 +21,13 @@ export interface Profile {
   role: Role;
   phone: string | null;
   facility_id: string | null;
+  clinic_id: string | null;
   region_id: string | null;
   district_id: string | null;
   neighborhood_id: string | null;
   specialty_id: string | null;
   patient_id: string | null;
+  created_at?: string;
 }
 
 export interface Specialty {
@@ -88,11 +93,23 @@ export interface Approval {
   created_at: string;
 }
 
+export type ClinicSubscriptionStatus = "active" | "inactive" | "expired" | "trial";
+
 export interface Facility {
   id: string;
   name: string;
   type: "polyclinic" | "hospital" | "family_clinic" | "other";
   region_id: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  radius_km?: number | null;
+  is_active?: boolean;
+  subscription_status?: ClinicSubscriptionStatus;
+  subscription_expires_at?: string | null;
+  activated_at?: string | null;
 }
 
 export interface Patient {
@@ -102,6 +119,8 @@ export interface Patient {
   birth_date: string | null;
   gender: "male" | "female" | "other" | null;
   phone: string | null;
+  // clinic-first schema: ma'lumotlar faqat shu klinikadagi xodimlarga ko'rinadi.
+  clinic_id?: string | null;
   region_id: string | null;
   district_id: string | null;
   neighborhood_id: string | null;
@@ -114,6 +133,7 @@ export interface ClinicalVisit {
   id: string;
   patient_id: string;
   facility_id: string | null;
+  clinic_id?: string | null;
   doctor_id: string | null;
   chief_complaint: string | null;
   diagnosis: string | null;
@@ -141,35 +161,60 @@ export interface Hospitalization {
   id: string;
   patient_id: string;
   facility_id: string | null;
+  clinic_id?: string | null;
   doctor_id: string | null;
   admission_date: string;
   diagnosis: string | null;
   status: "active" | "discharged";
+  code?: string | null;
+  end_date?: string | null;
 }
 
 export interface Discharge {
   id: string;
   hospitalization_id: string;
   patient_id: string;
+  clinic_id?: string | null;
   doctor_id: string | null;
   discharge_date: string;
+  diagnosis?: string | null;
   summary: string | null;
   recommendations: string | null;
   requires_follow_up: boolean;
   follow_up_days: number | null;
   assigned_family_doctor_id: string | null;
+  created_at?: string;
 }
 
 export interface FollowUp {
   id: string;
   patient_id: string;
   discharge_id: string | null;
+  clinic_id?: string | null;
   family_doctor_id: string | null;
   due_date: string;
   status: "pending" | "in_progress" | "completed" | "overdue";
   result_notes: string | null;
   next_step: string | null;
   completed_at: string | null;
+  created_at?: string;
+}
+
+export interface Medication {
+  id: string;
+  patient_id: string;
+  name: string;
+  dosage: string | null;
+  frequency: string | null;
+  notes: string | null;
+  frequency_type?: "daily" | "hourly" | "weekly" | "as_needed";
+  times_per_day?: number | null;
+  interval_hours?: number | null;
+  duration_days?: number | null;
+  start_date?: string | null;
+  times?: string[] | null;
+  prescribed_by?: string | null;
+  created_at?: string;
 }
 
 export interface Notification {
@@ -192,7 +237,6 @@ export interface AuditEntry {
   created_at: string;
 }
 
-// Bemorning mobil monitoring ma'lumotlari (mobil ilova bilan integratsiya)
 export interface Checkin {
   id: string;
   client_id: string;
@@ -228,6 +272,10 @@ export interface ClientHealth {
   avg_spo2: number | null;
   avg_weight: number | null;
   emergency_contact: string | null;
+  hospital_diagnosis?: string | null;
+  treatment_summary?: string | null;
+  discharge_recommendations?: string | null;
+  clinical_updated_at?: string | null;
 }
 
 export interface TimelineEvent {
@@ -239,13 +287,15 @@ export interface TimelineEvent {
 }
 
 export const ROLE_LABELS: Record<Role, string> = {
-  super_admin: "Super admin (Respublika)",
-  admin: "Viloyat admini",
-  district_admin: "Tuman admini",
+  super_admin: "Super admin",
   medical_worker: "Tibbiyot xodimi",
-  hospital_doctor: "Statsionar shifokori",
-  family_doctor: "Oilaviy shifokor",
-  client: "Mijoz (Bemor)",
+  patient: "Bemor",
+  admin: "Tibbiyot xodimi",
+  district_admin: "Tibbiyot xodimi",
+  clinic_admin: "Tibbiyot xodimi",
+  hospital_doctor: "Tibbiyot xodimi",
+  family_doctor: "Tibbiyot xodimi",
+  client: "Bemor",
 };
 
 export const GENDER_LABELS: Record<string, string> = {

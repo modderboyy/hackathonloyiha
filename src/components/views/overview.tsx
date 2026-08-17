@@ -3,346 +3,156 @@
 import { useMemo } from "react";
 import dynamic from "next/dynamic";
 import {
+  AccessTimeRounded,
+  ArrowForwardRounded,
+  CheckCircleRounded,
+  ErrorOutlineRounded,
+  FavoriteRounded,
+  LocalHospitalRounded,
+  MapRounded,
+  MedicationRounded,
+  PeopleAltRounded,
+  TrendingUpRounded,
+  WatchLaterRounded,
+} from "@mui/icons-material";
+import {
+  Avatar,
+  Box,
+  Button,
   Card,
   CardContent,
-  Box,
-  Typography,
   Chip,
-  Avatar,
-  List,
-  ListItem,
-  ListItemAvatar,
-  ListItemText,
-  LinearProgress,
+  Divider,
   Grid,
+  LinearProgress,
   Stack,
+  Typography,
 } from "@mui/material";
-import {
-  People as PeopleIcon,
-  Bed as BedIcon,
-  Assignment as AssignmentIcon,
-  Map as MapIcon,
-  NotificationsActive as NotifIcon,
-  Medication as MedIcon,
-  ArrowForward as ArrowIcon,
-} from "@mui/icons-material";
 import { useData } from "@/lib/data";
-import { BarChart, DonutChart, AreaChart } from "@/components/charts";
 import { formatDate } from "@/lib/utils";
 
-const RegionMap = dynamic(() => import("@/components/map/RegionMap"), {
+const ClinicMap = dynamic(() => import("@/components/map/ClinicMap"), {
   ssr: false,
-  loading: () => <Box sx={{ height: 400, bgcolor: "grey.100", borderRadius: 2 }} />,
+  loading: () => <Box sx={{ height: 440, borderRadius: 3, bgcolor: "#EEF4FF" }} />,
 });
 
-const MONTH_NAMES = ["Yan", "Fev", "Mar", "Apr", "May", "Iyn", "Iyl", "Avg", "Sen", "Okt", "Noy", "Dek"];
-
-export function Overview({ onRegionSelect }: { onRegionSelect: (regionId: string) => void }) {
-  const { regions, districts, patients, profiles, followUps, discharges, visits, hospitalizations, clientHealth } = useData();
+export function Overview({ onOpenPatients }: { onOpenPatients: () => void }) {
+  const { profile, patients, hospitalizations, discharges, followUps, facilities, checkins, medications } = useData();
+  const scopeClinic = profile?.role === "super_admin" ? null : profile?.clinic_id;
+  const scopedPatients = useMemo(() => scopeClinic ? patients.filter((patient) => patient.clinic_id === scopeClinic) : patients, [patients, scopeClinic]);
+  const scopedDischarges = useMemo(() => scopeClinic ? discharges.filter((item) => item.clinic_id === scopeClinic) : discharges, [discharges, scopeClinic]);
+  const scopedFollowUps = useMemo(() => scopeClinic ? followUps.filter((item) => item.clinic_id === scopeClinic) : followUps, [followUps, scopeClinic]);
+  const scopedHospitals = useMemo(() => scopeClinic ? hospitalizations.filter((item) => item.clinic_id === scopeClinic || item.facility_id === scopeClinic) : hospitalizations, [hospitalizations, scopeClinic]);
+  const clinics = useMemo(() => scopeClinic ? facilities.filter((clinic) => clinic.id === scopeClinic) : facilities, [facilities, scopeClinic]);
 
   const patientStats = useMemo(() => {
-    const total = patients.length;
-    const sick = patients.filter((p) => {
-      const hasActiveHosp = hospitalizations.some((h) => h.patient_id === p.id && h.status === "active");
-      const profileRow = profiles.find((pr) => pr.patient_id === p.id);
-      const hasCondition = profileRow
-        ? clientHealth.some((ch) => ch.client_id === profileRow.id && ch.current_condition)
-        : false;
-      return hasActiveHosp || hasCondition;
-    }).length;
-    return { total, sick, healthy: total - sick };
-  }, [patients, profiles, hospitalizations, clientHealth]);
+    const riskyPatientIds = new Set(scopedHospitals.filter((item) => item.status === "active").map((item) => item.patient_id));
+    checkins.filter((item) => ["answered_bad", "locked", "escalated"].includes(item.status)).forEach((checkin) => riskyPatientIds.add(checkin.client_id));
+    // client_id har doim patient_id bo'lmasligi mumkin; active statsionar eng ishonchli indikatsiya sifatida ishlaydi.
+    const sick = scopedPatients.filter((patient) => riskyPatientIds.has(patient.id)).length;
+    return { total: scopedPatients.length, sick, healthy: Math.max(0, scopedPatients.length - sick) };
+  }, [scopedPatients, scopedHospitals, checkins]);
 
-  const hospitalStats = useMemo(() => {
-    const total = hospitalizations.length;
-    let ongoing = hospitalizations.filter((h) => h.status === "active").length;
-    const discharged = hospitalizations.filter((h) => h.status === "discharged");
-    let success = 0;
-    let failed = 0;
-    discharged.forEach((h) => {
-      const disc = discharges.find((d) => d.hospitalization_id === h.id);
-      const fu = disc ? followUps.find((f) => f.discharge_id === disc.id) : null;
-      if (!fu || fu.status === "completed") success++;
-      else if (fu.status === "overdue") failed++;
-      else ongoing++;
+  const dischargeStats = useMemo(() => {
+    let successful = 0;
+    let unsuccessful = 0;
+    let ongoing = 0;
+    scopedDischarges.forEach((discharge) => {
+      const related = scopedFollowUps.find((followUp) => followUp.discharge_id === discharge.id);
+      if (!related) { ongoing += 1; return; }
+      if (related.status === "completed") successful += 1;
+      else if (related.status === "overdue") unsuccessful += 1;
+      else ongoing += 1;
     });
-    return { total, ongoing, success, failed };
-  }, [hospitalizations, followUps, discharges]);
+    return { total: scopedDischarges.length, successful, unsuccessful, ongoing };
+  }, [scopedDischarges, scopedFollowUps]);
 
-  const followUpStats = useMemo(() => {
-    const counts = { pending: 0, in_progress: 0, completed: 0, overdue: 0 };
-    followUps.forEach((f) => {
-      if (f.status in counts) counts[f.status as keyof typeof counts]++;
-    });
-    return counts;
-  }, [followUps]);
+  const observationStats = useMemo(() => ({
+    pending: scopedFollowUps.filter((item) => item.status === "pending").length,
+    active: scopedFollowUps.filter((item) => item.status === "in_progress").length,
+    urgent: scopedFollowUps.filter((item) => item.status === "overdue").length,
+    complete: scopedFollowUps.filter((item) => item.status === "completed").length,
+  }), [scopedFollowUps]);
 
-  const regionCounts = useMemo(() => {
-    const m: Record<string, number> = {};
-    regions.forEach((r) => (m[r.id] = 0));
-    patients.forEach((p) => {
-      if (p.region_id && m[p.region_id] !== undefined) m[p.region_id]++;
-    });
-    return m;
-  }, [regions, patients]);
-
-  const districtMarkers = useMemo(() => {
-    const counts: Record<string, number> = {};
-    patients.forEach((p) => {
-      if (p.district_id) counts[p.district_id] = (counts[p.district_id] ?? 0) + 1;
-    });
-    return districts
-      .filter((d) => d.lat !== null && d.lng !== null)
-      .map((d) => ({ id: d.id, name: d.name, lat: d.lat as number, lng: d.lng as number, count: counts[d.id] ?? 0, polygon: d.polygon }));
-  }, [districts, patients]);
-
-  const followUpDist = [
-    { label: "Kutilmoqda", value: followUpStats.pending, color: "#f59e0b" },
-    { label: "Jarayonda", value: followUpStats.in_progress, color: "#3b82f6" },
-    { label: "Yakunlandi", value: followUpStats.completed, color: "#10b981" },
-    { label: "Muddati o'tdi", value: followUpStats.overdue, color: "#ef4444" },
-  ];
-
-  const monthly = useMemo(() => {
-    const now = new Date();
-    const buckets: { key: string; label: string; value: number }[] = [];
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      buckets.push({ key: `${d.getFullYear()}-${d.getMonth()}`, label: MONTH_NAMES[d.getMonth()], value: 0 });
-    }
-    visits.forEach((v) => {
-      const d = new Date(v.visit_date);
-      const key = `${d.getFullYear()}-${d.getMonth()}`;
-      const b = buckets.find((x) => x.key === key);
-      if (b) b.value++;
-    });
-    return buckets;
-  }, [visits]);
-
-  const recent = useMemo(() => {
-    const ev = [
-      ...visits.map((v) => ({ date: v.visit_date, title: "Klinik tashrif", pid: v.patient_id, icon: "clipboard" })),
-      ...discharges.map((d) => ({ date: d.discharge_date, title: "Chiqarish", pid: d.patient_id, icon: "bed" })),
-      ...followUps.map((f) => ({ date: f.due_date, title: "Follow-up", pid: f.patient_id, icon: "clock" })),
-    ].sort((a, b) => +new Date(b.date) - +new Date(a.date));
-    return ev.slice(0, 6);
-  }, [visits, discharges, followUps]);
-
-  const pname = (id: string) => patients.find((p) => p.id === id)?.full_name ?? "—";
+  const upcoming = useMemo(() => scopedFollowUps.filter((item) => item.status !== "completed").sort((a, b) => +new Date(a.due_date) - +new Date(b.due_date)).slice(0, 4), [scopedFollowUps]);
+  const patientName = (id: string) => scopedPatients.find((patient) => patient.id === id)?.full_name ?? "Bemor";
+  const activeClinics = clinics.filter((clinic) => clinic.is_active && ["active", "trial"].includes(clinic.subscription_status ?? "inactive")).length;
 
   return (
-    <Box>
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h5" sx={{ fontWeight: 700 }} color="text.primary">
-          Bosh sahifa
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Tizimning umumiy holati va statistikasi
-        </Typography>
-      </Box>
-
-      {/* KPI kartalar */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid size={{ xs: 12, md: 4 }}>
-          <KpiCard
-            title="Jami bemorlar"
-            icon={<PeopleIcon />}
-            value={patientStats.total}
-            gradient="linear-gradient(135deg, #2563eb, #4338ca)"
-            segments={[
-              { label: "Sog'", value: patientStats.healthy, color: "#34d399" },
-              { label: "Kasal", value: patientStats.sick, color: "#f87171" },
-            ]}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
-          <KpiCard
-            title="Statsionar"
-            icon={<BedIcon />}
-            value={hospitalStats.total}
-            gradient="linear-gradient(135deg, #7c3aed, #6d28d9)"
-            segments={[
-              { label: "Davom etyabti", value: hospitalStats.ongoing, color: "#38bdf8" },
-              { label: "Muvaffaqiyatli", value: hospitalStats.success, color: "#34d399" },
-              { label: "Muvaffaqiyatsiz", value: hospitalStats.failed, color: "#f87171" },
-            ]}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
-          <KpiCard
-            title="Kuzatuvlar"
-            icon={<AssignmentIcon />}
-            value={followUpStats.pending + followUpStats.in_progress + followUpStats.overdue}
-            gradient="linear-gradient(135deg, #f59e0b, #ea580c)"
-            segments={[
-              { label: "Kutilmoqda", value: followUpStats.pending, color: "#fbbf24" },
-              { label: "Jarayonda", value: followUpStats.in_progress, color: "#38bdf8" },
-              { label: "Yakunlangan", value: followUpStats.completed, color: "#34d399" },
-              { label: "Muddati o'tdi", value: followUpStats.overdue, color: "#f87171" },
-            ]}
-          />
-        </Grid>
-      </Grid>
-
-      {/* Xarita */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-            <Box>
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                Hududlar bo'yicha bemorlar
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Hududni bosing — bemorlar ro'yxati filtrlanadi
-              </Typography>
-            </Box>
-            <MapIcon sx={{ color: "primary.main" }} />
-          </Box>
-          <RegionMap regions={regions} counts={regionCounts} selected={null} districtMarkers={districtMarkers} onSelect={(id) => id && onRegionSelect(id)} />
-        </CardContent>
-      </Card>
-
-      {/* Grafiklar */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid size={{ xs: 12, lg: 6 }}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>
-                Hududlar kesimida
-              </Typography>
-              <BarChart data={regions.map((r) => ({ label: r.code, value: regionCounts[r.id] ?? 0 }))} height={220} />
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid size={{ xs: 12, lg: 6 }}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>
-                Kuzatuv holati
-              </Typography>
-              <DonutChart data={followUpDist} centerLabel="Kuzatuv" centerValue={followUps.length} />
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>
-            Tashriflar dinamikasi (6 oy)
-          </Typography>
-          <AreaChart data={monthly.map((m) => m.value)} labels={monthly.map((m) => m.label)} height={200} />
-        </CardContent>
-      </Card>
-
-      {/* So'nggi faollik */}
-      <Card>
-        <CardContent>
-          <Typography variant="h6" sx={{ mb: 1, fontWeight: 700 }}>
-            So'nggi faollik
-          </Typography>
-          {recent.length === 0 ? (
-            <Typography variant="body2" color="text.secondary">
-              Hozircha faollik yo'q.
-            </Typography>
-          ) : (
-            <List disablePadding>
-              {recent.map((e, i) => (
-                <ListItem key={i} divider={i < recent.length - 1} sx={{ px: 0 }}>
-                  <ListItemAvatar>
-                    <Avatar sx={{ bgcolor: "primary.light", color: "primary.contrastText", width: 36, height: 36 }}>
-                      {e.icon === "bed" ? <BedIcon /> : e.icon === "clock" ? <NotifIcon /> : <MedIcon />}
-                    </Avatar>
-                  </ListItemAvatar>
-                  <ListItemText
-                    primary={`${e.title} — ${pname(e.pid)}`}
-                    secondary={formatDate(e.date)}
-                  />
-                  <ArrowIcon sx={{ color: "grey.400" }} />
-                </ListItem>
-              ))}
-            </List>
-          )}
-        </CardContent>
-      </Card>
-    </Box>
-  );
-}
-
-function KpiCard({
-  title,
-  icon,
-  value,
-  gradient,
-  segments,
-}: {
-  title: string;
-  icon: React.ReactNode;
-  value: number;
-  gradient: string;
-  segments: { label: string; value: number; color: string }[];
-}) {
-  const total = segments.reduce((s, seg) => s + seg.value, 0);
-
-  return (
-    <Card sx={{ height: "100%", overflow: "hidden" }}>
-      {/* Gradient header */}
-      <Box
-        sx={{
-          background: gradient,
-          color: "white",
-          p: 2.5,
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <Box>
-            <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: 1 }}>
-              {title}
-            </Typography>
-            <Typography variant="h3" sx={{ mt: 1, lineHeight: 1, fontWeight: 800 }}>
-              {value}
-            </Typography>
-          </Box>
-          <Avatar sx={{ bgcolor: "rgba(255,255,255,0.25)", backdropFilter: "blur(4px)" }}>{icon}</Avatar>
+    <Stack spacing={3.1}>
+      <Box sx={{ display: "flex", alignItems: { xs: "flex-start", sm: "center" }, flexDirection: { xs: "column", sm: "row" }, gap: 1.5, justifyContent: "space-between" }}>
+        <Box>
+          <Typography variant="h4" sx={{ fontSize: { xs: 27, md: 32 } }}>Bosh sahifa</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: .5 }}>{profile?.role === "super_admin" ? "Barcha klinikalar bo‘yicha care holati" : "Klinikangizdagi bemorlar va kuzatuvlar holati"}</Typography>
         </Box>
-        {/* dekorativ doiralar */}
-        <Box sx={{ position: "absolute", top: -24, right: -24, width: 96, height: 96, borderRadius: "50%", bgcolor: "rgba(255,255,255,0.12)" }} />
-        <Box sx={{ position: "absolute", bottom: -40, right: -8, width: 112, height: 112, borderRadius: "50%", bgcolor: "rgba(255,255,255,0.08)" }} />
+        <Button variant="outlined" endIcon={<ArrowForwardRounded />} onClick={onOpenPatients}>Bemorlar ro‘yxati</Button>
       </Box>
 
-      {/* Segmentlar */}
-      <CardContent sx={{ py: 1.5 }}>
-        <Stack spacing={1.5}>
-          {segments.map((seg, i) => {
-            const pct = total > 0 ? Math.round((seg.value / total) * 100) : 0;
-            return (
-              <Box key={i}>
-                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.5 }}>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-                    <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: seg.color }} />
-                    {seg.label}
-                  </Typography>
-                  <Typography variant="caption" sx={{ fontWeight: 700 }}>
-                    {seg.value}
-                  </Typography>
-                </Box>
-                <LinearProgress
-                  variant="determinate"
-                  value={pct}
-                  sx={{
-                    height: 6,
-                    borderRadius: 3,
-                    bgcolor: "grey.100",
-                    "& .MuiLinearProgress-bar": { bgcolor: seg.color, borderRadius: 3 },
-                  }}
-                />
-              </Box>
-            );
-          })}
-        </Stack>
-      </CardContent>
-    </Card>
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, md: 4 }}><MetricCard icon={<PeopleAltRounded />} title="Jami bemorlar" value={patientStats.total} tint="#EFF4FF" color="#155EEF" chips={[{ label: "Sog‘", value: patientStats.healthy, color: "#027A48" }, { label: "Kasal", value: patientStats.sick, color: "#B42318" }]} /></Grid>
+        <Grid size={{ xs: 12, md: 4 }}><MetricCard icon={<LocalHospitalRounded />} title="Statsionardan chiqarilganlar" value={dischargeStats.total} tint="#F4F3FF" color="#6938EF" chips={[{ label: "Muvaffaqiyatli", value: dischargeStats.successful, color: "#027A48" }, { label: "Muvaffaqiyatsiz", value: dischargeStats.unsuccessful, color: "#B42318" }, { label: "Davom etyapti", value: dischargeStats.ongoing, color: "#B54708" }]} /></Grid>
+        <Grid size={{ xs: 12, md: 4 }}><MetricCard icon={<FavoriteRounded />} title="Kuzatuvlar" value={observationStats.pending + observationStats.active + observationStats.urgent} tint="#ECFDF3" color="#0E9384" chips={[{ label: "Kutilmoqda", value: observationStats.pending, color: "#B54708" }, { label: "Jarayonda", value: observationStats.active, color: "#155EEF" }, { label: "Muddat o‘tgan", value: observationStats.urgent, color: "#B42318" }]} /></Grid>
+      </Grid>
+
+      <Grid container spacing={2.5}>
+        <Grid size={{ xs: 12, xl: 8 }}>
+          <Card sx={{ height: "100%", overflow: "hidden" }}>
+            <CardContent sx={{ p: { xs: 2, sm: 2.75 } }}>
+              <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" spacing={1.5} alignItems={{ sm: "center" }} sx={{ mb: 2 }}>
+                <Box><Stack direction="row" alignItems="center" spacing={.8}><MapRounded sx={{ color: "#155EEF" }} /><Typography variant="h6">Klinikalar xaritasi</Typography></Stack><Typography variant="body2" color="text.secondary" sx={{ mt: .4 }}>O‘zbekiston ichidagi klinikalar, xizmat radiusi va obuna holati</Typography></Box>
+                <Chip size="small" icon={<CheckCircleRounded />} label={`${activeClinics}/${clinics.length} faol`} sx={{ bgcolor: "#ECFDF3", color: "#027A48" }} />
+              </Stack>
+              <ClinicMap clinics={clinics} height={410} />
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid size={{ xs: 12, xl: 4 }}>
+          <Card sx={{ height: "100%" }}>
+            <CardContent sx={{ p: { xs: 2, sm: 2.75 } }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center"><Typography variant="h6">Kuzatuvlar holati</Typography><TrendingUpRounded sx={{ color: "#12B76A" }} /></Stack>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: .5 }}>Faol vazifalar tezkor ko‘rinishi</Typography>
+              <Stack spacing={2.1} sx={{ mt: 3 }}>
+                <Distribution label="Yakunlangan" value={observationStats.complete} total={scopedFollowUps.length} color="#12B76A" />
+                <Distribution label="Jarayonda" value={observationStats.active} total={scopedFollowUps.length} color="#155EEF" />
+                <Distribution label="Kutilmoqda" value={observationStats.pending} total={scopedFollowUps.length} color="#F79009" />
+                <Distribution label="Muddatidan o‘tgan" value={observationStats.urgent} total={scopedFollowUps.length} color="#F04438" />
+              </Stack>
+              <Divider sx={{ my: 3 }} />
+              <Stack direction="row" spacing={1.2} alignItems="center"><Avatar sx={{ bgcolor: "#F4EBFF", color: "#7A5AF8", width: 38, height: 38 }}><MedicationRounded fontSize="small" /></Avatar><Box><Typography variant="body2" fontWeight={750}>{medications.length} ta dori rejasi</Typography><Typography variant="caption" color="text.secondary">Mobile reminders tizimiga sinxronlanadi</Typography></Box></Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      <Grid container spacing={2.5}>
+        <Grid size={{ xs: 12, lg: 7 }}>
+          <Card>
+            <CardContent sx={{ p: { xs: 2, sm: 2.75 } }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center"><Box><Typography variant="h6">Yaqin kuzatuvlar</Typography><Typography variant="body2" color="text.secondary" sx={{ mt: .4 }}>Ustuvor follow-up vazifalari</Typography></Box><WatchLaterRounded sx={{ color: "#F79009" }} /></Stack>
+              <Stack divider={<Divider flexItem />} sx={{ mt: 2 }}>
+                {upcoming.length === 0 ? <EmptyText text="Hozircha kutilayotgan kuzatuv yo‘q." /> : upcoming.map((followUp) => {
+                  const isLate = followUp.status === "overdue" || new Date(followUp.due_date) < new Date();
+                  return <Stack key={followUp.id} direction="row" spacing={1.4} alignItems="center" sx={{ py: 1.5 }}><Avatar sx={{ width: 38, height: 38, bgcolor: isLate ? "#FEF3F2" : "#EFF4FF", color: isLate ? "#F04438" : "#155EEF", fontSize: 13, fontWeight: 800 }}>{patientName(followUp.patient_id).split(" ").map((part) => part[0]).join("").slice(0, 2)}</Avatar><Box flex={1} minWidth={0}><Typography variant="body2" fontWeight={750} noWrap>{patientName(followUp.patient_id)}</Typography><Typography variant="caption" color="text.secondary">{followUp.next_step || "Klinik baholash kutilmoqda"}</Typography></Box><Chip size="small" icon={isLate ? <ErrorOutlineRounded /> : <AccessTimeRounded />} label={isLate ? "Diqqat" : formatDate(followUp.due_date)} color={isLate ? "error" : "default"} sx={isLate ? undefined : { bgcolor: "#F2F4F7", color: "#475467" }} /></Stack>;
+                })}
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid size={{ xs: 12, lg: 5 }}>
+          <Card sx={{ height: "100%", bgcolor: "#0B1F4A", border: "none", color: "#fff", position: "relative", overflow: "hidden" }}>
+            <Box sx={{ position: "absolute", width: 210, height: 210, right: -70, top: -80, borderRadius: "50%", border: "30px solid rgba(255,255,255,.06)" }} />
+            <CardContent sx={{ position: "relative", p: { xs: 2.3, sm: 2.75 }, height: "100%", display: "flex", flexDirection: "column" }}><Avatar sx={{ bgcolor: "rgba(255,255,255,.12)", color: "#9BC0FF", width: 44, height: 44 }}><LocalHospitalRounded /></Avatar><Typography variant="h6" sx={{ mt: 2 }}>CareLink mobile bilan bog‘langan</Typography><Typography variant="body2" sx={{ color: "rgba(255,255,255,.7)", mt: .9, lineHeight: 1.7 }}>Chiqarish paytida yaratilgan kod bemor ilovasiga klinik reja, dori va eslatmalarni olib boradi.</Typography><Box flex={1} /><Button variant="contained" sx={{ mt: 3, alignSelf: "flex-start", bgcolor: "#fff", color: "#0B1F4A", "&:hover": { bgcolor: "#EEF4FF" } }} onClick={onOpenPatients}>Bemorni chiqarish</Button></CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+    </Stack>
   );
 }
+
+function MetricCard({ icon, title, value, tint, color, chips }: { icon: React.ReactNode; title: string; value: number; tint: string; color: string; chips: { label: string; value: number; color: string }[] }) {
+  const max = Math.max(1, ...chips.map((chip) => chip.value));
+  return <Card sx={{ height: "100%" }}><CardContent sx={{ p: { xs: 2.1, sm: 2.5 } }}><Stack direction="row" justifyContent="space-between" alignItems="flex-start"><Box><Typography variant="body2" color="text.secondary" fontWeight={700}>{title}</Typography><Typography sx={{ color: "#101828", fontSize: { xs: 31, sm: 36 }, fontWeight: 800, letterSpacing: "-.05em", mt: .5 }}>{value}</Typography></Box><Avatar sx={{ bgcolor: tint, color, borderRadius: 2.75 }}>{icon}</Avatar></Stack><Stack spacing={1.05} sx={{ mt: 2.1 }}>{chips.map((chip) => <Box key={chip.label}><Stack direction="row" justifyContent="space-between" sx={{ mb: .55 }}><Typography variant="caption" color="text.secondary">{chip.label}</Typography><Typography variant="caption" fontWeight={800} sx={{ color: chip.color }}>{chip.value}</Typography></Stack><LinearProgress variant="determinate" value={(chip.value / max) * 100} sx={{ height: 5, borderRadius: 3, bgcolor: "#F2F4F7", "& .MuiLinearProgress-bar": { bgcolor: chip.color, borderRadius: 3 } }} /></Box>)}</Stack></CardContent></Card>;
+}
+
+function Distribution({ label, value, total, color }: { label: string; value: number; total: number; color: string }) { return <Box><Stack direction="row" justifyContent="space-between" sx={{ mb: .6 }}><Typography variant="body2" color="text.secondary">{label}</Typography><Typography variant="body2" fontWeight={800}>{value}</Typography></Stack><LinearProgress variant="determinate" value={total ? (value / total) * 100 : 0} sx={{ height: 7, borderRadius: 9, bgcolor: "#F2F4F7", "& .MuiLinearProgress-bar": { bgcolor: color, borderRadius: 9 } }} /></Box>; }
+function EmptyText({ text }: { text: string }) { return <Typography variant="body2" color="text.secondary" sx={{ py: 3, textAlign: "center" }}>{text}</Typography>; }

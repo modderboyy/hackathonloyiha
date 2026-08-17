@@ -1,94 +1,76 @@
-# CareLink — Bemor (Mijoz) Flutter Ilovasi
+# CareLink — bemor Flutter ilovasi
 
-Statsionardan chiqqan bemorning kuzatuvda yo'qolib qolish muammosini hal qiluvchi
-mobil ilova. Bemor (mijoz) CareLink'ga ro'yxatdan o'tadi, **Premium obuna** ($5/oy)
-sotib oladi va AI yordamchi har soatda uni tekshirib turadi.
+CareLink statsionardan chiqarilgan og‘ir bemorning care jarayonini klinikadan uyga uzmaydi.
+Webdagi chiqarish rejasidan **tashxis, davolash yakuni, tavsiyalar, dorilar va reminder jadvali** bemor ilovasiga avtomatik keladi.
 
-## Oqim (flow)
+## Bemor oqimi
 
-```
-Ro'yxatdan o'tish → Sog'liq ma'lumotlari → Premium obuna ($5/oy)
-   → Har soatda AI tekshiruvi (push notification)
-       → Javob bersa: Yaxshiman / Yomonman
-       → Javob bermasa (1 soat): SMS yuboriladi (demo)
-       → Hali ham javob bermasa: TELEFON QULFLANADI
-           → Ekranda: 102, 103, Yopish, Yaxshiman, Yomonman
+```text
+Ro‘yxatdan o‘tish / klinik kod
+  → individual $5 obuna yoki faol klinika orqali bepul obuna
+  → discharge care rejasini sinxronlash
+  → telefon reminderlari + AI check-in
+  → tibbiyot xodimi kuzatuv natijasi
 ```
 
-## Tuzilish
+### Ikki obuna turi
 
+- **Individual** — $5 / oy. Klinikaga bog‘lanmasdan AI yordamchi, health dashboard va reminders.
+- **Klinik kod** — bemor statsionardan chiqarilganda berilgan kod bilan aktivlashadi. Klinika obunasi `active` yoki `trial` bo‘lsa bepul ishlaydi.
+
+## Auto-reminders qanday ishlaydi
+
+Webdagi chiqarish formasida xodim har bir dori uchun quyidagilarni kiritadi:
+
+- doza;
+- har kuni necha mahal va aniq vaqtlar **yoki** har necha soatda;
+- necha kun qabul qilinishi.
+
+`00016_clinic_first_care_model.sql` migratsiyasi medication → reminder yozuvlarini avtomatik yaratadi. Ilova:
+
+1. Supabase realtime orqali yangilangan reminders’ni oladi;
+2. ularni Android/iOS local notifications’iga rejalashtiradi;
+3. kurs tugash sanasidan keyin bildirishnoma yubormaydi.
+
+Klinikadan sinxronlangan reminders mobil ekranda alohida belgi bilan ko‘rsatiladi va bemor tomonidan o‘chirib yuborilmaydi.
+
+## Sozlash
+
+### 1. Supabase migratsiyalarini ishga tushiring
+
+Bazaviy migratsiyalardan keyin ayniqsa quyidagini ham ishlating:
+
+```text
+supabase/migrations/00016_clinic_first_care_model.sql
 ```
-lib/
-  main.dart                 # Ilova boshlanishi (Supabase init)
-  config.dart               # Supabase/OpenAI kalitlari
-  models.dart               # Ma'lumot modellari
-  state/app_state.dart      # Holat boshqaruvi (Provider)
-  services/
-    supabase_service.dart   # Supabase (auth, obuna, sog'liq, tekshiruv)
-    openai_service.dart     # OpenAI chatbot
-  screens/
-    splash_screen.dart
-    auth/login_screen.dart
-    auth/register_screen.dart
-    onboarding/health_setup_screen.dart
-    subscription_screen.dart
-    home_screen.dart
-    chat_screen.dart
-    lock_screen.dart        # Bloklash ekrani (102/103/Yopish/Yaxshiman/Yomonman)
+
+Bu migratsiya uchta rol (`super_admin`, `medical_worker`, `patient`), klinika doirasi RLS, dori-reminder sync va AI care kontekstini yaratadi.
+
+### 2. Ilovani maxfiy kalitlarsiz build qiling
+
+Kalitlar `lib/config.dart` ichiga yozilmaydi. Ularni build vaqtida uzating:
+
+```bash
+cd flutter_app
+flutter pub get
+flutter run \
+  --dart-define=SUPABASE_URL=https://YOUR_PROJECT.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=YOUR_PUBLIC_ANON_KEY \
+  --dart-define=OPENAI_API_KEY=YOUR_OPENAI_KEY
 ```
 
-## Sozlash (3 qadam)
+`OPENAI_API_KEY` berilmasa chat xavfsiz offline demo javobini qaytaradi.
 
-### 1. Backend (Supabase)
-
-`supabase/migrations/00007_patient_app.sql` ni SQL editor'da ishga tushiring:
-- `client` roli
-- `subscriptions` jadvali (Premium $5/oy)
-- `client_health` jadvali (sog'liq ma'lumotlari)
-- `checkins` jadvali (soatlik tekshiruvlar)
-
-### 2. Soatlik AI tekshiruvi (Edge Function)
+### 3. Push / soatlik check-in (ixtiyoriy)
 
 ```bash
 supabase functions deploy hourly-check
 ```
 
-Env o'zgaruvchilari:
-- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
-- `OPENAI_API_KEY`
-- `FCM_SERVER_KEY` (push uchun)
+Edge Function uchun `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY` va FCM sozlamalarini Supabase secret sifatida kiriting.
 
-Har soatda chaqirish uchun `pg_cron` yoki tashqi cron:
-```sql
-select cron.schedule('hourly-check', '0 * * * *',
-  'select net.http_post(url:=''https://YOUR.supabase.co/functions/v1/hourly-check'', headers:=''{"Authorization":"Bearer SERVICE_ROLE"}''::jsonb)');
-```
+## Muhim xavfsizlik eslatmasi
 
-### 3. Flutter ilovasini sozlash
-
-`lib/config.dart` ga kalitlarni yozing, keyin:
-
-```bash
-cd flutter_app
-
-# Platforma papkalarini yaratish (android/, ios/, web/)
-# (birinchi marta faqat bir marta kerak)
-flutter create . --platforms=android,ios,web --org uz.carelink --project-name carelink_patient
-
-flutter pub get
-flutter run
-```
-
-> `flutter create .` mavjud `lib/` va `pubspec.yaml` fayllarini saqlab qoladi,
-> faqat yetishmayotgan platforma papkalarini (AndroidManifest, iOS Info.plist va h.k.)
-> yaratadi.
-
-## Muhim eslatmalar
-
-- **To'lov demo** — haqiqiy to'lov (Payme/Click/Stripe) ulanmagan, "Premium olish"
-  tugmasi obunani bevosita faollashtiradi.
-- **SMS demo** — haqiqiy provider (Twilio/Eskiz.uz) keyinroq ulanadi, hozir log'ga yoziladi.
-- **OpenAI** — kalit kiritilmasa chatbot offline demo javoblar qaytaradi.
-- **Telefonni bloklash** — MVP'da ilova ichidagi to'liq ekran bloklash; real qurilma
-  darajasida bloklash uchun Device Admin / kiosk rejimi integratsiyasi kerak.
-- **Push** — FCM yoki OneSignal orqali; tokenlarni saqlash jadvali keyingi bosqichda.
+- Parollar faqat Supabase Auth’da xeshlangan holatda saqlanadi.
+- Klinik discharge ma’lumoti bemor bilan bog‘lanmaguncha klinika doirasida qoladi.
+- AI yordamchi tashxis qo‘ymaydi; xavf belgisi bo‘lsa 103 ga murojaat qilishni tavsiya qiladi.

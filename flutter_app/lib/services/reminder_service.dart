@@ -2,10 +2,12 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import '../models.dart';
 
-/// Eslatmalar uchun mahalliy bildirishnomalar (minutlik cron uslubida).
+/// Serverdagi reminders jadvalini telefon bildirishnomalariga akslantiradi.
+/// Klinika dori rejasini o'zgartirsa, realtime orqali qayta sinxronlanadi.
 class ReminderService {
   final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
   bool _inited = false;
+  static const int _maxScheduledPerReminder = 360;
 
   Future<void> init() async {
     if (_inited) return;
@@ -16,71 +18,123 @@ class ReminderService {
     _inited = true;
   }
 
-  /// Eslatmani rejalashtirish:
-  /// - intervalMinutes berilgan bo'lsa → har N daqiqada (periodic)
-  /// - timeOfDay berilgan bo'lsa → har kuni shu vaqtda
-  /// - remindOnceAt berilgan bo'lsa → bir marta
-  Future<void> schedule(Reminder r) async {
-    await init();
-    if (!r.active) return;
-
-    const details = NotificationDetails(
-      android: AndroidNotificationDetails(
-        'carelink_reminders',
-        'CareLink eslatmalari',
-        channelDescription: 'Dori-darmon va boshqa eslatmalar',
-        importance: Importance.high,
-        priority: Priority.high,
-      ),
-      iOS: DarwinNotificationDetails(),
-    );
-
-    final id = r.id.hashCode;
-
-    if (r.intervalMinutes != null) {
-      // Har N daqiqada (minutlik cron)
-      await _plugin.periodicallyShow(
-        id,
-        r.title,
-        r.notes ?? r.typeLabel,
-        RepeatInterval.everyMinute,
-        details,
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+  NotificationDetails get _details => const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'carelink_reminders',
+          'CareLink eslatmalari',
+          channelDescription: 'Klinikadan sinxronlangan dori-darmon va boshqa eslatmalar',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(),
       );
+
+  /// Barcha remote reminders'ni qayta yozadi. Bir xil ID'lar ishlatilgani uchun
+  /// qayta chaqirish duplicate notification yaratmaydi.
+  Future<void> syncAll(List<Reminder> reminders) async {
+    await init();
+    for (final reminder in reminders) {
+      await schedule(reminder);
+    }
+  }
+
+  /// Eslatma rejalashtirish:
+  /// - daily: klinika bergan vaqtlar uchun kunma-kun
+  /// - interval: klinika bergan har N daqiqa/soat oralig'ida
+  /// - manual deadline: bir marta
+  /// `endsAt` bo'lsa dori kursi tugagach notification ham tugaydi.
+  Future<void> schedule(Reminder reminder) async {
+    await init();
+    if (!reminder.active) return;
+
+    if (reminder.remindOnceAt != null) {
+      final once = tz.TZDateTime.from(reminder.remindOnceAt!, tz.local);
+      if (once.isAfter(tz.TZDateTime.now(tz.local))) {
+        await _scheduleAt(_id(reminder, 0), reminder, once);
+      }
       return;
     }
 
-    if (r.timeOfDay != null) {
-      // Har kuni HH:MM da
-      final parts = r.timeOfDay!.split(':');
-      final hour = int.tryParse(parts[0]) ?? 8;
-      final minute = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
-      var scheduled = _nextInstance(hour, minute);
+    if (reminder.timeOfDay != null) {
+      await _scheduleDaily(reminder);
+      return;
+    }
+
+    if (reminder.intervalMinutes != null && reminder.intervalMinutes! > 0) {
+      await _scheduleInterval(reminder);
+    }
+  }
+
+  Future<void> _scheduleDaily(Reminder reminder) async {
+    final parts = reminder.timeOfDay!.split(':');
+    final hour = int.tryParse(parts.first) ?? 8;
+    final minute = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
+    final now = tz.TZDateTime.now(tz.local);
+    final end = reminder.endsAt == null
+        ? null
+        : tz.TZDateTime(tz.local, reminder.endsAt!.year, reminder.endsAt!.month, reminder.endsAt!.day, 23, 59);
+
+    // Cheklanmagan manual reminder Material-style daily recurrence orqali ishlaydi.
+    if (end == null) {
+      var next = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+      if (!next.isAfter(now)) next = next.add(const Duration(days: 1));
       await _plugin.zonedSchedule(
-        id,
-        r.title,
-        r.notes ?? r.typeLabel,
-        scheduled,
-        details,
+        _id(reminder, 0),
+        reminder.title,
+        reminder.notes ?? reminder.typeLabel,
+        next,
+        _details,
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
+        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time,
       );
       return;
     }
 
-    if (r.remindOnceAt != null) {
-      await _plugin.zonedSchedule(
-        id,
-        r.title,
-        r.notes ?? r.typeLabel,
-        tz.TZDateTime.from(r.remindOnceAt!, tz.local),
-        details,
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-      );
+    var date = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+    if (!date.isAfter(now)) date = date.add(const Duration(days: 1));
+    var index = 0;
+    while (!date.isAfter(end) && index < _maxScheduledPerReminder) {
+      await _scheduleAt(_id(reminder, index), reminder, date);
+      date = date.add(const Duration(days: 1));
+      index += 1;
+    }
+  }
+
+  Future<void> _scheduleInterval(Reminder reminder) async {
+    final now = tz.TZDateTime.now(tz.local);
+    final interval = Duration(minutes: reminder.intervalMinutes!);
+    final end = reminder.endsAt == null
+        ? now.add(const Duration(days: 30))
+        : tz.TZDateTime(tz.local, reminder.endsAt!.year, reminder.endsAt!.month, reminder.endsAt!.day, 23, 59);
+    var next = now.add(interval);
+    var index = 0;
+    while (!next.isAfter(end) && index < _maxScheduledPerReminder) {
+      await _scheduleAt(_id(reminder, index), reminder, next);
+      next = next.add(interval);
+      index += 1;
+    }
+  }
+
+  Future<void> _scheduleAt(int id, Reminder reminder, tz.TZDateTime at) async {
+    await _plugin.zonedSchedule(
+      id,
+      reminder.title,
+      reminder.notes ?? reminder.typeLabel,
+      at,
+      _details,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+    );
+  }
+
+  /// Dori o'chirilganda yoki bemor o'chirganda hosil qilingan notificationlar bekor qilinadi.
+  Future<void> cancelReminder(Reminder reminder) async {
+    await init();
+    // Finite clinical kurs bir reminder uchun maksimal 360 ta plan hosil qiladi.
+    // platforma qo'llab-quvvatlamagan ID'larni cancel qilish xavfsiz no-op hisoblanadi.
+    for (var index = 0; index < _maxScheduledPerReminder; index++) {
+      await _plugin.cancel(_id(reminder, index));
     }
   }
 
@@ -89,12 +143,8 @@ class ReminderService {
     await _plugin.cancel(id);
   }
 
-  tz.TZDateTime _nextInstance(int hour, int minute) {
-    final now = tz.TZDateTime.now(tz.local);
-    var scheduled = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
-    if (scheduled.isBefore(now)) {
-      scheduled = scheduled.add(const Duration(days: 1));
-    }
-    return scheduled;
+  int _id(Reminder reminder, int offset) {
+    final base = reminder.id.hashCode & 0x003FFFFF;
+    return (base * 400 + offset) & 0x7FFFFFFF;
   }
 }

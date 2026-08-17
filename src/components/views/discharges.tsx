@@ -1,263 +1,69 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useData, type DischargeInput, type DischargeResult } from "@/lib/data";
-import { SearchInput, Badge, Modal, Field, Input, Select, Textarea, EmptyState } from "@/components/ui";
-import { Icon } from "@/components/icons";
+import {
+  AddRounded,
+  CheckCircleRounded,
+  ContentPasteSearchRounded,
+  ErrorOutlineRounded,
+  LocalHospitalRounded,
+  MonitorHeartRounded,
+  SearchRounded,
+} from "@mui/icons-material";
+import {
+  Avatar,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Chip,
+  Grid,
+  InputAdornment,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { useData } from "@/lib/data";
 import { formatDate } from "@/lib/utils";
+import DischargeDialog from "@/components/discharge/DischargeDialog";
 
 export function Discharges() {
-  const { patients, discharges, profiles, followUps, addDischarge } = useData();
+  const { profile, patients, discharges, followUps, medications } = useData();
   const [query, setQuery] = useState("");
-  const [showNew, setShowNew] = useState(false);
+  const [open, setOpen] = useState(false);
+  const scopeClinic = profile?.role === "super_admin" ? null : profile?.clinic_id;
+  const rows = useMemo(() => discharges.filter((item) => !scopeClinic || item.clinic_id === scopeClinic).filter((item) => {
+    const patient = patients.find((candidate) => candidate.id === item.patient_id);
+    return `${patient?.full_name ?? ""} ${item.diagnosis ?? ""} ${item.summary ?? ""}`.toLowerCase().includes(query.toLowerCase());
+  }), [discharges, patients, scopeClinic, query]);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return discharges.filter((d) => {
-      const p = patients.find((x) => x.id === d.patient_id);
-      const hay = `${p?.full_name ?? ""} ${d.summary ?? ""}`.toLowerCase();
-      return !q || hay.includes(q);
-    });
-  }, [discharges, patients, query]);
+  const completion = rows.filter((item) => followUps.find((followUp) => followUp.discharge_id === item.id)?.status === "completed").length;
+  const waiting = rows.filter((item) => { const followUp = followUps.find((value) => value.discharge_id === item.id); return !followUp || ["pending", "in_progress"].includes(followUp.status); }).length;
+  const issues = rows.filter((item) => followUps.find((followUp) => followUp.discharge_id === item.id)?.status === "overdue").length;
+  const patientName = (id: string) => patients.find((patient) => patient.id === id)?.full_name ?? "Bemor";
 
-  const pname = (id: string) => patients.find((p) => p.id === id)?.full_name ?? "—";
-  const dname = (id: string | null) => profiles.find((p) => p.id === id)?.full_name ?? null;
+  return <Stack spacing={3}>
+    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: { xs: "flex-start", sm: "center" }, gap: 1.5, flexDirection: { xs: "column", sm: "row" } }}><Box><Typography variant="h4" sx={{ fontSize: { xs: 27, md: 32 } }}>Chiqarish</Typography><Typography variant="body2" color="text.secondary" sx={{ mt: .5 }}>Statsionardan uyga — davolash rejasini uzluksiz davom ettiring</Typography></Box><Button variant="contained" size="large" startIcon={<AddRounded />} onClick={() => setOpen(true)}>Chiqarishni rasmiylashtirish</Button></Box>
 
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Chiqarishlar</h1>
-          <p className="text-sm text-slate-500">Statsionardan chiqarish va avtomatik yo'naltirish</p>
-        </div>
-        <button onClick={() => setShowNew(true)} className="btn-primary">
-          <Icon name="plus" size={16} /> Yangi chiqarish
-        </button>
-      </div>
+    <Grid container spacing={2}>
+      <Grid size={{ xs: 12, sm: 4 }}><TinyMetric title="Jami chiqarish" value={rows.length} icon={<LocalHospitalRounded />} color="#155EEF" tint="#EFF4FF" /></Grid>
+      <Grid size={{ xs: 12, sm: 4 }}><TinyMetric title="Muvaffaqiyatli yakunlangan" value={completion} icon={<CheckCircleRounded />} color="#12B76A" tint="#ECFDF3" /></Grid>
+      <Grid size={{ xs: 12, sm: 4 }}><TinyMetric title="Faol care rejasi" value={waiting} icon={<MonitorHeartRounded />} color="#F79009" tint="#FFFAEB" detail={issues ? `${issues} ta diqqat talab qiladi` : "Hammasi nazorat ostida"} error={Boolean(issues)} /></Grid>
+    </Grid>
 
-      <SearchInput value={query} onChange={setQuery} placeholder="Bemor yoki xulosa bo'yicha qidirish..." />
+    <Card><CardContent sx={{ p: { xs: 1.75, sm: 2 } }}><TextField fullWidth value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Bemor, tashxis yoki xulosa bo‘yicha qidirish…" InputProps={{ startAdornment: <InputAdornment position="start"><SearchRounded sx={{ color: "#98A2B3" }} /></InputAdornment> }} /></CardContent></Card>
 
-      {filtered.length === 0 ? (
-        <div className="card">
-          <EmptyState icon="bed" title="Chiqarishlar yo'q" desc="Birinchi chiqarishni yarating — kuzatuv avtomatik ochiladi." />
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {filtered.map((d) => {
-            const fu = followUps.find((f) => f.discharge_id === d.id);
-            return (
-              <div key={d.id} className="card flex flex-wrap items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-semibold text-slate-900">{pname(d.patient_id)}</p>
-                  <p className="text-sm text-slate-500">
-                    {formatDate(d.discharge_date)}
-                    {d.assigned_family_doctor_id ? ` · ${dname(d.assigned_family_doctor_id)}` : ""}
-                  </p>
-                  {d.summary && <p className="mt-1 text-sm text-slate-600 line-clamp-1">{d.summary}</p>}
-                </div>
-                <div className="flex flex-col items-end gap-1">
-                  {d.requires_follow_up ? (
-                    <Badge className="bg-primary-100 text-primary-800">Kuzatuv {d.follow_up_days ?? 7} kun</Badge>
-                  ) : (
-                    <Badge className="bg-slate-100 text-slate-600">Kuzatuvsiz</Badge>
-                  )}
-                  {fu && (
-                    <span className="text-xs text-slate-400">
-                      {fu.status === "completed" ? "✓ Yakunlangan" : `Follow-up: ${formatDate(fu.due_date)}`}
-                    </span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+    {rows.length === 0 ? <Card><CardContent sx={{ py: 8, textAlign: "center" }}><ContentPasteSearchRounded sx={{ color: "#98A2B3", fontSize: 38 }} /><Typography variant="h6" sx={{ mt: 1.5 }}>Chiqarish topilmadi</Typography><Typography variant="body2" color="text.secondary" sx={{ mt: .5 }}>Bemor profilidan yoki shu sahifadan yangi chiqarish yarating.</Typography><Button variant="outlined" sx={{ mt: 2 }} onClick={() => setOpen(true)}>Yangi chiqarish</Button></CardContent></Card> : <Stack spacing={1.5}>{rows.map((item) => {
+      const followUp = followUps.find((value) => value.discharge_id === item.id);
+      const status = followUp?.status ?? "pending";
+      const result = status === "completed" ? { label: "Muvaffaqiyatli", color: "success" as const, icon: <CheckCircleRounded /> } : status === "overdue" ? { label: "Diqqat kerak", color: "error" as const, icon: <ErrorOutlineRounded /> } : { label: "Davom etyapti", color: "warning" as const, icon: <MonitorHeartRounded /> };
+      const meds = medications.filter((medicine) => medicine.patient_id === item.patient_id).length;
+      return <Card key={item.id}><CardContent sx={{ p: { xs: 2, sm: 2.5 } }}><Stack direction={{ xs: "column", md: "row" }} spacing={2} justifyContent="space-between"><Stack direction="row" spacing={1.3} alignItems="flex-start"><Avatar sx={{ bgcolor: "#F4EBFF", color: "#6938EF", borderRadius: 2.75 }}><LocalHospitalRounded /></Avatar><Box><Stack direction="row" flexWrap="wrap" gap={1} alignItems="center"><Typography variant="subtitle1">{patientName(item.patient_id)}</Typography><Chip size="small" color={result.color} icon={result.icon} label={result.label} /></Stack><Typography variant="body2" color="text.secondary" sx={{ mt: .35 }}>{formatDate(item.discharge_date)} · {item.diagnosis || "Tashxis ko‘rsatilmagan"}</Typography></Box></Stack><Stack direction="row" spacing={.75} alignItems="center"><Chip size="small" icon={<MonitorHeartRounded />} label={item.requires_follow_up ? `${item.follow_up_days ?? 7} kunlik kuzatuv` : "Kuzatuv belgilanmagan"} sx={{ bgcolor: "#F2F4F7", color: "#475467" }} /><Chip size="small" icon={<CheckCircleRounded />} label={`${meds} dori rejasi`} sx={{ bgcolor: "#EFF4FF", color: "#175CD3" }} /></Stack></Stack><Grid container spacing={2} sx={{ mt: 2 }}><Grid size={{ xs: 12, md: 6 }}><Detail title="Davolash yakuni" value={item.summary || "Kiritilmagan"} /></Grid><Grid size={{ xs: 12, md: 6 }}><Detail title="Tavsiyalar" value={item.recommendations || "Kiritilmagan"} /></Grid></Grid>{followUp && <Box sx={{ mt: 2, px: 1.5, py: 1.2, borderRadius: 2, bgcolor: result.color === "error" ? "#FEF3F2" : result.color === "success" ? "#ECFDF3" : "#FFFAEB" }}><Stack direction="row" spacing={1} alignItems="center"><MonitorHeartRounded fontSize="small" color={result.color} /><Typography variant="caption" sx={{ color: "#344054", fontWeight: 700 }}>{followUp.status === "completed" ? followUp.result_notes || "Kuzatuv muvaffaqiyatli yakunlangan" : `Keyingi care nuqtasi: ${formatDate(followUp.due_date)}`}</Typography></Stack></Box>}</CardContent></Card>;
+    })}</Stack>}
 
-      {showNew && <DischargeModal onClose={() => setShowNew(false)} onSubmit={addDischarge} onDone={() => setShowNew(false)} />}
-    </div>
-  );
+    <DischargeDialog open={open} onClose={() => setOpen(false)} />
+  </Stack>;
 }
 
-function DischargeModal({
-  onClose,
-  onSubmit,
-  onDone,
-}: {
-  onClose: () => void;
-  onSubmit: (d: DischargeInput) => Promise<DischargeResult>;
-  onDone: () => void;
-}) {
-  const { patients, profiles } = useData();
-  const familyDoctors = profiles.filter((p) => p.role === "family_doctor");
-  const today = new Date().toISOString().slice(0, 10);
-
-  const [patientId, setPatientId] = useState("");
-  const [admissionDate, setAdmissionDate] = useState(today);
-  const [dischargeDate, setDischargeDate] = useState(today);
-  const [diagnosis, setDiagnosis] = useState("");
-  const [summary, setSummary] = useState("");
-  const [recommendations, setRecommendations] = useState("");
-  const [requiresFollowUp, setRequiresFollowUp] = useState(true);
-  const [followUpDays, setFollowUpDays] = useState(7);
-  const [familyDoctorId, setFamilyDoctorId] = useState("");
-  const [medications, setMedications] = useState<{ name: string; dosage: string; frequency: string }[]>([
-    { name: "", dosage: "", frequency: "" },
-  ]);
-  const [err, setErr] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [resultCode, setResultCode] = useState<string | null>(null);
-
-  function updateMed(i: number, field: "name" | "dosage" | "frequency", value: string) {
-    setMedications((prev) => prev.map((m, idx) => (idx === i ? { ...m, [field]: value } : m)));
-  }
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!patientId) {
-      setErr("Bemorni tanlang (majburiy).");
-      return;
-    }
-    const meds = medications.filter((m) => m.name.trim());
-    setBusy(true);
-    const res = await onSubmit({
-      patientId,
-      admissionDate,
-      dischargeDate,
-      diagnosis,
-      summary,
-      recommendations,
-      requiresFollowUp,
-      followUpDays,
-      familyDoctorId: familyDoctorId || null,
-      medications: meds,
-    });
-    setBusy(false);
-    if (res.error) setErr(res.error);
-    else setResultCode(res.code);
-  }
-
-  // Natija (kod) ko'rsatish ekrani
-  if (resultCode) {
-    const patient = patients.find((p) => p.id === patientId);
-    return (
-      <Modal open onClose={onClose} title="Chiqarish yakunlandi">
-        <div className="space-y-4 text-center">
-          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-            <Icon name="check" size={26} />
-          </span>
-          <p className="font-semibold text-slate-900">{patient?.full_name ?? "Bemor"} statsionardan chiqarildi</p>
-          <p className="text-sm text-slate-500">Bemorga bering — mobil ilovada shu kod bilan klinik obunani faollashtiradi:</p>
-          <div className="rounded-xl bg-slate-900 p-4">
-            <p className="font-mono text-2xl font-bold tracking-[0.3em] text-white">{resultCode}</p>
-          </div>
-          <p className="text-xs text-slate-400">
-            Bu kod statsionar muddati ({requiresFollowUp ? followUpDays : 0} kun) davomida faol bo'ladi. Bemor ma'lumotlari va dori-darmonlar avtomatik sinxronlanadi.
-          </p>
-          <button onClick={onDone} className="btn-primary w-full">Tayyor</button>
-        </div>
-      </Modal>
-    );
-  }
-
-  return (
-    <Modal open onClose={onClose} title="Chiqarish va yo'naltirish" wide>
-      <form onSubmit={submit} className="space-y-4">
-        <Field label="Bemor" required>
-          <Select value={patientId} onChange={(e) => setPatientId(e.target.value)}>
-            <option value="">Bemorni tanlang...</option>
-            {patients.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.full_name}
-              </option>
-            ))}
-          </Select>
-        </Field>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Qabul sanasi" optional>
-            <Input type="date" value={admissionDate} onChange={(e) => setAdmissionDate(e.target.value)} />
-          </Field>
-          <Field label="Chiqarish sanasi" optional>
-            <Input type="date" value={dischargeDate} onChange={(e) => setDischargeDate(e.target.value)} />
-          </Field>
-        </div>
-        <Field label="Tashxis" optional>
-          <Input value={diagnosis} onChange={(e) => setDiagnosis(e.target.value)} placeholder="Statsionar tashxis" />
-        </Field>
-        <Field label="Davolash yakuni (xulosa)" optional>
-          <Textarea rows={2} value={summary} onChange={(e) => setSummary(e.target.value)} />
-        </Field>
-        <Field label="Tavsiyalar" optional>
-          <Textarea rows={2} value={recommendations} onChange={(e) => setRecommendations(e.target.value)} />
-        </Field>
-
-        {/* Dori-darmonlar */}
-        <div>
-          <div className="mb-2 flex items-center justify-between">
-            <p className="label">Dori-darmonlar (bemorga sinxronlanadi)</p>
-            <button
-              type="button"
-              onClick={() => setMedications((prev) => [...prev, { name: "", dosage: "", frequency: "" }])}
-              className="text-sm font-medium text-primary-700 hover:text-primary-800"
-            >
-              + Qo'shish
-            </button>
-          </div>
-          <div className="space-y-2">
-            {medications.map((m, i) => (
-              <div key={i} className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
-                <Input placeholder="Nomi" value={m.name} onChange={(e) => updateMed(i, "name", e.target.value)} />
-                <Input placeholder="Dozasi" value={m.dosage} onChange={(e) => updateMed(i, "dosage", e.target.value)} />
-                <Input placeholder="Qabul vaqti" value={m.frequency} onChange={(e) => updateMed(i, "frequency", e.target.value)} />
-                <button
-                  type="button"
-                  onClick={() => setMedications((prev) => prev.filter((_, idx) => idx !== i))}
-                  className="self-center rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
-                >
-                  <Icon name="trash" size={15} />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-primary-200 bg-primary-50 p-4">
-          <label className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              checked={requiresFollowUp}
-              onChange={(e) => setRequiresFollowUp(e.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-primary-700"
-            />
-            <span className="text-sm font-medium text-slate-800">Keyingi kuzatuv kerak</span>
-          </label>
-          {requiresFollowUp && (
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <Field label="Kuzatuv muddati (kun)" optional>
-                <Input type="number" min={1} value={followUpDays} onChange={(e) => setFollowUpDays(+e.target.value)} />
-              </Field>
-              <Field label="Oilaviy shifokor" optional hint="Bo'sh qoldirsangiz hudud bo'yicha avtomatik topiladi">
-                <Select value={familyDoctorId} onChange={(e) => setFamilyDoctorId(e.target.value)}>
-                  <option value="">Avtomatik (hudud bo'yicha)</option>
-                  {familyDoctors.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.full_name}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            </div>
-          )}
-          <p className="mt-3 flex items-center gap-2 text-xs text-primary-700">
-            <Icon name="zap" size={13} /> Saqlangach bemor uchun klinik kod yaratiladi, follow-up va xabarnoma avtomatik ochiladi.
-          </p>
-        </div>
-
-        {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{err}</p>}
-        <div className="flex justify-end gap-3 pt-2">
-          <button type="button" onClick={onClose} className="btn-ghost">Bekor qilish</button>
-          <button type="submit" disabled={busy} className="btn-primary">{busy ? "Saqlanmoqda..." : "Chiqarish va yo'naltirish"}</button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
+function TinyMetric({ title, value, icon, color, tint, detail, error }: { title: string; value: number; icon: React.ReactNode; color: string; tint: string; detail?: string; error?: boolean }) { return <Card><CardContent sx={{ p: 2.2 }}><Stack direction="row" justifyContent="space-between" alignItems="flex-start"><Box><Typography variant="body2" color="text.secondary" fontWeight={700}>{title}</Typography><Typography sx={{ mt: .4, fontSize: 31, lineHeight: 1, color: "#101828", fontWeight: 800, letterSpacing: "-.05em" }}>{value}</Typography></Box><Avatar sx={{ bgcolor: tint, color, borderRadius: 2.5 }}>{icon}</Avatar></Stack><Typography variant="caption" sx={{ display: "block", mt: 1.4, color: error ? "#B42318" : "#667085", fontWeight: error ? 700 : 500 }}>{detail || "Oxirgi 30 kun bo‘yicha"}</Typography></CardContent></Card>; }
+function Detail({ title, value }: { title: string; value: string }) { return <Box><Typography variant="caption" color="text.secondary" fontWeight={700}>{title}</Typography><Typography variant="body2" sx={{ mt: .35, color: "#475467", lineHeight: 1.55 }}>{value}</Typography></Box>; }

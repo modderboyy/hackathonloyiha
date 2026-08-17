@@ -25,7 +25,7 @@ class SupabaseService {
         'region_id': regionId,
         'district_id': districtId,
         'neighborhood_id': neighborhoodId,
-        'role': 'client',
+        'role': 'patient',
       },
     );
   }
@@ -38,11 +38,12 @@ class SupabaseService {
 
   String? get userId => client.auth.currentUser?.id;
 
-  /// Ro'yxatdan o'tgandan so'ng profilga 'client' rolini yozish
+  /// Bemor mobil ilovasi uchun rolni tekshirish.
+  /// Asosiy rol auth trigger orqali yoziladi; bu metod eski loyihalardagi profilni moslaydi.
   Future<void> ensureClientRole() async {
     final id = userId;
     if (id == null) return;
-    await client.from('profiles').upsert({'id': id, 'role': 'client'});
+    await client.from('profiles').upsert({'id': id, 'role': 'patient'});
   }
 
   // ---------- Profil ----------
@@ -194,10 +195,15 @@ class SupabaseService {
     return (res as List).map((e) => Reminder.fromJson(e)).toList();
   }
 
-  Future<void> addReminder(Reminder r) async {
+  Future<Reminder?> addReminder(Reminder r) async {
     final id = userId;
-    if (id == null) return;
-    await client.from('reminders').insert({'client_id': id, ...r.toJson()});
+    if (id == null) return null;
+    final saved = await client
+        .from('reminders')
+        .insert({'client_id': id, ...r.toJson()})
+        .select()
+        .single();
+    return Reminder.fromJson(saved);
   }
 
   Future<void> updateReminder(String reminderId, Map<String, dynamic> patch) async {
@@ -271,6 +277,17 @@ class SupabaseService {
     if (id == null) return const Stream<List<Map<String, dynamic>>>.empty();
     return client
         .from('checkins')
+        .stream(primaryKey: ['id'])
+        .eq('client_id', id)
+        .map((rows) => rows);
+  }
+
+  /// Klinikadan yangi dori rejasi kelganda reminders ham realtime qayta yuklanadi.
+  Stream<List<Map<String, dynamic>>> watchReminders() {
+    final id = userId;
+    if (id == null) return const Stream<List<Map<String, dynamic>>>.empty();
+    return client
+        .from('reminders')
         .stream(primaryKey: ['id'])
         .eq('client_id', id)
         .map((rows) => rows);

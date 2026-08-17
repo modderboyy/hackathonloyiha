@@ -1,242 +1,110 @@
 "use client";
 
-import { useState } from "react";
-import { DataProvider, useData } from "@/lib/data";
+import { useMemo, useState } from "react";
+import {
+  AccountCircleOutlined,
+  ApartmentRounded,
+  CloseRounded,
+  DashboardRounded,
+  DescriptionRounded,
+  FavoriteRounded,
+  LogoutRounded,
+  MenuRounded,
+  NotificationsNoneRounded,
+  PeopleAltRounded,
+  QueryStatsRounded,
+} from "@mui/icons-material";
+import {
+  Alert,
+  AppBar,
+  Avatar,
+  Badge,
+  BottomNavigation,
+  BottomNavigationAction,
+  Box,
+  Divider,
+  Drawer,
+  IconButton,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
+  Snackbar,
+  Stack,
+  Toolbar,
+  Tooltip,
+  Typography,
+} from "@mui/material";
+import { useTheme } from "@mui/material/styles";
+import Link from "next/link";
 import ThemeRegistry from "@/lib/theme";
-import { Icon, Logo } from "@/components/icons";
-import { ROLE_LABELS, type Notification } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { DataProvider, useData } from "@/lib/data";
 import { Overview } from "@/components/views/overview";
 import { Patients } from "@/components/views/patients";
 import { Discharges } from "@/components/views/discharges";
 import { FollowUps } from "@/components/views/followups";
-import { Notifications } from "@/components/views/notifications";
-import { Admin } from "@/components/views/admin";
-import { Points } from "@/components/views/points";
-import { Approvals } from "@/components/views/approvals";
+import { Clinics } from "@/components/views/clinics";
 
-type View =
-  | "overview"
-  | "patients"
-  | "discharges"
-  | "followups"
-  | "notifications"
-  | "points"
-  | "approvals"
-  | "admin";
+const drawerWidth = 270;
+type View = "overview" | "patients" | "discharges" | "followups" | "clinics";
 
-const NAV: { id: View; label: string; icon: string; adminOnly?: boolean }[] = [
-  { id: "overview", label: "Bosh sahifa", icon: "home" },
-  { id: "patients", label: "Bemorlar", icon: "users" },
-  { id: "discharges", label: "Chiqarish", icon: "bed" },
-  { id: "followups", label: "Kuzatuvlar", icon: "clipboard" },
-  { id: "notifications", label: "Xabarnomalar", icon: "bell" },
-  { id: "points", label: "Punktlar", icon: "map-pin" },
-  { id: "approvals", label: "Tasdiqlash", icon: "shield", adminOnly: true },
-  { id: "admin", label: "Boshqaruv", icon: "settings", adminOnly: true },
+const commonNav: { id: Exclude<View, "clinics">; label: string; icon: React.ReactNode }[] = [
+  { id: "overview", label: "Bosh sahifa", icon: <DashboardRounded /> },
+  { id: "patients", label: "Bemorlar", icon: <PeopleAltRounded /> },
+  { id: "discharges", label: "Chiqarish", icon: <DescriptionRounded /> },
+  { id: "followups", label: "Kuzatuvlar", icon: <QueryStatsRounded /> },
 ];
 
 export default function DashboardPage() {
-  return (
-    <ThemeRegistry>
-      <DataProvider>
-        <Shell />
-      </DataProvider>
-    </ThemeRegistry>
-  );
+  return <ThemeRegistry><DataProvider><DashboardShell /></DataProvider></ThemeRegistry>;
 }
 
-// Tepadan chiqadigan realtime xabarnoma popup
-function NotificationPopup({ notification }: { notification: Notification }) {
-  const icon = (() => {
-    switch (notification.type) {
-      case "follow_up": return "clipboard";
-      case "discharge": return "bed";
-      case "alert": return "alert-triangle";
-      default: return "info";
-    }
-  })();
-
-  const tone = (() => {
-    switch (notification.type) {
-      case "follow_up": return "border-primary-300 bg-primary-50";
-      case "alert": return "border-red-300 bg-red-50";
-      default: return "border-slate-300 bg-white";
-    }
-  })();
-
-  return (
-    <div className="pointer-events-none fixed inset-x-0 top-4 z-[100] flex justify-center px-4">
-      <div className={`view-enter pointer-events-auto flex w-full max-w-md items-start gap-3 rounded-xl border shadow-lg backdrop-blur-md ${tone}`}>
-        <span className="mt-3 ml-3 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-800 text-white">
-          <Icon name={icon} size={16} />
-        </span>
-        <div className="min-w-0 flex-1 py-3 pr-4">
-          <p className="text-sm font-semibold text-slate-900">{notification.title}</p>
-          {notification.body && <p className="mt-0.5 text-sm text-slate-600 line-clamp-2">{notification.body}</p>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Shell() {
+function DashboardShell() {
+  const theme = useTheme();
+  const { profile, notifications, liveNotification, notConfigured } = useData();
   const [view, setView] = useState<View>("overview");
-  const [regionFilter, setRegionFilter] = useState<string | null>(null);
-  const [navOpen, setNavOpen] = useState(false);
-  const data = useData();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const isSuper = profile?.role === "super_admin";
+  const unread = notifications.filter((notification) => !notification.is_read).length;
+  const nav = useMemo(() => isSuper ? [...commonNav, { id: "clinics" as const, label: "Klinikalar", icon: <ApartmentRounded /> }] : commonNav, [isSuper]);
+  const navigate = (target: View) => { setView(target); setMobileOpen(false); };
 
-  const { ready, notConfigured, profile, notifications, liveNotification } = data;
-  const unread = notifications.filter((n) => !n.is_read).length;
-  const isAdmin =
-    profile?.role === "super_admin" ||
-    profile?.role === "admin" ||
-    profile?.role === "district_admin";
+  const sidebar = <Box sx={{ height: "100%", display: "flex", flexDirection: "column", bgcolor: "#fff" }}>
+    <Box sx={{ px: 2.5, py: 2.5 }}><Brand /></Box>
+    <Divider />
+    <Box sx={{ px: 1.35, pt: 2 }}><Typography variant="overline" sx={{ px: 1.25, color: "#98A2B3", fontWeight: 800, letterSpacing: ".08em" }}>ISH MAYDONI</Typography></Box>
+    <List sx={{ px: 1.15, py: 1, flex: 1 }}>
+      {nav.map((item) => <ListItemButton key={item.id} selected={view === item.id} onClick={() => navigate(item.id)} sx={{ mb: .5, px: 1.35, py: 1.12, borderRadius: 2.5, "&.Mui-selected": { bgcolor: "#EFF4FF", color: "#155EEF", "& .MuiListItemIcon-root": { color: "#155EEF" } }, "&:hover": { bgcolor: view === item.id ? "#EFF4FF" : "#F9FAFB" } }}><ListItemIcon sx={{ minWidth: 38, color: view === item.id ? "#155EEF" : "#667085" }}>{item.icon}</ListItemIcon><ListItemText primary={item.label} primaryTypographyProps={{ fontSize: 14, fontWeight: view === item.id ? 750 : 620 }} /></ListItemButton>)}
+    </List>
+    <Box sx={{ p: 1.5 }}><Box sx={{ p: 1.5, border: "1px solid #EAECF0", borderRadius: 3, bgcolor: "#FCFCFD" }}><Stack direction="row" spacing={1.1} alignItems="center"><Avatar sx={{ bgcolor: isSuper ? "#0B1F4A" : "#155EEF", width: 38, height: 38, fontWeight: 800 }}>{(profile?.full_name || "C").slice(0, 1)}</Avatar><Box minWidth={0}><Typography variant="body2" fontWeight={750} noWrap>{profile?.full_name || "CareLink foydalanuvchisi"}</Typography><Typography variant="caption" color="text.secondary">{isSuper ? "Super admin" : profile?.role === "patient" ? "Bemor" : "Tibbiyot xodimi"}</Typography></Box></Stack></Box></Box>
+  </Box>;
 
-  function navigate(v: View) {
-    setView(v);
-    setNavOpen(false);
-  }
-
-  // Supabase sozlanmagan
-  if (notConfigured) {
-    return (
-      <div className="flex min-h-screen items-center justify-center px-4">
-        <div className="w-full max-w-md text-center">
-          <div className="flex justify-center">
-            <Logo size={48} withText />
-          </div>
-          <h1 className="mt-6 text-xl font-bold text-slate-900">Supabase sozlanmagan</h1>
-          <p className="mt-2 text-sm text-slate-500">
-            Real rejimda ishlash uchun <code className="rounded bg-slate-100 px-1">.env.local</code> faylini
-            to&lsquo;ldiring:
-          </p>
-          <div className="mt-4 rounded-xl bg-slate-900 p-4 text-left font-mono text-xs text-slate-100">
-            <p>NEXT_PUBLIC_SUPABASE_URL=...</p>
-            <p>NEXT_PUBLIC_SUPABASE_ANON_KEY=...</p>
-          </div>
-          <p className="mt-4 text-xs text-slate-400">
-            Keyin <code className="rounded bg-slate-100 px-1">supabase/migrations/00001_init.sql</code> ni
-            SQL editor&apos;da ishga tushiring va serverni qayta yuklang.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Yuklanmoqda
-  if (!ready || !profile) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <span className="h-8 w-8 animate-spin rounded-full border-2 border-primary-200 border-t-primary-700" />
-          <p className="text-sm text-slate-500">Ma&lsquo;lumotlar yuklanmoqda...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const nav = NAV.filter((n) => !n.adminOnly || isAdmin);
-
-  return (
-    <div className="flex min-h-screen">
-      {/* Realtime xabarnoma popup (tepada) */}
-      {liveNotification && <NotificationPopup notification={liveNotification} />}
-
-      {/* Overlay (mobil) */}
-      {navOpen && <div className="fixed inset-0 z-30 bg-slate-900/40 backdrop-blur-sm lg:hidden" onClick={() => setNavOpen(false)} />}
-
-      {/* Sidebar */}
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-slate-200 bg-white transition-transform duration-300 lg:static lg:translate-x-0",
-          navOpen ? "translate-x-0" : "-translate-x-full"
-        )}
-      >
-        <div className="flex items-center gap-2 border-b border-slate-200 px-5 py-4">
-          <Logo size={34} withText />
-        </div>
-
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-          {nav.map((n) => (
-            <button
-              key={n.id}
-              onClick={() => navigate(n.id)}
-              className={cn(
-                "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition",
-                view === n.id ? "bg-primary-50 text-primary-800" : "text-slate-600 hover:bg-slate-50"
-              )}
-            >
-              <Icon name={n.icon} size={18} gradient={view === n.id} />
-              <span className="flex-1 text-left">{n.label}</span>
-              {n.id === "notifications" && unread > 0 && (
-                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white">
-                  {unread}
-                </span>
-              )}
-            </button>
-          ))}
-        </nav>
-
-        <div className="border-t border-slate-200 px-4 py-4">
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-primary-800 font-semibold text-white">
-              {(profile.full_name || "?").charAt(0)}
-            </span>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-slate-900">{profile.full_name}</p>
-              <p className="truncate text-xs text-slate-500">{ROLE_LABELS[profile.role]}</p>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      {/* Asosiy kontent */}
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur sm:px-6">
-          <button
-            onClick={() => setNavOpen(true)}
-            className="rounded-lg p-2 text-slate-600 transition hover:bg-slate-100 lg:hidden"
-            aria-label="Menyu"
-          >
-            <Icon name="menu" size={20} />
-          </button>
-          <div className="min-w-0 flex-1">
-            <h2 className="truncate text-base font-semibold text-slate-900 sm:text-lg">
-              {NAV.find((n) => n.id === view)?.label}
-            </h2>
-          </div>
-          <button
-            onClick={() => navigate("notifications")}
-            className="relative rounded-lg p-2 text-slate-600 transition hover:bg-slate-100"
-            aria-label="Xabarnomalar"
-          >
-            <Icon name="bell" size={20} />
-            {unread > 0 && (
-              <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
-                {unread}
-              </span>
-            )}
-          </button>
-        </header>
-
-        <main className="flex-1 px-4 py-6 sm:px-6">
-          <div key={view} className="view-enter mx-auto max-w-6xl">
-            {view === "overview" && (
-              <Overview onRegionSelect={(rid) => { setRegionFilter(rid); setView("patients"); }} />
-            )}
-            {view === "patients" && (
-              <Patients regionFilter={regionFilter} onClearRegion={() => setRegionFilter(null)} />
-            )}
-            {view === "discharges" && <Discharges />}
-            {view === "followups" && <FollowUps />}
-            {view === "notifications" && <Notifications />}
-            {view === "points" && <Points />}
-            {view === "approvals" && isAdmin && <Approvals />}
-            {view === "admin" && isAdmin && <Admin />}
-          </div>
-        </main>
-      </div>
-    </div>
-  );
+  return <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "#F7F9FC" }}>
+    <Drawer variant="permanent" open sx={{ display: { xs: "none", lg: "block" }, width: drawerWidth, flexShrink: 0, "& .MuiDrawer-paper": { width: drawerWidth, borderRight: "1px solid #EAECF0", boxSizing: "border-box" } }}>{sidebar}</Drawer>
+    <Drawer variant="temporary" open={mobileOpen} onClose={() => setMobileOpen(false)} ModalProps={{ keepMounted: true }} sx={{ display: { lg: "none" }, "& .MuiDrawer-paper": { width: drawerWidth, boxSizing: "border-box" } }}>{sidebar}</Drawer>
+    <Box sx={{ flex: 1, minWidth: 0, pb: { xs: 8.5, lg: 0 } }}>
+      <AppBar position="sticky" elevation={0} sx={{ bgcolor: "rgba(255,255,255,.88)", borderBottom: "1px solid #EAECF0", backdropFilter: "blur(14px)" }}><Toolbar sx={{ minHeight: { xs: 64, md: 72 }, px: { xs: 1.5, sm: 3 } }}>
+        <IconButton onClick={() => setMobileOpen(true)} sx={{ display: { lg: "none" }, mr: .5 }}><MenuRounded /></IconButton>
+        <Box sx={{ minWidth: 0, flex: 1 }}><Typography variant="subtitle1" sx={{ fontWeight: 800 }} noWrap>{nav.find((item) => item.id === view)?.label}</Typography><Typography variant="caption" color="text.secondary" sx={{ display: { xs: "none", sm: "block" } }}>{isSuper ? "CareLink tizimi boshqaruvi" : "Klinik care coordination markazi"}</Typography></Box>
+        <Tooltip title={unread ? `${unread} ta yangi xabarnoma` : "Xabarnomalar"}><IconButton sx={{ mr: .5 }}><Badge badgeContent={unread} color="error"><NotificationsNoneRounded /></Badge></IconButton></Tooltip>
+        <IconButton onClick={(event) => setAnchor(event.currentTarget)}><AccountCircleOutlined /></IconButton>
+        <Menu anchorEl={anchor} open={Boolean(anchor)} onClose={() => setAnchor(null)}><Box sx={{ px: 2, py: 1.25, minWidth: 200 }}><Typography variant="body2" fontWeight={750}>{profile?.full_name || "CareLink"}</Typography><Typography variant="caption" color="text.secondary">{isSuper ? "Super admin" : "Tibbiyot xodimi"}</Typography></Box><Divider /><MenuItem component={Link} href="/" onClick={() => setAnchor(null)}><ListItemIcon><LogoutRounded fontSize="small" /></ListItemIcon>Bosh sahifaga chiqish</MenuItem></Menu>
+      </Toolbar></AppBar>
+      <Box component="main" sx={{ maxWidth: 1500, mx: "auto", px: { xs: 1.5, sm: 3, lg: 4 }, py: { xs: 2.25, sm: 3.5 } }}>
+        {notConfigured && <Alert severity="info" sx={{ mb: 2.5, borderRadius: 2.5 }}>Preview rejimi: Supabase kalitlari qo‘shilgach, bu demo ko‘rsatkichlar real klinika ma’lumotlari va RLS bilan almashinadi.</Alert>}
+        {view === "overview" && <Overview onOpenPatients={() => navigate("patients")} />}
+        {view === "patients" && <Patients />}
+        {view === "discharges" && <Discharges />}
+        {view === "followups" && <FollowUps />}
+        {view === "clinics" && isSuper && <Clinics />}
+      </Box>
+    </Box>
+    <Box sx={{ display: { xs: "block", lg: "none" }, position: "fixed", bottom: 0, left: 0, right: 0, zIndex: theme.zIndex.appBar, borderTop: "1px solid #EAECF0", bgcolor: "rgba(255,255,255,.96)", backdropFilter: "blur(12px)" }}><BottomNavigation showLabels value={view === "clinics" ? "overview" : view} onChange={(_, value: View) => navigate(value)} sx={{ height: 66 }}><BottomNavigationAction label="Bosh sahifa" value="overview" icon={<DashboardRounded />} /><BottomNavigationAction label="Bemorlar" value="patients" icon={<PeopleAltRounded />} /><BottomNavigationAction label="Chiqarish" value="discharges" icon={<DescriptionRounded />} /><BottomNavigationAction label="Kuzatuvlar" value="followups" icon={<QueryStatsRounded />} /></BottomNavigation></Box>
+    <Snackbar open={Boolean(liveNotification)} autoHideDuration={5000} anchorOrigin={{ vertical: "top", horizontal: "center" }}><Alert severity={liveNotification?.type === "alert" ? "warning" : "info"} icon={<FavoriteRounded />} action={<IconButton size="small" color="inherit"><CloseRounded fontSize="small" /></IconButton>} sx={{ borderRadius: 2.5 }}><Typography variant="body2" fontWeight={750}>{liveNotification?.title}</Typography>{liveNotification?.body && <Typography variant="caption">{liveNotification.body}</Typography>}</Alert></Snackbar>
+  </Box>;
 }
+
+function Brand() { return <Stack direction="row" spacing={1.1} alignItems="center"><Avatar sx={{ width: 36, height: 36, bgcolor: "#155EEF", borderRadius: 2.5, boxShadow: "0 6px 14px rgba(21,94,239,.24)" }}><FavoriteRounded fontSize="small" /></Avatar><Typography sx={{ color: "#101828", fontSize: 20, fontWeight: 800, letterSpacing: "-.045em" }}>Care<span style={{ color: "#155EEF" }}>Link</span></Typography></Stack>; }
