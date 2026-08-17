@@ -18,6 +18,14 @@ class _LoginScreenState extends State<LoginScreen> {
   final _password = TextEditingController();
   bool _obscure = true;
 
+  void _fillPatientDemo() {
+    setState(() {
+      _email.text = 'mbuzb0001@gmail.com';
+      _password.text = '123456';
+      _obscure = false;
+    });
+  }
+
   Future<void> _submit() async {
     final state = context.read<AppState>();
     await state.login(_email.text.trim(), _password.text);
@@ -107,6 +115,26 @@ class _LoginScreenState extends State<LoginScreen> {
                         loading: state.loading,
                         icon: Icons.login,
                         onPressed: _submit,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(color: const Color(0xFFEFF8F5), borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.emerald.withOpacity(0.22))),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text('BEMOR MOBILE DEMO', style: TextStyle(color: AppColors.emerald, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.8)),
+                      const SizedBox(height: 6),
+                      const Text('mbuzb0001@gmail.com · 123456', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 9),
+                      OutlinedButton.icon(
+                        onPressed: _fillPatientDemo,
+                        icon: const Icon(Icons.auto_fix_high, size: 17),
+                        label: const Text('Demo ma’lumotlarini to‘ldirish'),
+                        style: OutlinedButton.styleFrom(foregroundColor: AppColors.primary, side: const BorderSide(color: AppColors.primary), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                       ),
                     ],
                   ),

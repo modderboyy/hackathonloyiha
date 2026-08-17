@@ -79,6 +79,23 @@ Faol subscription bo‘lsa bemor plan yoki klinik kodni UI/API orqali o‘zgarti
 
 ---
 
+## Demo loginlar
+
+> Faqat demo/hackathon uchun. Productionga chiqishdan oldin parollarni almashtiring yoki demo accountlarni o‘chirib qo‘ying.
+
+| Rol | Email | Parol | Qayerda ishlatiladi |
+| --- | --- | --- | --- |
+| Super admin | `moddermexc1@gmail.com` | `12345678` | Web dashboard `/login` |
+| Bemor mobile demo | `mbuzb0001@gmail.com` | `123456` | Flutter mobile login |
+
+Demo userlarni Supabase Auth’da yaratish:
+
+```powershell
+$env:SUPABASE_URL="https://YOUR_PROJECT.supabase.co"
+$env:SUPABASE_SERVICE_ROLE_KEY="YOUR_SERVICE_ROLE_KEY"
+node .\scripts\seed-demo-users.mjs
+```
+
 ## Tezkor ishga tushirish — Web
 
 ### 1. Muhit fayli

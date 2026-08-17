@@ -3,6 +3,15 @@
 CareLink statsionardan chiqarilgan og‘ir bemorning care jarayonini klinikadan uyga uzmaydi.
 Webdagi chiqarish rejasidan **tashxis, davolash yakuni, tavsiyalar, dorilar va reminder jadvali** bemor ilovasiga avtomatik keladi.
 
+## Mobile demo login
+
+```text
+Email: mbuzb0001@gmail.com
+Parol: 123456
+```
+
+Bu account avval root repository’dagi `scripts/seed-demo-users.mjs` yordamida Supabase Auth’da yaratilishi kerak. Bu demo parol, production uchun emas.
+
 ## Bemor oqimi
 
 ```text
