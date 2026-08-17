@@ -51,6 +51,12 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> _initFcm() async {
+    // Web build uchun FirebaseOptions/VAPID sozlanmagan. Android push oqimi
+    // web previewdan mustaqil ishlaydi, shuning uchun webda FCM init qilmaymiz.
+    if (kIsWeb) {
+      debugPrint('FCM web previewda o‘chirilgan; Android buildda faol bo‘ladi.');
+      return;
+    }
     // FCM token Supabase'ga saqlanadi (login'da ham chaqiriladi)
     FirebaseMessagingService.setTokenCallback((token) async {
       if (db.userId != null) {
@@ -319,6 +325,8 @@ class AppState extends ChangeNotifier {
         }
       }
       notifyListeners();
+    }, onError: (error) {
+      debugPrint('Realtime checkins ulanmagan: $error');
     });
   }
 
@@ -327,6 +335,8 @@ class AppState extends ChangeNotifier {
       reminderList = await db.getReminders();
       await reminders.syncAll(reminderList);
       notifyListeners();
+    }, onError: (error) {
+      debugPrint('Realtime reminders ulanmagan: $error');
     });
   }
 
@@ -356,6 +366,8 @@ class AppState extends ChangeNotifier {
           .toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       notifyListeners();
+    }, onError: (error) {
+      debugPrint('Realtime notifications ulanmagan: $error');
     });
   }
 }

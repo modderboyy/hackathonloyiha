@@ -48,6 +48,7 @@ supabase/migrations/00017_fix_patient_insert_rls.sql
 supabase/migrations/00018_lock_active_subscriptions.sql
 supabase/migrations/00019_notification_history.sql
 supabase/migrations/00020_vitals_push_beta_settings.sql
+supabase/migrations/00021_enable_mobile_realtime.sql
 ```
 
 Bu migratsiya uchta rol (`super_admin`, `medical_worker`, `patient`), klinika doirasi RLS, dori-reminder sync va AI care kontekstini yaratadi.
