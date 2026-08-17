@@ -1,0 +1,9 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title">
+  <title id="title">CareLink app icon</title>
+  <rect x="42" y="42" width="428" height="428" rx="124" fill="#155EEF"/>
+  <circle cx="360" cy="152" r="22" fill="#A7F3D0"/>
+  <circle cx="399" cy="198" r="12" fill="#D1FAE5"/>
+  <path d="M244 169C244 156.297 254.297 146 267 146H288C300.703 146 311 156.297 311 169V231H373C385.703 231 396 241.297 396 254V275C396 287.703 385.703 298 373 298H311V360C311 372.703 300.703 383 288 383H267C254.297 383 244 372.703 244 360V298H182C169.297 298 159 287.703 159 275V254C159 241.297 169.297 231 182 231H244V169Z" fill="white"/>
+  <path d="M130 156C103 181 103 224 130 249" stroke="#D1FAE5" stroke-width="20" stroke-linecap="round"/>
+  <path d="M382 263C409 238 409 195 382 170" stroke="#A7F3D0" stroke-width="20" stroke-linecap="round"/>
+</svg>
