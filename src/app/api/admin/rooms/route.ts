@@ -1,14 +1,40 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
+async function getUserProfile(supabase: any) {
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return null;
+  }
+
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+
+  return profile;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
+    const profile = await getUserProfile(supabase);
+
+    if (!profile) {
+      return NextResponse.json({ error: "Autentifikatsiya noto'g'ri" }, { status: 401 });
+    }
+
     const body = await request.json();
     const { clinic_id, name, floor, capacity, status, note } = body;
 
     if (!clinic_id || !name) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    // Check access: clinic admins can only add to their clinic
+    if (profile.role !== "super_admin" && profile.clinic_id !== clinic_id) {
+      return NextResponse.json({ error: "Siz faqat o'z klinikangizga xona qo'sha olasiz" }, { status: 403 });
     }
 
     const { data, error } = await supabase
@@ -36,10 +62,21 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
+    const profile = await getUserProfile(supabase);
+
+    if (!profile) {
+      return NextResponse.json({ error: "Autentifikatsiya noto'g'ri" }, { status: 401 });
+    }
+
     const clinicId = request.nextUrl.searchParams.get("clinic_id");
 
     if (!clinicId) {
       return NextResponse.json({ error: "Missing clinic_id" }, { status: 400 });
+    }
+
+    // Check access: clinic admins can only view their clinic's rooms
+    if (profile.role !== "super_admin" && profile.clinic_id !== clinicId) {
+      return NextResponse.json({ error: "Siz faqat o'z klinikaning xonalarini ko'ra olasiz" }, { status: 403 });
     }
 
     const { data, error } = await supabase
@@ -61,15 +98,29 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const supabase = await createClient();
+    const profile = await getUserProfile(supabase);
+
+    if (!profile) {
+      return NextResponse.json({ error: "Autentifikatsiya noto'g'ri" }, { status: 401 });
+    }
+
     const body = await request.json();
-    const { id, status, note } = body;
+    const { id, clinic_id, status, name, floor, capacity, note } = body;
 
     if (!id) {
       return NextResponse.json({ error: "Missing room id" }, { status: 400 });
     }
 
+    // Check access: clinic admins can only edit their clinic's rooms
+    if (profile.role !== "super_admin" && profile.clinic_id !== clinic_id) {
+      return NextResponse.json({ error: "Siz faqat o'z klinikaning xonalarini tahrirlay olasiz" }, { status: 403 });
+    }
+
     const updates: any = {};
     if (status !== undefined) updates.status = status;
+    if (name !== undefined) updates.name = name;
+    if (floor !== undefined) updates.floor = floor;
+    if (capacity !== undefined) updates.capacity = capacity;
     if (note !== undefined) updates.note = note;
 
     const { data, error } = await supabase
@@ -91,11 +142,22 @@ export async function PATCH(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const supabase = await createClient();
+    const profile = await getUserProfile(supabase);
+
+    if (!profile) {
+      return NextResponse.json({ error: "Autentifikatsiya noto'g'ri" }, { status: 401 });
+    }
+
     const body = await request.json();
-    const { id } = body;
+    const { id, clinic_id } = body;
 
     if (!id) {
       return NextResponse.json({ error: "Missing room id" }, { status: 400 });
+    }
+
+    // Check access: clinic admins can only delete their clinic's rooms
+    if (profile.role !== "super_admin" && profile.clinic_id !== clinic_id) {
+      return NextResponse.json({ error: "Siz faqat o'z klinikaning xonalarini o'chira olasiz" }, { status: 403 });
     }
 
     const { error } = await supabase.from("rooms").delete().eq("id", id);

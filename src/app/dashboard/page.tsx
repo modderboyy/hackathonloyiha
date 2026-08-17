@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   AccountCircleOutlined,
   ApartmentRounded,
+  ChatRounded,
   CloseRounded,
   DashboardRounded,
   DescriptionRounded,
@@ -98,6 +99,7 @@ function DashboardShell() {
     if (viewParam === "patients") setView("patients");
     if (viewParam === "rooms") setView("rooms");
   }, []);
+  const [notificationAnchor, setNotificationAnchor] = useState<HTMLElement | null>(null);
   const isSuper = profile?.role === "super_admin";
   const unread = notifications.filter((notification) => !notification.is_read).length;
   const nav = useMemo(() => (isSuper ? dashboardNav : dashboardNav.filter((item) => ["overview", "patients", "doctors", "appointments", "rooms", "emergency", "followups", "discharges"].includes(item.id))), [isSuper]);
@@ -232,12 +234,76 @@ function DashboardShell() {
             />
 
             <Tooltip title={unread ? `${unread} ta yangi xabarnoma` : "Xabarnomalar"}>
-              <IconButton sx={{ mr: 0.75, color: "#11211F" }}>
+              <IconButton onClick={(event) => setNotificationAnchor(event.currentTarget)} sx={{ mr: 0.75, color: "#11211F" }}>
                 <Badge badgeContent={unread} color="error">
                   <NotificationsNoneRounded />
                 </Badge>
               </IconButton>
             </Tooltip>
+
+            <Menu
+              anchorEl={notificationAnchor}
+              open={Boolean(notificationAnchor)}
+              onClose={() => setNotificationAnchor(null)}
+              PaperProps={{
+                sx: {
+                  background: "rgba(255,255,255,.96)",
+                  border: "1px solid rgba(17,34,31,.08)",
+                  mt: 1,
+                  maxWidth: 380,
+                  maxHeight: 400,
+                  overflowY: "auto",
+                },
+              }}
+            >
+              <Box sx={{ px: 2, py: 1.5 }}>
+                <Typography variant="subtitle2" fontWeight={750}>
+                  Bildirishnomalar
+                </Typography>
+              </Box>
+              <Divider sx={{ borderColor: "rgba(17,34,31,.08)" }} />
+              {notifications.length === 0 ? (
+                <Box sx={{ px: 2, py: 3, textAlign: "center" }}>
+                  <Typography variant="caption" sx={{ color: "#6B7280" }}>
+                    Hozircha yangi bildirishnomalar yo'q
+                  </Typography>
+                </Box>
+              ) : (
+                notifications.slice(0, 5).map((notif) => (
+                  <MenuItem
+                    key={notif.id}
+                    sx={{
+                      flexDirection: "column",
+                      alignItems: "flex-start",
+                      width: "100%",
+                      px: 2,
+                      py: 1.2,
+                      borderBottom: "1px solid rgba(17,34,31,.04)",
+                      bgcolor: notif.is_read ? "transparent" : "rgba(15,110,92,.04)",
+                      "&:hover": { bgcolor: "rgba(15,110,92,.08)" },
+                    }}
+                  >
+                    <Typography variant="body2" fontWeight={notif.is_read ? 600 : 700} sx={{ color: "#1F2937" }}>
+                      {notif.title}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: "#6B7280", mt: 0.3 }}>
+                      {notif.body}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: "#9CA3AF", mt: 0.5 }}>
+                      {new Date(notif.created_at).toLocaleTimeString("uz-UZ")}
+                    </Typography>
+                  </MenuItem>
+                ))
+              )}
+              {notifications.length > 5 && (
+                <>
+                  <Divider sx={{ borderColor: "rgba(17,34,31,.08)" }} />
+                  <MenuItem sx={{ justifyContent: "center", py: 1, color: "#0F6E5C", fontWeight: 600 }}>
+                    Barchasini ko'rish
+                  </MenuItem>
+                </>
+              )}
+            </Menu>
 
             <IconButton onClick={(event) => setAnchor(event.currentTarget)} sx={{ color: "#11211F" }}>
               <AccountCircleOutlined />

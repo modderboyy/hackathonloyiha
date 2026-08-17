@@ -33,7 +33,7 @@ import {
 import { useData } from "@/lib/data";
 
 export function RoomsOverview() {
-  const { facilities } = useData();
+  const { facilities, profile } = useData();
   const [selectedClinic, setSelectedClinic] = useState<string>(facilities[0]?.id || "");
   const [rooms, setRooms] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -41,15 +41,31 @@ export function RoomsOverview() {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({ name: "", floor: 1, capacity: 1, status: "available" });
 
+  // Role-based clinic filtering
+  const isClinicAdmin = profile?.role === "clinic_admin" || profile?.role === "medical_worker";
+  const clinicId = isClinicAdmin ? profile?.clinic_id : selectedClinic;
+  const visibleFacilities = isClinicAdmin 
+    ? facilities.filter((f) => f.id === profile?.clinic_id)
+    : facilities;
+
   useEffect(() => {
-    if (selectedClinic) {
+    // Set initial clinic
+    if (isClinicAdmin && profile?.clinic_id) {
+      setSelectedClinic(profile.clinic_id);
+    } else if (facilities.length > 0 && !selectedClinic) {
+      setSelectedClinic(facilities[0].id);
+    }
+  }, [isClinicAdmin, profile?.clinic_id, facilities]);
+
+  useEffect(() => {
+    if (clinicId) {
       loadRooms();
     }
-  }, [selectedClinic]);
+  }, [clinicId]);
 
   const loadRooms = async () => {
     try {
-      const response = await fetch(`/api/admin/rooms?clinic_id=${selectedClinic}`);
+      const response = await fetch(`/api/admin/rooms?clinic_id=${clinicId}`);
       if (!response.ok) throw new Error("Failed to load rooms");
       const { data } = await response.json();
       setRooms((data || []).map((room: any) => ({
@@ -78,6 +94,7 @@ export function RoomsOverview() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             id: editingRoom.id,
+            clinic_id: clinicId,
             ...formData,
           }),
         });
@@ -86,7 +103,7 @@ export function RoomsOverview() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            clinic_id: selectedClinic,
+            clinic_id: clinicId,
             ...formData,
           }),
         });
@@ -113,7 +130,7 @@ export function RoomsOverview() {
       const response = await fetch("/api/admin/rooms", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: roomId }),
+        body: JSON.stringify({ id: roomId, clinic_id: clinicId }),
       });
 
       if (!response.ok) throw new Error("Failed to delete room");
@@ -168,24 +185,34 @@ export function RoomsOverview() {
       <Card>
         <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
           <Stack spacing={2} sx={{ mb: 2 }}>
-            <TextField
-              select
-              fullWidth
-              label="Klinika"
-              value={selectedClinic}
-              onChange={(e) => setSelectedClinic(e.target.value)}
-              SelectProps={{ native: true }}
-            >
-              {facilities.map((facility) => (
-                <option key={facility.id} value={facility.id}>{facility.name}</option>
-              ))}
-            </TextField>
+            {isClinicAdmin ? (
+              <Box sx={{ p: 1.5, bgcolor: "#EAFBF3", borderRadius: 2, border: "1px solid rgba(15,110,92,0.2)" }}>
+                <Typography variant="caption" sx={{ color: "#5A6D68", fontWeight: 600 }}>Sizning klinika</Typography>
+                <Typography sx={{ fontWeight: 700, color: "#0F6E5C", mt: 0.5 }}>
+                  {visibleFacilities[0]?.name || "Klinika"}
+                </Typography>
+              </Box>
+            ) : (
+              <TextField
+                select
+                fullWidth
+                label="Klinika"
+                value={selectedClinic}
+                onChange={(e) => setSelectedClinic(e.target.value)}
+                SelectProps={{ native: true }}
+              >
+                {visibleFacilities.map((facility) => (
+                  <option key={facility.id} value={facility.id}>{facility.name}</option>
+                ))}
+              </TextField>
+            )}
           </Stack>
 
           <TableContainer>
             <Table>
               <TableHead>
                 <TableRow>
+                  {!isClinicAdmin && <TableCell>Klinika</TableCell>}
                   <TableCell>Xona nomi</TableCell>
                   <TableCell>Qavat</TableCell>
                   <TableCell>Sig'imi</TableCell>
@@ -196,8 +223,10 @@ export function RoomsOverview() {
               <TableBody>
                 {rooms.map((room) => {
                   const status = statusColor(room.status);
+                  const clinicName = visibleFacilities.find((f) => f.id === room.clinic_id)?.name || "Klinika";
                   return (
                     <TableRow key={room.id} hover>
+                      {!isClinicAdmin && <TableCell>{clinicName}</TableCell>}
                       <TableCell>{room.name}</TableCell>
                       <TableCell>{room.floor}</TableCell>
                       <TableCell>{room.capacity} kishi</TableCell>
@@ -224,6 +253,29 @@ export function RoomsOverview() {
         <DialogTitle>{editingRoom ? "Xonani tahrirlash" : "Yangi xona qo'shish"}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 2 }}>
+            {/* Clinic Selection/Display */}
+            {isClinicAdmin ? (
+              <Box sx={{ p: 1.5, bgcolor: "#EAFBF3", borderRadius: 2, border: "1px solid rgba(15,110,92,0.2)" }}>
+                <Typography variant="caption" sx={{ color: "#5A6D68", fontWeight: 600 }}>Klinika</Typography>
+                <Typography sx={{ fontWeight: 700, color: "#0F6E5C", mt: 0.5 }}>
+                  {visibleFacilities[0]?.name || "Klinika"}
+                </Typography>
+              </Box>
+            ) : (
+              <TextField
+                select
+                fullWidth
+                label="Klinika"
+                value={clinicId || ""}
+                onChange={(e) => setSelectedClinic(e.target.value)}
+                SelectProps={{ native: true }}
+              >
+                {visibleFacilities.map((facility) => (
+                  <option key={facility.id} value={facility.id}>{facility.name}</option>
+                ))}
+              </TextField>
+            )}
+
             <TextField
               label="Xona nomi"
               fullWidth
@@ -235,16 +287,22 @@ export function RoomsOverview() {
               label="Qavat"
               type="number"
               fullWidth
-              value={formData.floor}
-              onChange={(e) => setFormData({ ...formData, floor: parseInt(e.target.value) })}
+              value={formData.floor || ""}
+              onChange={(e) => {
+                const val = e.target.value;
+                setFormData({ ...formData, floor: val === "" ? 1 : Math.max(1, parseInt(val) || 1) });
+              }}
               inputProps={{ min: 1 }}
             />
             <TextField
               label="Sig'imi (kishi)"
               type="number"
               fullWidth
-              value={formData.capacity}
-              onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) })}
+              value={formData.capacity || ""}
+              onChange={(e) => {
+                const val = e.target.value;
+                setFormData({ ...formData, capacity: val === "" ? 1 : Math.max(1, parseInt(val) || 1) });
+              }}
               inputProps={{ min: 1 }}
             />
             <TextField

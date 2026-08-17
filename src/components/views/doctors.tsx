@@ -343,7 +343,6 @@ function ProfileDialog({
           id: doctor.id,
           full_name: editForm.full_name.trim(),
           phone: editForm.phone.trim() || null,
-          specialty_id: doctor.specialty_id,
         }),
       });
 
@@ -354,8 +353,7 @@ function ProfileDialog({
 
       setEditMode(false);
       onClose();
-      // Reload page or refresh data
-      window.location.reload();
+      alert("Profil muvaffaqiyatli yangilandi!");
     } catch (error) {
       alert(error instanceof Error ? error.message : "Profil saqlanmadi");
     } finally {

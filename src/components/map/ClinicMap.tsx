@@ -190,7 +190,7 @@ export default function ClinicMap({
       }
     });
 
-    if (selectedLocation && onLocationSelect) {
+    if (selectedLocation && onLocationSelectRef.current) {
       try {
         const marker = L.marker([selectedLocation.lat, selectedLocation.lng], {
           draggable: true,
@@ -218,13 +218,13 @@ export default function ClinicMap({
       } else if (!hasFitRef.current && bounds.length === 1) {
         map.setView(bounds[0], 10);
         hasFitRef.current = true;
-      } else if (selectedLocation && onLocationSelect) {
+      } else if (selectedLocation && onLocationSelectRef.current) {
         map.setView([selectedLocation.lat, selectedLocation.lng], 10);
       }
     } catch (error) {
       console.error("Error finalizing map layers:", error);
     }
-  }, [clinics, selectedId, selectedLocation, onLocationSelect, selectedRadiusKm]);
+  }, [clinics, selectedId, selectedLocation, showRadius]);
 
   return (
     <div style={{ position: "relative", overflow: "hidden", borderRadius: 14, height }}>
