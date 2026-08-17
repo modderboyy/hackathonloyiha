@@ -15,6 +15,8 @@ Firebase secretlari `client_email` va `private_key` bir xil service-account JSON
 | `SMS_WEBHOOK_URL` | SMS provider endpoint (Eskiz/Twilio/custom) | ⚠️ avtomatik SMS uchun kerak |
 | `SMS_WEBHOOK_TOKEN` | SMS provider token | ⚠️ provider talab qilsa |
 
+> `SMS_WEBHOOK_URL` uchun MCHJ/YATT nomidagi transactional SMS shlyuzi (Eskiz, Play Mobile, Twilio yoki custom gateway) ulanishi kerak. Token faqat Edge Function secret sifatida saqlanadi.
+
 ## 1. Service role key ni olish (sizdan kerak)
 
 1. [supabase.com](https://supabase.com) → loyihangiz (`flpmqhditzfosvdtbqlw`) → **Project Settings → API**

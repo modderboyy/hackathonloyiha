@@ -110,6 +110,8 @@ class _SosScreenState extends State<SosScreen> with SingleTickerProviderStateMix
                   const SizedBox(height: 12),
                 ],
                 _ActionButton(label: '103 GA QO‘NG‘IROQ', icon: Icons.phone_in_talk_rounded, color: Colors.white, onTap: () { context.read<AppState>().callEmergency103(); }),
+                const SizedBox(height: 12),
+                const Text('Yaqinlarga SMS yuborilishi uchun MCHJ/YATT SMS shlyuzi serverda sozlangan bo‘lishi kerak.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFFB2C5E5), fontSize: 11, height: 1.35)),
                 const SizedBox(height: 18),
               ],
             ),

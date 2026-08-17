@@ -502,6 +502,8 @@ class _SafetyPanel extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(child: _SafetyButton(label: 'Yaqinlarga', icon: Icons.group_outlined, color: AppColors.emerald, onTap: () => _showResult(context, state.notifyFamily))),
           ]),
+          const SizedBox(height: 9),
+          const Text('Yaqinlarga SMS avtomatik yuborilishi uchun MCHJ/YATT SMS shlyuzi (SMS_WEBHOOK_URL) sozlangan bo‘lishi kerak.', style: TextStyle(color: AppColors.textMuted, fontSize: 10, height: 1.35)),
         ],
       ),
     );

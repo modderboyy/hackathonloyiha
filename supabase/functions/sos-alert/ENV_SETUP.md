@@ -14,6 +14,8 @@ supabase functions deploy sos-alert
 
 Avtomatik SMS device’dan emas, server SMS provider orqali yuboriladi. Bu Android `SEND_SMS`/Play Store cheklovlaridan xavfsizroq va bemor ilovasi yopiq bo‘lsa ham ishlaydi.
 
+> O‘zbekiston raqamlariga transactional SMS uchun MCHJ/YATT nomidan SMS provider bilan shartnoma, sender ID va gateway token talab qilinishi mumkin. Provider tokenini Flutter appga emas, faqat Supabase Edge Function Secret’ga qo‘ying.
+
 Generic webhook sozlamasi:
 
 ```bash

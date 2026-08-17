@@ -82,16 +82,16 @@ export function Overview({ onOpenPatients }: { onOpenPatients: () => void }) {
     <Stack spacing={3.1}>
       <Box sx={{ display: "flex", alignItems: { xs: "flex-start", sm: "center" }, flexDirection: { xs: "column", sm: "row" }, gap: 1.5, justifyContent: "space-between" }}>
         <Box>
-          <Typography variant="h4" sx={{ fontSize: { xs: 27, md: 32 } }}>Bosh sahifa</Typography>
+          <Typography variant="h4" sx={{ fontSize: { xs: 27, md: 32 }, color: "#11211F" }}>Bosh sahifa</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: .5 }}>{profile?.role === "super_admin" ? "Barcha klinikalar bo‘yicha care holati" : "Klinikangizdagi bemorlar va kuzatuvlar holati"}</Typography>
         </Box>
-        <Button variant="outlined" endIcon={<ArrowForwardRounded />} onClick={onOpenPatients}>Bemorlar ro‘yxati</Button>
+        <Button variant="outlined" endIcon={<ArrowForwardRounded />} onClick={onOpenPatients} sx={{ borderColor: "rgba(15,110,92,.18)", color: "#0F6E5C", background: "rgba(255,255,255,.5)" }}>Bemorlar ro‘yxati</Button>
       </Box>
 
       <Grid container spacing={2}>
-        <Grid size={{ xs: 12, md: 4 }}><MetricCard icon={<PeopleAltRounded />} title="Jami bemorlar" value={patientStats.total} tint="#EFF4FF" color="#155EEF" chips={[{ label: "Sog‘", value: patientStats.healthy, color: "#027A48" }, { label: "Kasal", value: patientStats.sick, color: "#B42318" }]} /></Grid>
-        <Grid size={{ xs: 12, md: 4 }}><MetricCard icon={<LocalHospitalRounded />} title="Statsionardan chiqarilganlar" value={dischargeStats.total} tint="#F4F3FF" color="#6938EF" chips={[{ label: "Muvaffaqiyatli", value: dischargeStats.successful, color: "#027A48" }, { label: "Muvaffaqiyatsiz", value: dischargeStats.unsuccessful, color: "#B42318" }, { label: "Davom etyapti", value: dischargeStats.ongoing, color: "#B54708" }]} /></Grid>
-        <Grid size={{ xs: 12, md: 4 }}><MetricCard icon={<FavoriteRounded />} title="Kuzatuvlar" value={observationStats.pending + observationStats.active + observationStats.urgent} tint="#ECFDF3" color="#0E9384" chips={[{ label: "Kutilmoqda", value: observationStats.pending, color: "#B54708" }, { label: "Jarayonda", value: observationStats.active, color: "#155EEF" }, { label: "Muddat o‘tgan", value: observationStats.urgent, color: "#B42318" }]} /></Grid>
+        <Grid size={{ xs: 12, md: 4 }}><MetricCard icon={<PeopleAltRounded />} title="Jami bemorlar" value={patientStats.total} tint="#EAFBF3" color="#0F6E5C" chips={[{ label: "Sog‘", value: patientStats.healthy, color: "#1FA777" }, { label: "Kasal", value: patientStats.sick, color: "#C74B49" }]} /></Grid>
+        <Grid size={{ xs: 12, md: 4 }}><MetricCard icon={<LocalHospitalRounded />} title="Statsionardan chiqarilganlar" value={dischargeStats.total} tint="#EEF7F9" color="#156B7D" chips={[{ label: "Muvaffaqiyatli", value: dischargeStats.successful, color: "#1FA777" }, { label: "Muvaffaqiyatsiz", value: dischargeStats.unsuccessful, color: "#C74B49" }, { label: "Davom etyapti", value: dischargeStats.ongoing, color: "#D9872F" }]} /></Grid>
+        <Grid size={{ xs: 12, md: 4 }}><MetricCard icon={<FavoriteRounded />} title="Kuzatuvlar" value={observationStats.pending + observationStats.active + observationStats.urgent} tint="#F0F7F5" color="#0F6E5C" chips={[{ label: "Kutilmoqda", value: observationStats.pending, color: "#D9872F" }, { label: "Jarayonda", value: observationStats.active, color: "#136C83" }, { label: "Muddat o‘tgan", value: observationStats.urgent, color: "#C74B49" }]} /></Grid>
       </Grid>
 
       <Grid container spacing={2.5}>
@@ -99,8 +99,8 @@ export function Overview({ onOpenPatients }: { onOpenPatients: () => void }) {
           <Card sx={{ height: "100%", overflow: "hidden" }}>
             <CardContent sx={{ p: { xs: 2, sm: 2.75 } }}>
               <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" spacing={1.5} alignItems={{ sm: "center" }} sx={{ mb: 2 }}>
-                <Box><Stack direction="row" alignItems="center" spacing={.8}><MapRounded sx={{ color: "#155EEF" }} /><Typography variant="h6">Klinikalar xaritasi</Typography></Stack><Typography variant="body2" color="text.secondary" sx={{ mt: .4 }}>O‘zbekiston ichidagi klinikalar, xizmat radiusi va obuna holati</Typography></Box>
-                <Chip size="small" icon={<CheckCircleRounded />} label={`${activeClinics}/${clinics.length} faol`} sx={{ bgcolor: "#ECFDF3", color: "#027A48" }} />
+                <Box><Stack direction="row" alignItems="center" spacing={.8}><MapRounded sx={{ color: "#0F6E5C" }} /><Typography variant="h6">Klinikalar xaritasi</Typography></Stack><Typography variant="body2" color="text.secondary" sx={{ mt: .4 }}>O‘zbekiston ichidagi klinikalar, xizmat radiusi va obuna holati</Typography></Box>
+                <Chip size="small" icon={<CheckCircleRounded />} label={`${activeClinics}/${clinics.length} faol`} sx={{ bgcolor: "#EAFBF3", color: "#1FA777" }} />
               </Stack>
               <ClinicMap clinics={clinics} height={410} />
             </CardContent>
@@ -109,13 +109,13 @@ export function Overview({ onOpenPatients }: { onOpenPatients: () => void }) {
         <Grid size={{ xs: 12, xl: 4 }}>
           <Card sx={{ height: "100%" }}>
             <CardContent sx={{ p: { xs: 2, sm: 2.75 } }}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center"><Typography variant="h6">Kuzatuvlar holati</Typography><TrendingUpRounded sx={{ color: "#12B76A" }} /></Stack>
+              <Stack direction="row" justifyContent="space-between" alignItems="center"><Typography variant="h6">Kuzatuvlar holati</Typography><TrendingUpRounded sx={{ color: "#1FA777" }} /></Stack>
               <Typography variant="body2" color="text.secondary" sx={{ mt: .5 }}>Faol vazifalar tezkor ko‘rinishi</Typography>
               <Stack spacing={2.1} sx={{ mt: 3 }}>
-                <Distribution label="Yakunlangan" value={observationStats.complete} total={scopedFollowUps.length} color="#12B76A" />
-                <Distribution label="Jarayonda" value={observationStats.active} total={scopedFollowUps.length} color="#155EEF" />
-                <Distribution label="Kutilmoqda" value={observationStats.pending} total={scopedFollowUps.length} color="#F79009" />
-                <Distribution label="Muddatidan o‘tgan" value={observationStats.urgent} total={scopedFollowUps.length} color="#F04438" />
+                <Distribution label="Yakunlangan" value={observationStats.complete} total={scopedFollowUps.length} color="#1FA777" />
+                <Distribution label="Jarayonda" value={observationStats.active} total={scopedFollowUps.length} color="#136C83" />
+                <Distribution label="Kutilmoqda" value={observationStats.pending} total={scopedFollowUps.length} color="#D9872F" />
+                <Distribution label="Muddatidan o‘tgan" value={observationStats.urgent} total={scopedFollowUps.length} color="#C74B49" />
               </Stack>
               <Divider sx={{ my: 3 }} />
               <Stack direction="row" spacing={1.2} alignItems="center"><Avatar sx={{ bgcolor: "#F4EBFF", color: "#7A5AF8", width: 38, height: 38 }}><MedicationRounded fontSize="small" /></Avatar><Box><Typography variant="body2" fontWeight={750}>{medications.length} ta dori rejasi</Typography><Typography variant="caption" color="text.secondary">Mobile reminders tizimiga sinxronlanadi</Typography></Box></Stack>
@@ -151,8 +151,41 @@ export function Overview({ onOpenPatients }: { onOpenPatients: () => void }) {
 
 function MetricCard({ icon, title, value, tint, color, chips }: { icon: React.ReactNode; title: string; value: number; tint: string; color: string; chips: { label: string; value: number; color: string }[] }) {
   const max = Math.max(1, ...chips.map((chip) => chip.value));
-  return <Card sx={{ height: "100%" }}><CardContent sx={{ p: { xs: 2.1, sm: 2.5 } }}><Stack direction="row" justifyContent="space-between" alignItems="flex-start"><Box><Typography variant="body2" color="text.secondary" fontWeight={700}>{title}</Typography><Typography sx={{ color: "#101828", fontSize: { xs: 31, sm: 36 }, fontWeight: 800, letterSpacing: "-.05em", mt: .5 }}>{value}</Typography></Box><Avatar sx={{ bgcolor: tint, color, borderRadius: 2.75 }}>{icon}</Avatar></Stack><Stack spacing={1.05} sx={{ mt: 2.1 }}>{chips.map((chip) => <Box key={chip.label}><Stack direction="row" justifyContent="space-between" sx={{ mb: .55 }}><Typography variant="caption" color="text.secondary">{chip.label}</Typography><Typography variant="caption" fontWeight={800} sx={{ color: chip.color }}>{chip.value}</Typography></Stack><LinearProgress variant="determinate" value={(chip.value / max) * 100} sx={{ height: 5, borderRadius: 3, bgcolor: "#F2F4F7", "& .MuiLinearProgress-bar": { bgcolor: chip.color, borderRadius: 3 } }} /></Box>)}</Stack></CardContent></Card>;
+  return (
+    <Card sx={{ height: "100%" }}>
+      <CardContent sx={{ p: { xs: 2.1, sm: 2.5 } }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+          <Box>
+            <Typography variant="body2" color="text.secondary" fontWeight={700}>{title}</Typography>
+            <Typography className="mono" sx={{ color: "#11211F", fontSize: { xs: 31, sm: 36 }, fontWeight: 700, letterSpacing: "-.05em", mt: .5 }}>{value}</Typography>
+          </Box>
+          <Avatar sx={{ bgcolor: tint, color, borderRadius: 2.75 }}>{icon}</Avatar>
+        </Stack>
+        <Stack spacing={1.05} sx={{ mt: 2.1 }}>
+          {chips.map((chip) => (
+            <Box key={chip.label}>
+              <Stack direction="row" justifyContent="space-between" sx={{ mb: .55 }}>
+                <Typography variant="caption" color="text.secondary">{chip.label}</Typography>
+                <Typography variant="caption" fontWeight={800} sx={{ color: chip.color }}>{chip.value}</Typography>
+              </Stack>
+              <LinearProgress variant="determinate" value={(chip.value / max) * 100} sx={{ height: 6, borderRadius: 999, bgcolor: "#EBF0EE", "& .MuiLinearProgress-bar": { bgcolor: chip.color, borderRadius: 999 } }} />
+            </Box>
+          ))}
+        </Stack>
+      </CardContent>
+    </Card>
+  );
 }
 
-function Distribution({ label, value, total, color }: { label: string; value: number; total: number; color: string }) { return <Box><Stack direction="row" justifyContent="space-between" sx={{ mb: .6 }}><Typography variant="body2" color="text.secondary">{label}</Typography><Typography variant="body2" fontWeight={800}>{value}</Typography></Stack><LinearProgress variant="determinate" value={total ? (value / total) * 100 : 0} sx={{ height: 7, borderRadius: 9, bgcolor: "#F2F4F7", "& .MuiLinearProgress-bar": { bgcolor: color, borderRadius: 9 } }} /></Box>; }
+function Distribution({ label, value, total, color }: { label: string; value: number; total: number; color: string }) {
+  return (
+    <Box>
+      <Stack direction="row" justifyContent="space-between" sx={{ mb: .6 }}>
+        <Typography variant="body2" color="text.secondary">{label}</Typography>
+        <Typography variant="body2" fontWeight={800} className="mono">{value}</Typography>
+      </Stack>
+      <LinearProgress variant="determinate" value={total ? (value / total) * 100 : 0} sx={{ height: 7, borderRadius: 9, bgcolor: "#EBF0EE", "& .MuiLinearProgress-bar": { bgcolor: color, borderRadius: 9 } }} />
+    </Box>
+  );
+}
 function EmptyText({ text }: { text: string }) { return <Typography variant="body2" color="text.secondary" sx={{ py: 3, textAlign: "center" }}>{text}</Typography>; }
