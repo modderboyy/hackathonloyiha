@@ -235,6 +235,34 @@ class Checkin {
       );
 }
 
+/// Supabase notifications jadvalidagi bemor uchun push/bildirishnoma tarixi.
+class CareNotification {
+  final String id;
+  final String type;
+  final String title;
+  final String? body;
+  final bool isRead;
+  final DateTime createdAt;
+
+  CareNotification({
+    required this.id,
+    required this.type,
+    required this.title,
+    this.body,
+    required this.isRead,
+    required this.createdAt,
+  });
+
+  factory CareNotification.fromJson(Map<String, dynamic> json) => CareNotification(
+        id: json['id'].toString(),
+        type: json['type']?.toString() ?? 'info',
+        title: json['title']?.toString() ?? 'CareLink xabari',
+        body: json['body']?.toString(),
+        isRead: json['is_read'] == true,
+        createdAt: json['created_at'] != null ? DateTime.parse(json['created_at'].toString()) : DateTime.now(),
+      );
+}
+
 class ChatMessage {
   final String? id;
   final String role; // 'user' yoki 'assistant'

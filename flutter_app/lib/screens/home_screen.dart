@@ -8,8 +8,10 @@ import '../widgets/health_dashboard.dart';
 import '../widgets/typewriter.dart';
 import 'chat_screen.dart';
 import 'lock_screen.dart';
+import 'notifications_screen.dart';
 import 'profile_screen.dart';
 import 'reminders_screen.dart';
+import 'search_screen.dart';
 import 'stats_screen.dart';
 import 'subscription_screen.dart';
 
@@ -48,7 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
               _MobileTopBar(
                 tab: _tab,
                 state: state,
-                onReminders: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RemindersScreen())),
+                onNotifications: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationsScreen())),
                 onMore: _showMore,
               ),
               Expanded(
@@ -111,10 +113,10 @@ class _HomeScreenState extends State<HomeScreen> {
 class _MobileTopBar extends StatelessWidget {
   final int tab;
   final AppState state;
-  final VoidCallback onReminders;
+  final VoidCallback onNotifications;
   final VoidCallback onMore;
 
-  const _MobileTopBar({required this.tab, required this.state, required this.onReminders, required this.onMore});
+  const _MobileTopBar({required this.tab, required this.state, required this.onNotifications, required this.onMore});
 
   @override
   Widget build(BuildContext context) {
@@ -153,7 +155,7 @@ class _MobileTopBar extends StatelessWidget {
           if (tab == 1)
             _TopCircleButton(icon: Icons.calendar_month_outlined, onTap: () {})
           else if (tab == 0)
-            _TopCircleButton(icon: Icons.notifications_none_rounded, onTap: onReminders, hasDot: true)
+            _TopCircleButton(icon: Icons.notifications_none_rounded, onTap: onNotifications, hasDot: state.unreadNotificationCount > 0)
           else
             const SizedBox(width: 42),
           const SizedBox(width: 8),
@@ -219,15 +221,18 @@ class _HomeTab extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 18),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
-            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(15), border: Border.all(color: AppColors.border)),
-            child: const Row(
-              children: [
-                Icon(Icons.search_rounded, color: AppColors.textMuted, size: 21),
-                SizedBox(width: 10),
-                Text('Care rejangizni qidiring...', style: TextStyle(color: AppColors.textMuted, fontSize: 14)),
-              ],
+          GestureDetector(
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CareSearchScreen())),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
+              decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(15), border: Border.all(color: AppColors.border)),
+              child: const Row(
+                children: [
+                  Icon(Icons.search_rounded, color: AppColors.textMuted, size: 21),
+                  SizedBox(width: 10),
+                  Text('Dori yoki tahlil natijasini qidiring...', style: TextStyle(color: AppColors.textMuted, fontSize: 14)),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 18),

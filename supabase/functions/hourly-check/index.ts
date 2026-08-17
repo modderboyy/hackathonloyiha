@@ -187,6 +187,7 @@ Deno.serve(async (req) => {
   if (subs) {
     for (const s of subs) {
       const template = TEMPLATES[Math.floor(Math.random() * TEMPLATES.length)];
+      const title = "CareLink — holatingizni so'raymiz";
       await supabase.from("checkins").insert({
         client_id: s.client_id,
         ai_message: template,
@@ -195,9 +196,18 @@ Deno.serve(async (req) => {
         family_step: 0,
       });
 
+      // Top bar'dagi notification tarixi uchun push serverda ham saqlanadi.
+      await supabase.from("notifications").insert({
+        recipient_id: s.client_id,
+        type: "info",
+        title,
+        body: template,
+        source: "push",
+      });
+
       const fcmToken = (s as any).profiles?.fcm_token;
       if (fcmToken) {
-        await sendPush([fcmToken], "CareLink — holatingizni so'raymiz", template, { type: "checkin" });
+        await sendPush([fcmToken], title, template, { type: "checkin" });
       }
       results.push({ client: s.client_id, template });
     }

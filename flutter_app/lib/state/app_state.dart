@@ -21,6 +21,9 @@ class AppState extends ChangeNotifier {
   List<Reminder> reminderList = [];
   List<Medication> medications = [];
   List<FamilyMember> familyMembers = [];
+  List<CareNotification> notificationHistory = [];
+
+  int get unreadNotificationCount => notificationHistory.where((item) => !item.isRead).length;
   bool locked = false;
   bool loading = true;
   String? error;
@@ -53,6 +56,12 @@ class AppState extends ChangeNotifier {
         await db.saveFcmToken(token);
       }
     });
+    FirebaseMessagingService.setMessageCallback((_) async {
+      if (db.userId != null) {
+        notificationHistory = await db.getNotifications();
+        notifyListeners();
+      }
+    });
     try {
       await FirebaseMessagingService.init();
     } catch (e) {
@@ -66,6 +75,7 @@ class AppState extends ChangeNotifier {
     subscription = await db.getSubscription();
     checkins = await db.getCheckins();
     reminderList = await db.getReminders();
+    notificationHistory = await db.getNotifications();
     // Klinikadan kelgan dori rejasi shu yerda telefonning local notifications'iga yoziladi.
     await reminders.syncAll(reminderList);
     medications = await db.getMedications();
@@ -84,6 +94,7 @@ class AppState extends ChangeNotifier {
     _realtimeStarted = true;
     watchCheckins();
     watchReminders();
+    watchNotifications();
   }
 
   // ---------- Auth ----------
@@ -149,6 +160,7 @@ class AppState extends ChangeNotifier {
     profile = null;
     health = null;
     subscription = null;
+    notificationHistory = [];
     locked = false;
     _realtimeStarted = false;
     notifyListeners();
@@ -280,6 +292,35 @@ class AppState extends ChangeNotifier {
     db.watchReminders().listen((_) async {
       reminderList = await db.getReminders();
       await reminders.syncAll(reminderList);
+      notifyListeners();
+    });
+  }
+
+  Future<void> markNotificationRead(String id) async {
+    final item = notificationHistory.where((notification) => notification.id == id).toList();
+    if (item.isEmpty || item.first.isRead) return;
+    await db.markNotificationRead(id);
+    notificationHistory = notificationHistory
+        .map((notification) => notification.id == id
+            ? CareNotification(
+                id: notification.id,
+                type: notification.type,
+                title: notification.title,
+                body: notification.body,
+                isRead: true,
+                createdAt: notification.createdAt,
+              )
+            : notification)
+        .toList();
+    notifyListeners();
+  }
+
+  void watchNotifications() {
+    db.watchNotifications().listen((rows) {
+      notificationHistory = rows
+          .map((row) => CareNotification.fromJson(row))
+          .toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       notifyListeners();
     });
   }

@@ -180,6 +180,38 @@ class SupabaseService {
     }).eq('id', checkinId);
   }
 
+  // ---------- Push notification tarixi ----------
+  Future<List<CareNotification>> getNotifications() async {
+    final id = userId;
+    if (id == null) return [];
+    final rows = await client
+        .from('notifications')
+        .select()
+        .eq('recipient_id', id)
+        .order('created_at', ascending: false)
+        .limit(100);
+    return (rows as List)
+        .map((row) => CareNotification.fromJson(row as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> markNotificationRead(String notificationId) async {
+    await client
+        .from('notifications')
+        .update({'is_read': true})
+        .eq('id', notificationId);
+  }
+
+  Stream<List<Map<String, dynamic>>> watchNotifications() {
+    final id = userId;
+    if (id == null) return const Stream<List<Map<String, dynamic>>>.empty();
+    return client
+        .from('notifications')
+        .stream(primaryKey: ['id'])
+        .eq('recipient_id', id)
+        .map((rows) => rows);
+  }
+
   // ---------- Eslatmalar ----------
   Future<List<Reminder>> getReminders() async {
     final id = userId;
