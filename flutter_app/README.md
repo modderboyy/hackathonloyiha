@@ -18,6 +18,8 @@ Ro‘yxatdan o‘tish / klinik kod
 - **Individual** — $5 / oy. Klinikaga bog‘lanmasdan AI yordamchi, health dashboard va reminders. Mobil ilovadagi **Demo karta bilan to‘lash** ekrani hozircha haqiqiy pul yechmaydi, faqat 30 kunlik obunani sinov uchun faollashtiradi.
 - **Klinik kod** — bemor statsionardan chiqarilganda berilgan kod bilan aktivlashadi. Klinika obunasi `active` yoki `trial` bo‘lsa bepul ishlaydi. Klinikani faollashtirish Super adminning webdagi `/pay` demo checkouti orqali amalga oshadi.
 
+`00018_lock_active_subscriptions.sql` dan keyin `public.subscriptions` ichida faol row bo‘lsa SubscriptionScreen umuman chiqmaydi. Bemor mobile UI yoki API orqali plan/kodini o‘zgartira olmaydi; backend buni RPC va RLS bilan ham bloklaydi.
+
 ## Auto-reminders qanday ishlaydi
 
 Webdagi chiqarish formasida xodim har bir dori uchun quyidagilarni kiritadi:
@@ -42,6 +44,8 @@ Bazaviy migratsiyalardan keyin ayniqsa quyidagini ham ishlating:
 
 ```text
 supabase/migrations/00016_clinic_first_care_model.sql
+supabase/migrations/00017_fix_patient_insert_rls.sql
+supabase/migrations/00018_lock_active_subscriptions.sql
 ```
 
 Bu migratsiya uchta rol (`super_admin`, `medical_worker`, `patient`), klinika doirasi RLS, dori-reminder sync va AI care kontekstini yaratadi.

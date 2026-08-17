@@ -1,5 +1,4 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../config.dart';
 import '../models.dart';
 
 /// Supabase bilan bog'langan yagona xizmat qatlami.
@@ -73,34 +72,32 @@ class SupabaseService {
   }
 
   // ---------- Obuna ----------
+  /// Faqat status=active va muddati tugamagan obuna qaytadi.
+  /// Shuning uchun eski/expired yozuvlar SubscriptionScreen'ni ochmaydi.
   Future<Subscription?> getSubscription() async {
     final id = userId;
     if (id == null) return null;
-    final res = await client
+    final rows = await client
         .from('subscriptions')
         .select()
         .eq('client_id', id)
-        .order('created_at', ascending: false)
-        .limit(1)
-        .maybeSingle();
-    if (res == null) return null;
-    return Subscription.fromJson(res);
+        .eq('status', 'active')
+        .order('created_at', ascending: false);
+    for (final row in rows as List) {
+      final subscription = Subscription.fromJson(row as Map<String, dynamic>);
+      if (subscription.isActive) return subscription;
+    }
+    return null;
   }
 
-  /// Premium obuna sotib olish (demo — real to'lov gateway keyinroq)
+  /// Premium obuna faqat demo checkout RPC orqali faollashadi.
+  /// Backend faol obuna mavjud bo'lsa yangi row yaratishni rad etadi.
   Future<void> subscribeIndividual() async {
-    final id = userId;
-    if (id == null) return;
-    final expiresAt = DateTime.now().add(const Duration(days: 30));
-    await client.from('subscriptions').insert({
-      'client_id': id,
-      'type': 'individual',
-      'plan': 'premium',
-      'price_usd': Config.premiumPriceUsd,
-      'status': 'active',
-      'started_at': DateTime.now().toIso8601String(),
-      'expires_at': expiresAt.toIso8601String(),
-    });
+    final result = await client.rpc('activate_individual_demo_subscription');
+    final data = (result as Map?) ?? {};
+    if (data['ok'] != true) {
+      throw Exception(data['error']?.toString() ?? 'Obunani faollashtirib bo\'lmadi');
+    }
   }
 
   // ---------- Klinik (B2B) ----------

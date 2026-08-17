@@ -94,20 +94,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, receipt, amount: clinicPriceUsd, expiresAt, facility });
   }
 
-  const { error } = await userClient.from("subscriptions").insert({
-    client_id: userData.user.id,
-    type: "individual",
-    plan: "premium",
-    price_usd: individualPriceUsd,
-    currency: "USD",
-    status: "active",
-    started_at: new Date().toISOString(),
-    expires_at: expiresAt,
-  });
-
+  // RLS qoidasi individual subscriptionni faqat RPC orqali yaratishga ruxsat beradi.
+  // RPC faol subscription bo'lsa o'zgartirishni backend tomonda ham rad etadi.
+  const { data: result, error } = await userClient.rpc("activate_individual_demo_subscription");
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
+  const payload = result as { ok?: boolean; error?: string; subscription?: { expires_at?: string } } | null;
+  if (!payload?.ok) {
+    return NextResponse.json({ error: payload?.error ?? "Obunani faollashtirib bo‘lmadi." }, { status: 409 });
+  }
 
-  return NextResponse.json({ ok: true, receipt, amount: individualPriceUsd, expiresAt });
+  return NextResponse.json({
+    ok: true,
+    receipt,
+    amount: individualPriceUsd,
+    expiresAt: payload.subscription?.expires_at ?? expiresAt,
+  });
 }

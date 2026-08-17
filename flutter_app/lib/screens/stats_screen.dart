@@ -28,9 +28,8 @@ class StatsScreen extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const NeonText('STATISTIKA', size: 22),
-          const SizedBox(height: 6),
-          const Text('Sog\'liq ko\'rsatkichlaringiz tahlili', style: TextStyle(color: AppColors.textSecondary)),
+          const SizedBox(height: 4),
+          const Text('Sog\'liq ko\'rsatkichlaringiz tahlili', style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
           const SizedBox(height: 16),
 
           // Umumiy holat

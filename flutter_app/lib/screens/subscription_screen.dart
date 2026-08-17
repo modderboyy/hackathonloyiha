@@ -14,7 +14,11 @@ class SubscriptionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    return Scaffold(
+    // Faol subscription bo‘lsa bu ekran umuman render qilinmaydi.
+    if (state.hasSubscription) return const SizedBox.shrink();
+    return WillPopScope(
+      onWillPop: () async => false,
+      child: Scaffold(
       body: Container(
         decoration: const BoxDecoration(
           gradient: AppColors.bgGradient,
@@ -38,12 +42,11 @@ class SubscriptionScreen extends StatelessWidget {
                 const SizedBox(height: 32),
 
                 // --- B2C Individual (deep blue premium karta) ---
-                ClipPath(
-                  clipper: const SlantClipper(cut: 16),
-                  child: Container(
+                Container(
                     padding: const EdgeInsets.all(20),
                     decoration: const BoxDecoration(
                       gradient: AppColors.primaryGradient,
+                      borderRadius: BorderRadius.all(Radius.circular(20)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -90,7 +93,6 @@ class SubscriptionScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                ),
 
                 const SizedBox(height: 20),
 
@@ -148,7 +150,7 @@ class SubscriptionScreen extends StatelessWidget {
 
                 const SizedBox(height: 28),
                 const Text(
-                  'Kodingiz yo\'qmi? Yaqin klinika yoki punktga boring — shifokor sizga statsionar kod beradi.',
+                  'Kodingiz yo\'qmi? Klinikangizga murojaat qiling — tibbiyot xodimi statsionar kodni beradi.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: AppColors.textMuted, fontSize: 12),
                 ),
@@ -157,7 +159,8 @@ class SubscriptionScreen extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 
   Future<void> _showPayment(BuildContext context) async {

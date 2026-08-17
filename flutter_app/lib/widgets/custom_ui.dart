@@ -1,10 +1,9 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
 /// ============================================================
-/// CareLink Custom UI — digital/cyber uslub
-/// Sharp (slant) qirralar, glassmorphism (blur), neon aksentlar
+/// CareLink Custom UI — yengil, yumaloq, premium mobile uslub
+/// Soft karta, oq fon va yumshoq ko'k aksentlar
 /// ============================================================
 
 /// Qirralarni qiya (slant) kesuvchi klip
@@ -48,31 +47,19 @@ class GlassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipPath(
-      clipper: SlantClipper(cut: cut),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-        child: Container(
-          padding: padding,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                (tint ?? AppColors.surface).withOpacity(0.55),
-                (tint ?? AppColors.bgCard).withOpacity(0.35),
-              ],
-            ),
-            border: border
-                ? Border.all(
-                    color: AppColors.accent.withOpacity(0.25),
-                    width: 1,
-                  )
-                : null,
-          ),
-          child: child,
-        ),
+    // Yengil, yumaloq va iOS-uslubidagi karta. `cut` eski ekranlar bilan
+    // API mosligi uchun qoldirilgan, lekin yangi light dizaynda ishlatilmaydi.
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: tint ?? AppColors.bgCard,
+        borderRadius: BorderRadius.circular(18),
+        border: border ? Border.all(color: AppColors.border) : null,
+        boxShadow: const [
+          BoxShadow(color: Color(0x0D101828), blurRadius: 18, offset: Offset(0, 6)),
+        ],
       ),
+      child: child,
     );
   }
 }
@@ -101,45 +88,28 @@ class SlantButton extends StatelessWidget {
       onTap: enabled ? onPressed : null,
       child: Opacity(
         opacity: enabled ? 1 : 0.5,
-        child: ClipPath(
-          clipper: const SlantClipper(cut: 12),
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-            decoration: BoxDecoration(
-              gradient: outline ? null : AppColors.primaryGradient,
-              color: outline ? Colors.transparent : null,
-              border: outline
-                  ? Border.all(color: AppColors.accent.withOpacity(0.6), width: 1.5)
-                  : null,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (loading)
-                  SizedBox(
-                    height: 18,
-                    width: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: outline ? AppColors.accent : Colors.white,
-                    ),
-                  )
-                else ...[
-                  if (icon != null) ...[
-                    Icon(icon, color: outline ? AppColors.accent : Colors.white, size: 18),
-                    const SizedBox(width: 8),
-                  ],
-                  Text(
-                    label,
-                    style: TextStyle(
-                      color: outline ? AppColors.primary : Colors.white,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+          decoration: BoxDecoration(
+            gradient: outline ? null : AppColors.primaryGradient,
+            color: outline ? AppColors.bgCard : null,
+            borderRadius: BorderRadius.circular(14),
+            border: outline ? Border.all(color: AppColors.primary.withOpacity(0.35)) : null,
+            boxShadow: outline ? null : [BoxShadow(color: AppColors.primary.withOpacity(0.20), blurRadius: 12, offset: const Offset(0, 5))],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (loading)
+                SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: outline ? AppColors.primary : Colors.white))
+              else ...[
+                if (icon != null) ...[
+                  Icon(icon, color: outline ? AppColors.primary : Colors.white, size: 18),
+                  const SizedBox(width: 8),
                 ],
+                Text(label, style: TextStyle(color: outline ? AppColors.primary : Colors.white, fontWeight: FontWeight.w700)),
               ],
-            ),
+            ],
           ),
         ),
       ),
@@ -173,13 +143,8 @@ class NeonText extends StatelessWidget {
         fontSize: size,
         fontWeight: weight,
         color: color,
-        letterSpacing: 0.3,
-        shadows: [
-          Shadow(
-            color: AppColors.accent.withOpacity(0.5),
-            blurRadius: 18,
-          ),
-        ],
+        letterSpacing: size >= 22 ? -0.7 : 0,
+        fontFamily: size >= 22 ? 'serif' : null,
       ),
     );
   }
@@ -245,30 +210,28 @@ class GlassInput extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        ClipPath(
-          clipper: const SlantClipper(cut: 10),
-          child: Container(
-            decoration: BoxDecoration(
-              color: AppColors.surface.withOpacity(0.6),
-              border: Border.all(color: AppColors.accent.withOpacity(0.2)),
-            ),
-            child: TextField(
-              controller: controller,
-              obscureText: obscure,
-              keyboardType: keyboardType,
-              maxLength: maxLength,
-              maxLines: maxLines,
-              textCapitalization: textCapitalization,
-              onChanged: onChanged,
-              style: const TextStyle(color: AppColors.textPrimary),
-              cursorColor: AppColors.accent,
-              decoration: InputDecoration(
-                hintText: hint,
-                hintStyle: const TextStyle(color: AppColors.textMuted),
-                counterText: '',
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                border: InputBorder.none,
-              ),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(13),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: TextField(
+            controller: controller,
+            obscureText: obscure,
+            keyboardType: keyboardType,
+            maxLength: maxLength,
+            maxLines: maxLines,
+            textCapitalization: textCapitalization,
+            onChanged: onChanged,
+            style: const TextStyle(color: AppColors.textPrimary),
+            cursorColor: AppColors.primary,
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: const TextStyle(color: AppColors.textMuted),
+              counterText: '',
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              border: InputBorder.none,
             ),
           ),
         ),

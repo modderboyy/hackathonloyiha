@@ -39,43 +39,154 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!state.hasSubscription) return const SubscriptionScreen();
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.bgCard,
-        elevation: 0,
-        title: const Text(
-          'CareLink',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.2,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.alarm, color: AppColors.cyan),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RemindersScreen())),
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout, color: AppColors.textSecondary),
-            onPressed: () async => await state.logout(),
-          ),
-        ],
-      ),
+      backgroundColor: AppColors.bg,
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppColors.bgGradient,
-        ),
-        child: IndexedStack(
-          index: _tab,
-          children: [
-            _HomeTab(),
-            const StatsScreen(),
-            const ChatScreen(embedded: true),
-            const ProfileScreen(embedded: true),
-          ],
+        decoration: const BoxDecoration(gradient: AppColors.bgGradient),
+        child: SafeArea(
+          child: Column(
+            children: [
+              _MobileTopBar(
+                tab: _tab,
+                state: state,
+                onReminders: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RemindersScreen())),
+                onMore: _showMore,
+              ),
+              Expanded(
+                child: IndexedStack(
+                  index: _tab,
+                  children: [
+                    _HomeTab(),
+                    const StatsScreen(),
+                    const ChatScreen(embedded: true),
+                    const ProfileScreen(embedded: true),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: _BottomNav(current: _tab, onTap: (i) => setState(() => _tab = i)),
+    );
+  }
+
+  void _showMore() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => SafeArea(
+        child: Container(
+          margin: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(color: AppColors.bgCard, borderRadius: BorderRadius.circular(24)),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(width: 38, height: 4, decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(99))),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.alarm_outlined, color: AppColors.primary),
+                title: const Text('Eslatmalar'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RemindersScreen()));
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.logout, color: AppColors.red),
+                title: const Text('Hisobdan chiqish'),
+                onTap: () async {
+                  Navigator.pop(sheetContext);
+                  await context.read<AppState>().logout();
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MobileTopBar extends StatelessWidget {
+  final int tab;
+  final AppState state;
+  final VoidCallback onReminders;
+  final VoidCallback onMore;
+
+  const _MobileTopBar({required this.tab, required this.state, required this.onReminders, required this.onMore});
+
+  @override
+  Widget build(BuildContext context) {
+    final title = switch (tab) {
+      1 => 'Haftalik tahlil',
+      2 => 'CareLink AI',
+      3 => 'Profil',
+      _ => '',
+    };
+    final words = (state.profile?.fullName ?? '').trim().split(RegExp(r'\s+')).where((part) => part.isNotEmpty).toList();
+    final initials = words.isEmpty ? 'B' : words.take(2).map((part) => part[0]).join().toUpperCase();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
+      child: Row(
+        children: [
+          if (tab == 0)
+            Container(
+              width: 42,
+              height: 42,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.bgCard,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Text(initials, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w700)),
+            )
+          else
+            const SizedBox(width: 42),
+          Expanded(
+            child: tab == 0
+                ? const SizedBox()
+                : Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 25, fontFamily: 'serif', fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+          ),
+          if (tab == 1)
+            _TopCircleButton(icon: Icons.calendar_month_outlined, onTap: () {})
+          else if (tab == 0)
+            _TopCircleButton(icon: Icons.notifications_none_rounded, onTap: onReminders, hasDot: true)
+          else
+            const SizedBox(width: 42),
+          const SizedBox(width: 8),
+          _TopCircleButton(icon: Icons.more_horiz_rounded, onTap: onMore),
+        ],
+      ),
+    );
+  }
+}
+
+class _TopCircleButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool hasDot;
+  const _TopCircleButton({required this.icon, required this.onTap, this.hasDot = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(color: AppColors.bgCard, shape: BoxShape.circle, border: Border.all(color: AppColors.border)),
+            child: Icon(icon, color: AppColors.textPrimary, size: 21),
+          ),
+          if (hasDot)
+            Positioned(right: 7, top: 7, child: Container(width: 7, height: 7, decoration: const BoxDecoration(color: AppColors.red, shape: BoxShape.circle))),
+        ],
+      ),
     );
   }
 }
@@ -87,6 +198,7 @@ class _HomeTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
+    final firstName = (state.profile?.fullName ?? 'Bemor').trim().split(RegExp(r'\s+')).first;
     return RefreshIndicator(
       onRefresh: () => state.loadAll(),
       color: AppColors.cyan,
@@ -94,54 +206,31 @@ class _HomeTab extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Salomlashish
-          GlassCard(
-            cut: 14,
-            child: Row(
+          Text(
+            'Xayrli kun, $firstName',
+            style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'serif', fontSize: 32, fontWeight: FontWeight.w600, letterSpacing: -0.8),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              StatusDot(color: state.hasSubscription ? AppColors.emerald : AppColors.red),
+              const SizedBox(width: 7),
+              Text(_subLabel(state), style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
+            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(15), border: Border.all(color: AppColors.border)),
+            child: const Row(
               children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    gradient: AppColors.primaryGradient,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.person, color: Colors.white, size: 26),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Salom, ${state.profile?.fullName ?? "bemor"}!',
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Row(
-                        children: [
-                          StatusDot(
-                            color: state.hasSubscription ? AppColors.emerald : AppColors.red,
-                            pulse: true,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            _subLabel(state),
-                            style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
+                Icon(Icons.search_rounded, color: AppColors.textMuted, size: 21),
+                SizedBox(width: 10),
+                Text('Care rejangizni qidiring...', style: TextStyle(color: AppColors.textMuted, fontSize: 14)),
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
 
           // Klinikadan discharge vaqtida kelgan AI-safe care context.
           if (state.health?.hospitalDiagnosis != null || state.health?.treatmentSummary != null || state.health?.dischargeRecommendations != null) ...[
@@ -384,52 +473,54 @@ class _BottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = [
-      (icon: Icons.home_outlined, activeIcon: Icons.home, label: 'Bosh sahifa'),
-      (icon: Icons.insights_outlined, activeIcon: Icons.insights, label: 'Statistika'),
-      (icon: Icons.chat_bubble_outline, activeIcon: Icons.chat_bubble, label: 'Chat'),
-      (icon: Icons.person_outline, activeIcon: Icons.person, label: 'Profil'),
+      (icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: 'Bosh sahifa'),
+      (icon: Icons.insights_outlined, activeIcon: Icons.insights_rounded, label: 'Tahlil'),
+      (icon: Icons.chat_bubble_outline_rounded, activeIcon: Icons.chat_bubble_rounded, label: 'AI chat'),
+      (icon: Icons.person_outline_rounded, activeIcon: Icons.person_rounded, label: 'Profil'),
     ];
 
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.bgCard,
-        border: const Border(top: BorderSide(color: Color(0xFFE2E8F0))),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Row(
-          children: items.asMap().entries.map((e) {
-            final i = e.key;
-            final item = e.value;
-            final active = current == i;
-            return Expanded(
-              child: InkWell(
-                onTap: () => onTap(i),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        active ? item.activeIcon : item.icon,
-                        color: active ? AppColors.cyan : AppColors.textMuted,
-                        size: 22,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        item.label,
-                        style: TextStyle(
-                          color: active ? AppColors.cyan : AppColors.textMuted,
-                          fontSize: 10,
-                          fontWeight: active ? FontWeight.bold : FontWeight.normal,
-                        ),
-                      ),
-                    ],
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
+        child: Container(
+          height: 68,
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: AppColors.bgCard.withOpacity(0.97),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.border),
+            boxShadow: const [BoxShadow(color: Color(0x14101828), blurRadius: 20, offset: Offset(0, 7))],
+          ),
+          child: Row(
+            children: items.asMap().entries.map((entry) {
+              final index = entry.key;
+              final item = entry.value;
+              final active = current == index;
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () => onTap(index),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeOut,
+                    height: double.infinity,
+                    decoration: BoxDecoration(
+                      color: active ? AppColors.surface : Colors.transparent,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(active ? item.activeIcon : item.icon, color: active ? AppColors.textPrimary : AppColors.textMuted, size: 21),
+                        const SizedBox(height: 3),
+                        Text(item.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: active ? AppColors.textPrimary : AppColors.textMuted, fontSize: 10, fontWeight: active ? FontWeight.w700 : FontWeight.w500)),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            );
-          }).toList(),
+              );
+            }).toList(),
+          ),
         ),
       ),
     );
