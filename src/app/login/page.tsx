@@ -2,9 +2,78 @@ import Link from "next/link";
 import { loginAction } from "@/lib/auth";
 import { LoginForm } from "./login-form";
 import ThemeRegistry from "@/lib/theme";
-import { Avatar, Box, Card, CardContent, Chip, Stack, Typography } from "@mui/material";
-import { FavoriteRounded, ShieldRounded } from "@mui/icons-material";
+import { Avatar, Box, Card, CardContent, Chip, Grid, Stack, Typography } from "@mui/material";
+import { FavoriteRounded, LockRounded, MedicalInformationRounded, ShieldRounded } from "@mui/icons-material";
 
 export default function LoginPage() {
-  return <ThemeRegistry><Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center", p: 2, background: "radial-gradient(circle at 95% 8%, #D1E0FF, transparent 27%), linear-gradient(135deg, #F8FAFC, #EFF4FF)" }}><Box sx={{ width: "100%", maxWidth: 440 }}><Stack alignItems="center" spacing={1.5} sx={{ mb: 3 }}><Link href="/" style={{ textDecoration: "none" }}><Stack direction="row" alignItems="center" spacing={1}><Avatar sx={{ bgcolor: "#155EEF", borderRadius: 2.5 }}><FavoriteRounded /></Avatar><Typography sx={{ color: "#101828", fontSize: 22, fontWeight: 800, letterSpacing: "-.04em" }}>Care<span style={{ color: "#155EEF" }}>Link</span></Typography></Stack></Link><Chip icon={<ShieldRounded />} label="Xavfsiz klinik kirish" sx={{ bgcolor: "#EFF4FF", color: "#175CD3" }} /></Stack><Card sx={{ boxShadow: "0 24px 48px rgba(16,24,40,.10)" }}><CardContent sx={{ p: { xs: 2.5, sm: 4 } }}><Typography variant="h4" sx={{ fontSize: 28 }}>Tizimga kirish</Typography><Typography variant="body2" color="text.secondary" sx={{ mt: .7, mb: 3 }}>Super admin va tibbiyot xodimlari uchun boshqaruv maydoni.</Typography><LoginForm action={loginAction} /><Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 3 }}>Bemor hisobingiz yo‘qmi? <Link href="/signup" style={{ color: "#155EEF", fontWeight: 750 }}>Hisob yaratish</Link></Typography></CardContent></Card></Box></Box></ThemeRegistry>;
+  return (
+    <ThemeRegistry>
+      <Box
+        sx={{
+          minHeight: "100vh",
+          display: "grid",
+          placeItems: "center",
+          p: 2,
+          background:
+            "radial-gradient(circle at top left, rgba(15,110,92,.12), transparent 24%), radial-gradient(circle at bottom right, rgba(19,108,131,.10), transparent 26%), linear-gradient(135deg, #F5F7F4 0%, #ECF3F0 100%)",
+        }}
+      >
+        <Box sx={{ width: "100%", maxWidth: 1040 }}>
+          <Grid container spacing={3} alignItems="stretch">
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Box sx={{ height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", p: { xs: 2, md: 3 } }}>
+                <Link href="/" style={{ textDecoration: "none" }}>
+                  <Stack direction="row" alignItems="center" spacing={1.1} sx={{ mb: 3 }}>
+                    <Avatar sx={{ bgcolor: "linear-gradient(135deg, #0F6E5C, #1F5A73)", width: 42, height: 42, borderRadius: 2.5, color: "#F3FBF8" }}>
+                      <FavoriteRounded sx={{ fontSize: 21 }} />
+                    </Avatar>
+                    <Typography sx={{ color: "#11211F", fontSize: 22, fontWeight: 800, letterSpacing: "-.04em" }}>
+                      Care<span style={{ color: "#0F6E5C" }}>Link</span>
+                    </Typography>
+                  </Stack>
+                </Link>
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ width: "fit-content", bgcolor: "#EAFBF3", border: "1px solid rgba(15,110,92,.12)", color: "#0F6E5C", borderRadius: 999, px: 1.4, py: 0.7, mb: 2.5 }}>
+                  <ShieldRounded sx={{ fontSize: 18 }} />
+                  <Typography variant="caption" sx={{ fontWeight: 700, letterSpacing: "0.02em" }}>Xavfsiz klinik kirish</Typography>
+                </Stack>
+                <Typography variant="h2" sx={{ fontSize: { xs: 34, md: 52 }, letterSpacing: "-.05em", lineHeight: 1.04, color: "#11211F" }}>
+                  Bemor va klinika ma’lumotlari bir joyda.
+                </Typography>
+                <Typography variant="body1" sx={{ mt: 1.5, maxWidth: 500, color: "#4F5E5B", lineHeight: 1.75 }}>
+                  Tibbiyot xodimlari, klinika ma’muriyati va super-adminlar uchun tezkor, ishonchli boshqaruv paneli.
+                </Typography>
+                <Stack spacing={1.8} sx={{ mt: 3.5 }}>
+                  {[
+                    "24/7 kuzatuv va alertlar",
+                    "Klinikalar tarmog‘ini bitta ko‘rinishda nazorat qilish",
+                    "Himoyalangan qaror qabul qilish tizimi",
+                  ].map((item) => (
+                    <Stack direction="row" spacing={1.2} alignItems="center" key={item}>
+                      <MedicalInformationRounded sx={{ color: "#0F6E5C", fontSize: 19 }} />
+                      <Typography variant="body2" sx={{ color: "#11211F", fontWeight: 600 }}>{item}</Typography>
+                    </Stack>
+                  ))}
+                </Stack>
+              </Box>
+            </Grid>
+
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Card sx={{ height: "100%", borderRadius: 4, border: "1px solid rgba(17,34,31,.08)", background: "rgba(255,255,255,.9)", boxShadow: "0 20px 40px rgba(17,34,31,.08)" }}>
+                <CardContent sx={{ p: { xs: 2.5, sm: 4 } }}>
+                  <Typography variant="h4" sx={{ fontSize: 30, color: "#11211F", fontWeight: 800 }}>Tizimga kirish</Typography>
+                  <Typography variant="body2" sx={{ mt: 0.8, mb: 3, color: "#4F5E5B", lineHeight: 1.7 }}>
+                    Super admin va tibbiyot xodimlari uchun boshqaruv maydoni.
+                  </Typography>
+                  <LoginForm action={loginAction} />
+                  <Typography variant="body2" align="center" sx={{ mt: 3, color: "#4F5E5B" }}>
+                    Bemor hisobingiz yo‘qmi? <Link href="/signup" style={{ color: "#0F6E5C", fontWeight: 750 }}>Hisob yaratish</Link>
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+        </Box>
+      </Box>
+    </ThemeRegistry>
+  );
 }

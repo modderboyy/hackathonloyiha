@@ -61,7 +61,11 @@ export async function POST(request: NextRequest) {
   const password = safeText(body.password, 128);
   if (!payload.name || !payload.email || !password) return NextResponse.json({ error: "Klinika nomi, email va vaqtinchalik parol majburiy." }, { status: 400 });
   if (password.length < 8) return NextResponse.json({ error: "Parol kamida 8 belgidan iborat bo‘lishi kerak." }, { status: 400 });
-  if (payload.lat != null && (payload.lat < 36.7 || payload.lat > 46.4 || payload.lng == null || payload.lng < 55 || payload.lng > 74.7)) return NextResponse.json({ error: "Klinika joylashuvi O‘zbekiston chegarasida bo‘lishi kerak." }, { status: 400 });
+  const lat = typeof payload.lat === "number" ? payload.lat : null;
+  const lng = typeof payload.lng === "number" ? payload.lng : null;
+  if ((lat !== null && (lat < 36.7 || lat > 46.4)) || (lng !== null && (lng < 55 || lng > 74.7)) || (lat !== null && lng === null) || (lng !== null && lat === null)) {
+    return NextResponse.json({ error: "Klinika joylashuvi faqat O‘zbekiston hududi ichida bo‘lishi kerak." }, { status: 400 });
+  }
 
   const isActive = payload.subscription_status === "active" || payload.subscription_status === "trial";
   const { data: facility, error: facilityError } = await admin.from("facilities").insert({ ...payload, is_active: isActive, activated_at: isActive ? new Date().toISOString() : null }).select().single();

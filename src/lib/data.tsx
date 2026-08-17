@@ -39,36 +39,9 @@ import type {
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-// Faqat kalitlar kiritilmaganda UI ni ko'rish uchun lokal preview.
-// Haqiqiy ma'lumotlar bo'lsa Supabase RLS ushbu ma'lumotlarni to'liq almashtiradi.
-const DEMO_CLINICS: Facility[] = [
-  { id: "clinic-tashkent", name: "Toshkent shahar OVaBMU", type: "hospital", email: "toshkent@carelink.uz", phone: "+998 71 205 10 30", address: "Toshkent shahri, Shifokorlar ko'chasi 12", lat: 41.3111, lng: 69.2797, radius_km: 5, is_active: true, subscription_status: "active", subscription_expires_at: "2026-12-31T00:00:00.000Z", region_id: null },
-  { id: "clinic-samarkand", name: "Samarqand viloyat klinikasi", type: "hospital", email: "samarkand@carelink.uz", phone: "+998 66 233 42 20", address: "Samarqand, Universitet xiyoboni 4", lat: 39.6542, lng: 66.9597, radius_km: 4, is_active: true, subscription_status: "trial", subscription_expires_at: "2026-09-20T00:00:00.000Z", region_id: null },
-  { id: "clinic-andijan", name: "Andijon yurak markazi", type: "family_clinic", email: "andijon@carelink.uz", phone: "+998 74 225 11 02", address: "Andijon, Bobur shoh ko'chasi 88", lat: 40.7821, lng: 72.3442, radius_km: 3, is_active: false, subscription_status: "inactive", region_id: null },
-];
-
-const DEMO_PROFILE: Profile = {
-  id: "demo-super-admin", full_name: "Nodira Xasanova", first_name: "Nodira", last_name: "Xasanova", birth_date: null,
-  role: "super_admin", phone: "+998 90 123 45 67", facility_id: null, clinic_id: null, region_id: null, district_id: null, neighborhood_id: null, specialty_id: null, patient_id: null,
-};
-
-const DEMO_PATIENTS: Patient[] = [
-  { id: "patient-1", full_name: "Aziza Mirzayeva", pinfl: "51403041230012", birth_date: "1971-03-04", gender: "female", phone: "+998 90 445 36 60", clinic_id: "clinic-tashkent", region_id: null, district_id: null, neighborhood_id: null, address: "Toshkent shahri", emergency_contact: "+998 90 111 23 45", created_at: "2026-08-10T09:00:00Z" },
-  { id: "patient-2", full_name: "Jasur Abdullayev", pinfl: "50712231220045", birth_date: "1966-12-23", gender: "male", phone: "+998 93 112 74 20", clinic_id: "clinic-tashkent", region_id: null, district_id: null, neighborhood_id: null, address: "Toshkent shahri", emergency_contact: "+998 90 908 80 10", created_at: "2026-08-12T11:00:00Z" },
-  { id: "patient-3", full_name: "Muhammadali Karimov", pinfl: "51004011230012", birth_date: "1984-04-01", gender: "male", phone: "+998 91 333 66 50", clinic_id: "clinic-samarkand", region_id: null, district_id: null, neighborhood_id: null, address: "Samarqand shahri", emergency_contact: null, created_at: "2026-08-14T08:30:00Z" },
-  { id: "patient-4", full_name: "Malika Toirova", pinfl: "50808161210089", birth_date: "1958-08-16", gender: "female", phone: "+998 97 681 11 54", clinic_id: "clinic-tashkent", region_id: null, district_id: null, neighborhood_id: null, address: "Toshkent shahri", emergency_contact: "+998 93 300 20 90", created_at: "2026-08-15T10:10:00Z" },
-];
-const DEMO_HOSPITALIZATIONS: Hospitalization[] = [{ id: "hosp-1", patient_id: "patient-2", facility_id: "clinic-tashkent", clinic_id: "clinic-tashkent", doctor_id: "demo-super-admin", admission_date: "2026-08-15", diagnosis: "O'tkir pnevmoniya", status: "active" }];
-const DEMO_DISCHARGES: Discharge[] = [
-  { id: "disc-1", hospitalization_id: "hosp-0", patient_id: "patient-1", clinic_id: "clinic-tashkent", doctor_id: "demo-super-admin", discharge_date: "2026-08-14", diagnosis: "Yurak yetishmovchiligi", summary: "Holati barqarorlashdi. Uy sharoitida davomiy davo belgilandi.", recommendations: "Bosimni har kuni kuzating, tuzni cheklang.", requires_follow_up: true, follow_up_days: 14, assigned_family_doctor_id: null },
-  { id: "disc-2", hospitalization_id: "hosp-2", patient_id: "patient-4", clinic_id: "clinic-tashkent", doctor_id: "demo-super-admin", discharge_date: "2026-08-10", diagnosis: "Gipertoniya", summary: "Davolash kursi muvaffaqiyatli yakunlandi.", recommendations: "Dori jadvaliga amal qiling.", requires_follow_up: true, follow_up_days: 7, assigned_family_doctor_id: null },
-];
-const DEMO_FOLLOWUPS: FollowUp[] = [
-  { id: "follow-1", patient_id: "patient-1", discharge_id: "disc-1", clinic_id: "clinic-tashkent", family_doctor_id: "demo-super-admin", due_date: "2026-08-28", status: "in_progress", result_notes: null, next_step: "3 kundan so'ng qon bosimi monitoringi", completed_at: null },
-  { id: "follow-2", patient_id: "patient-4", discharge_id: "disc-2", clinic_id: "clinic-tashkent", family_doctor_id: "demo-super-admin", due_date: "2026-08-17", status: "completed", result_notes: "Bemorning holati yaxshi, dori qabul qilmoqda.", next_step: null, completed_at: "2026-08-17T09:00:00Z" },
-];
-const DEMO_CHECKINS: Checkin[] = [{ id: "check-1", client_id: "client-1", scheduled_at: "2026-08-17T08:00:00Z", ai_message: "Bugun o'zingizni qanday his qilyapsiz?", status: "answered_fine", response: "Yaxshiman", responded_at: "2026-08-17T08:03:00Z", escalation: 0, family_step: 0, created_at: "2026-08-17T08:00:00Z" }];
-const DEMO_MEDICATIONS: Medication[] = [{ id: "med-1", patient_id: "patient-1", name: "Bisoprolol", dosage: "5 mg", frequency: "Kuniga 2 mahal", notes: null, frequency_type: "daily", times_per_day: 2, duration_days: 30, start_date: "2026-08-14", times: ["08:00", "20:00"] }];
+// Demo fallbacklari ochirildi: real app faqat Supabase ma'lumotlariga ishlaydi.
+// Agar environment konfiguratsiyasi bo'lmasa, UI faqat tizim holatini ko'rsatadi,
+// lekin hech qanday ishlab bo'lmagan demo ma'lumotlar ko'rinmaydi.
 
 export interface MedicationScheduleInput {
   name: string;
@@ -115,6 +88,17 @@ export interface ClinicInput {
   type?: Facility["type"];
 }
 
+export interface DoctorInput {
+  full_name: string;
+  email: string;
+  password?: string;
+  phone?: string;
+  role?: "medical_worker" | "hospital_doctor" | "family_doctor";
+  clinic_id?: string | null;
+  facility_id?: string | null;
+  specialty_id?: string | null;
+}
+
 interface Data {
   ready: boolean;
   notConfigured: boolean;
@@ -152,6 +136,7 @@ interface Data {
   completeFollowUp: (id: string, notes: string, next: string) => Promise<string | null>;
   markNotificationRead: (id: string) => Promise<string | null>;
   deletePatient: (id: string) => Promise<string | null>;
+  addDoctor: (input: DoctorInput) => Promise<string | null>;
   addClinic: (input: ClinicInput) => Promise<string | null>;
   updateClinic: (id: string, input: Partial<ClinicInput>) => Promise<string | null>;
 
@@ -192,55 +177,30 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     return createClient();
   }, [notConfigured]);
 
-  const [ready, setReady] = useState(notConfigured);
-  const [profile, setProfile] = useState<Profile | null>(notConfigured ? DEMO_PROFILE : null);
-  const [profiles, setProfiles] = useState<Profile[]>(notConfigured ? [DEMO_PROFILE] : []);
+  const [ready, setReady] = useState(false);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [regions, setRegions] = useState<Region[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
   const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>([]);
   const [streets, setStreets] = useState<Street[]>([]);
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [specialties, setSpecialties] = useState<Specialty[]>([]);
-  const [facilities, setFacilities] = useState<Facility[]>(notConfigured ? DEMO_CLINICS : []);
-  const [patients, setPatients] = useState<Patient[]>(notConfigured ? DEMO_PATIENTS : []);
+  const [facilities, setFacilities] = useState<Facility[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
   const [visits, setVisits] = useState<ClinicalVisit[]>([]);
   const [vitals, setVitals] = useState<Vital[]>([]);
-  const [hospitalizations, setHospitalizations] = useState<Hospitalization[]>(notConfigured ? DEMO_HOSPITALIZATIONS : []);
-  const [discharges, setDischarges] = useState<Discharge[]>(notConfigured ? DEMO_DISCHARGES : []);
-  const [followUps, setFollowUps] = useState<FollowUp[]>(notConfigured ? DEMO_FOLLOWUPS : []);
+  const [hospitalizations, setHospitalizations] = useState<Hospitalization[]>([]);
+  const [discharges, setDischarges] = useState<Discharge[]>([]);
+  const [followUps, setFollowUps] = useState<FollowUp[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [liveNotification, setLiveNotification] = useState<Notification | null>(null);
-  const [checkins, setCheckins] = useState<Checkin[]>(notConfigured ? DEMO_CHECKINS : []);
+  const [checkins, setCheckins] = useState<Checkin[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessageRow[]>([]);
   const [clientHealth, setClientHealth] = useState<ClientHealth[]>([]);
-  const [medications, setMedications] = useState<Medication[]>(notConfigured ? DEMO_MEDICATIONS : []);
-
-  // /pay previewdagi demo checkout qaytganda klinika kartasi darhol faol ko‘rinadi.
-  useEffect(() => {
-    if (!notConfigured || typeof window === "undefined") return;
-    const timer = window.setTimeout(() => {
-      const raw = window.sessionStorage.getItem("carelink-demo-payment");
-      if (!raw) return;
-      try {
-        const payment = JSON.parse(raw) as { target?: string; clinicId?: string | null; expiresAt?: string };
-        if (payment.target === "clinic" && payment.clinicId) {
-          setFacilities((current) => current.map((clinic) => clinic.id === payment.clinicId ? {
-            ...clinic,
-            is_active: true,
-            subscription_status: "active",
-            subscription_expires_at: payment.expiresAt ?? new Date(Date.now() + 30 * 86400000).toISOString(),
-          } : clinic));
-        }
-      } catch {
-        // Noto‘g‘ri preview ma’lumotini jim tozalaymiz.
-      } finally {
-        window.sessionStorage.removeItem("carelink-demo-payment");
-      }
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [notConfigured]);
+  const [medications, setMedications] = useState<Medication[]>([]);
 
   // Realtime: yangi xabarnomalar (popup uchun)
   useEffect(() => {
@@ -547,6 +507,22 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     return null;
   }, [supabase]);
 
+  const addDoctor = useCallback(async (input: DoctorInput): Promise<string | null> => {
+    try {
+      const response = await fetch("/api/admin/doctors", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      const payload = await response.json() as { error?: string; profile?: Profile };
+      if (!response.ok) return payload.error ?? "Shifokor yaratilmadi.";
+      if (payload.profile) setProfiles((prev) => [payload.profile as Profile, ...prev]);
+      return null;
+    } catch {
+      return "Shifokor yaratish xizmatiga ulanib bo'lmadi.";
+    }
+  }, []);
+
   const addClinic = useCallback(async (input: ClinicInput): Promise<string | null> => {
     if (profile?.role !== "super_admin") return "Klinikani faqat super admin boshqara oladi.";
     if (!supabase) {
@@ -777,7 +753,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       streets, buildings, specialties, facilities, patients, visits, vitals, hospitalizations,
       discharges, followUps, notifications, liveNotification, audit, approvals, checkins, chatMessages, clientHealth, medications,
       addPatient, updatePatient, addVisit, addDischarge, completeFollowUp, markNotificationRead,
-      deletePatient, addClinic, updateClinic, addRegion, addDistrict, updateDistrict, deleteDistrict, addNeighborhood,
+      deletePatient, addDoctor, addClinic, updateClinic, addRegion, addDistrict, updateDistrict, deleteDistrict, addNeighborhood,
       updateNeighborhood, deleteNeighborhood, addStreet, updateStreet, deleteStreet,
       addBuilding, updateBuilding, deleteBuilding, setRole, submitApproval, decideApproval,
     }),
@@ -786,7 +762,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       streets, buildings, specialties, facilities, patients, visits, vitals, hospitalizations,
       discharges, followUps, notifications, liveNotification, audit, approvals, checkins, chatMessages, clientHealth, medications,
       addPatient, updatePatient, addVisit, addDischarge, completeFollowUp, markNotificationRead,
-      deletePatient, addClinic, updateClinic, addRegion, addDistrict, updateDistrict, deleteDistrict, addNeighborhood,
+      deletePatient, addDoctor, addClinic, updateClinic, addRegion, addDistrict, updateDistrict, deleteDistrict, addNeighborhood,
       updateNeighborhood, deleteNeighborhood, addStreet, updateStreet, deleteStreet,
       addBuilding, updateBuilding, deleteBuilding, setRole, submitApproval, decideApproval,
     ]

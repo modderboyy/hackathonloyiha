@@ -1,18 +1,27 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
 :root {
-  --background: #f7f9fc;
-  --foreground: #101828;
-  --primary-50: #eff4ff;
-  --primary-100: #d1e0ff;
-  --primary-200: #b2ccff;
-  --primary-300: #84adff;
-  --primary-400: #528bff;
-  --primary-500: #2970ff;
-  --primary-600: #155eef;
-  --primary-700: #004eeb;
-  --primary-800: #0040c1;
-  --primary-900: #00359e;
+  --background: #f5f7f4;
+  --foreground: #11211f;
+  --muted: #5a6d68;
+  --panel: rgba(255,255,255,0.88);
+  --panel-border: rgba(17,34,31,0.08);
+  --primary-50: #edf9f5;
+  --primary-100: #d6f1e8;
+  --primary-200: #b2e1d2;
+  --primary-300: #7ec5ad;
+  --primary-400: #3aa98d;
+  --primary-500: #0f6e5c;
+  --primary-600: #0b5c4e;
+  --primary-700: #0b4c40;
+  --primary-800: #0d3d34;
+  --primary-900: #0a2d28;
+  --sage: #dff7f0;
+  --success: #1fa777;
+  --warning: #d9872f;
+  --danger: #c74b49;
+  --slate: #475467;
 }
 
 @theme inline {
@@ -33,44 +42,91 @@
 html { scroll-behavior: smooth; }
 body {
   margin: 0;
-  background: var(--background);
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(15,110,92,0.09), transparent 20%),
+    radial-gradient(circle at top right, rgba(61,169,141,0.08), transparent 22%),
+    linear-gradient(180deg, #F5F7F4 0%, #EEF3F1 100%);
   color: var(--foreground);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
 }
-
-/* Existing auth screens use these semantic helpers. */
-.field { @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20; }
-.label { @apply mb-1.5 block text-sm font-medium text-slate-700; }
-.req { @apply text-red-500; }
-.opt { @apply ml-1 text-xs font-normal text-slate-400; }
-.btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50; }
-.btn-ghost { @apply inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 active:scale-[0.98]; }
-.btn-danger { @apply inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700; }
-.card { @apply rounded-xl border border-slate-200 bg-white p-5 shadow-sm; }
-.badge { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium; }
 
 .view-enter { animation: carelink-view-in .28s cubic-bezier(.22, 1, .36, 1); }
 @keyframes carelink-view-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
-/* Leaflet / clinic map animation. It does not rely on a third-party animation plugin. */
-.clinic-pin { position: relative; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: #155eef; color: white; border: 3px solid white; box-shadow: 0 4px 12px rgba(21,94,239,.35); font: 700 12px/1 Inter, sans-serif; }
-.clinic-pin::after { content: ""; position: absolute; inset: -9px; border: 2px solid rgba(21,94,239,.45); border-radius: 50%; animation: clinic-ping 2.4s ease-out infinite; }
-.clinic-pin--inactive { background: #98a2b3; box-shadow: 0 4px 12px rgba(71,84,103,.25); }
-.clinic-pin--inactive::after { border-color: rgba(152,162,179,.42); animation: none; }
+.soft-grid {
+  background-image: linear-gradient(rgba(17,34,31,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(17,34,31,.04) 1px, transparent 1px);
+  background-size: 42px 42px;
+}
+
+.glass {
+  background: rgba(255,255,255,0.72);
+  border: 1px solid rgba(17,34,31,0.08);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.clinic-pin {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #0f6e5c;
+  color: #f3fbf8;
+  border: 3px solid rgba(255,255,255,.92);
+  box-shadow: 0 10px 18px rgba(15,110,92,.25);
+  font: 700 13px/1 "IBM Plex Sans", sans-serif;
+  transform: translateY(0);
+}
+.clinic-pin::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border: 2px solid rgba(15,110,92,.38);
+  border-radius: 50%;
+  animation: clinic-ping 2.4s ease-out infinite;
+}
+.clinic-pin span { display: block; transform: translateY(-1px); }
+.clinic-pin--selected {
+  background: #155eef;
+  box-shadow: 0 12px 20px rgba(21,94,239,.28);
+}
+.clinic-pin--selected::after { border-color: rgba(21,94,239,.45); }
+.clinic-pin--inactive {
+  background: #9aa6a0;
+  box-shadow: 0 8px 18px rgba(90,109,104,.24);
+}
+.clinic-pin--inactive::after { border-color: rgba(90,109,104,.38); animation: none; }
+.clinic-map-tooltip {
+  background: rgba(17,34,31,0.84);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #fff;
+  font-weight: 700;
+  font-size: 11px;
+  border-radius: 8px;
+  padding: 5px 8px;
+  box-shadow: 0 10px 22px rgba(17,34,31,0.18);
+}
+.clinic-map-tooltip:before {
+  border-top-color: rgba(17,34,31,0.84);
+}
 @keyframes clinic-ping { 0% { transform: scale(.65); opacity: .8; } 70%,100% { transform: scale(1.45); opacity: 0; } }
+
+.mono,
+.mono-number {
+  font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+}
 
 .hero-orb { animation: float-orb 7s ease-in-out infinite; }
 .hero-orb--slow { animation-delay: -3.5s; }
 @keyframes float-orb { 0%,100% { transform: translate3d(0,0,0); } 50% { transform: translate3d(0,-18px,0); } }
-.soft-grid {
-  background-image: linear-gradient(rgba(255,255,255,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.08) 1px, transparent 1px);
-  background-size: 42px 42px;
-}
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; border: 2px solid transparent; background-clip: content-box; }
-::-webkit-scrollbar-thumb:hover { background: #94a3b8; background-clip: content-box; }
+::-webkit-scrollbar-thumb { background: rgba(90,109,104,0.38); border-radius: 999px; border: 2px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background: rgba(15,110,92,0.6); background-clip: content-box; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
