@@ -332,7 +332,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const addPatient = useCallback(async (p: Omit<Patient, "id" | "created_at" | "created_by">): Promise<string | null> => {
     if (!profile) return "Tizimga ulanmagan";
-    const payload = { ...p, clinic_id: p.clinic_id ?? profile.clinic_id ?? null };
+    const clinicId = p.clinic_id ?? profile.clinic_id ?? null;
+    if (!clinicId) return profile.role === "super_admin" ? "Bemorni saqlash uchun klinikani tanlang." : "Sizning profilingiz klinikaga biriktirilmagan.";
+    const payload = { ...p, clinic_id: clinicId };
     if (!supabase) {
       const row = { ...payload, id: `demo-patient-${Date.now()}`, created_at: new Date().toISOString() } as Patient;
       setPatients((prev) => [row, ...prev]);
