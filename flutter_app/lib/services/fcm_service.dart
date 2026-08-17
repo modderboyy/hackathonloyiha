@@ -45,6 +45,13 @@ class FirebaseMessagingService {
   static FutureOr<void> Function(RemoteMessage message)? _onMessage;
   static FutureOr<void> Function(RemoteMessage message)? _onMessageOpened;
 
+  /// Login bo'lgandan keyin ham joriy tokenni olish uchun.
+  /// App birinchi marta login sahifasida ochilganda token saqlanmay qolmasin.
+  static Future<String?> currentToken() async {
+    await init();
+    return FirebaseMessaging.instance.getToken();
+  }
+
   static void setTokenCallback(FutureOr<void> Function(String token) callback) => _onTokenReceived = callback;
   static void setMessageCallback(FutureOr<void> Function(RemoteMessage) callback) => _onMessage = callback;
   static void setMessageOpenedCallback(FutureOr<void> Function(RemoteMessage) callback) => _onMessageOpened = callback;

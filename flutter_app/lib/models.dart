@@ -8,6 +8,7 @@ class UserProfile {
   final String? regionId;
   final String? districtId;
   final String? neighborhoodId;
+  final String? fcmToken;
 
   UserProfile({
     required this.id,
@@ -17,6 +18,7 @@ class UserProfile {
     this.regionId,
     this.districtId,
     this.neighborhoodId,
+    this.fcmToken,
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
@@ -27,6 +29,7 @@ class UserProfile {
         regionId: json['region_id'],
         districtId: json['district_id'],
         neighborhoodId: json['neighborhood_id'],
+        fcmToken: json['fcm_token'],
       );
 }
 

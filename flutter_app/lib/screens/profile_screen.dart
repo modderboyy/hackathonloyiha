@@ -210,6 +210,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               enabled: state.monitoringSettings.enabled,
               intervalMinutes: state.monitoringSettings.intervalMinutes,
               testing: _testingPush,
+              pushReady: profile?.fcmToken?.isNotEmpty ?? false,
               onEnabledChanged: (value) => _saveMonitoring(value, state.monitoringSettings.intervalMinutes),
               onIntervalChanged: (value) => _saveMonitoring(state.monitoringSettings.enabled, value),
               onTestPush: _testPush,
@@ -281,6 +282,7 @@ class _BetaMonitoringCard extends StatelessWidget {
   final bool enabled;
   final int intervalMinutes;
   final bool testing;
+  final bool pushReady;
   final ValueChanged<bool> onEnabledChanged;
   final ValueChanged<int> onIntervalChanged;
   final VoidCallback onTestPush;
@@ -289,6 +291,7 @@ class _BetaMonitoringCard extends StatelessWidget {
     required this.enabled,
     required this.intervalMinutes,
     required this.testing,
+    required this.pushReady,
     required this.onEnabledChanged,
     required this.onIntervalChanged,
     required this.onTestPush,
@@ -330,8 +333,16 @@ class _BetaMonitoringCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(pushReady ? Icons.check_circle_rounded : Icons.error_outline_rounded, color: pushReady ? AppColors.emerald : AppColors.amber, size: 16),
+                const SizedBox(width: 6),
+                Text(pushReady ? 'Android FCM token saqlandi — testga tayyor' : 'FCM token kutilmoqda — ruxsatni bering va ilovani qayta oching', style: TextStyle(color: pushReady ? AppColors.emerald : AppColors.amber, fontSize: 11, fontWeight: FontWeight.w600)),
+              ],
+            ),
+            const SizedBox(height: 10),
             OutlinedButton.icon(
-              onPressed: testing ? null : onTestPush,
+              onPressed: testing || !pushReady ? null : onTestPush,
               icon: testing ? const SizedBox(width: 17, height: 17, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.notifications_active_outlined),
               label: Text(testing ? 'TEST PUSH YUBORILMOQDA…' : 'TEST PUSH YUBORISH'),
               style: OutlinedButton.styleFrom(foregroundColor: AppColors.primary, side: const BorderSide(color: AppColors.primary), padding: const EdgeInsets.symmetric(vertical: 13), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13))),

@@ -55,6 +55,8 @@ class AppState extends ChangeNotifier {
     FirebaseMessagingService.setTokenCallback((token) async {
       if (db.userId != null) {
         await db.saveFcmToken(token);
+        profile = await db.getProfile();
+        notifyListeners();
       }
     });
     FirebaseMessagingService.setMessageCallback((message) async {
@@ -68,6 +70,14 @@ class AppState extends ChangeNotifier {
     });
     try {
       await FirebaseMessagingService.init();
+      // FCM init login'dan oldin bo'lgan bo'lsa ham, login'dan keyin token
+      // profile.fcm_token ga albatta yoziladi. Test push shu qiymatdan foydalanadi.
+      final token = await FirebaseMessagingService.currentToken();
+      if (token != null && db.userId != null) {
+        await db.saveFcmToken(token);
+        profile = await db.getProfile();
+        notifyListeners();
+      }
     } catch (e) {
       debugPrint('FCM init xato: $e');
     }
@@ -204,7 +214,11 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<String?> sendTestPush() async => db.sendTestPush();
+  Future<String?> sendTestPush() async {
+    // Testdan oldin tokenni qayta saqlaymiz, shunda yangi qurilmada ham push ishlaydi.
+    await _initFcm();
+    return db.sendTestPush();
+  }
 
   // ---------- Obuna ----------
   Future<void> buyIndividual() async {
