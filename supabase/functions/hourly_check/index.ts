@@ -15,6 +15,10 @@ const FIREBASE_PROJECT_ID = Deno.env.get("FIREBASE_PROJECT_ID")!; // masalan: ca
 const FIREBASE_CLIENT_EMAIL = Deno.env.get("FIREBASE_CLIENT_EMAIL")!; // ...@...gserviceaccount.com
 const FIREBASE_PRIVATE_KEY = Deno.env.get("FIREBASE_PRIVATE_KEY")!; // -----BEGIN PRIVATE KEY-----
 
+// Generic SMS provider webhook. Eskiz/Twilio/custom backend shu webhook orqali ulanadi.
+const SMS_WEBHOOK_URL = Deno.env.get("SMS_WEBHOOK_URL") ?? "";
+const SMS_WEBHOOK_TOKEN = Deno.env.get("SMS_WEBHOOK_TOKEN") ?? "";
+
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
 
 const TEMPLATES = [
@@ -133,19 +137,37 @@ async function sendPush(fcmTokens: string[], title: string, body: string, data: 
   }
 }
 
-// ---------- SMS (demo) ----------
+// ---------- SMS provider ----------
 async function sendSms(phone: string, message: string) {
-  console.log(`[SMS-DEMO] ${phone} ga: ${message}`);
+  if (!SMS_WEBHOOK_URL) {
+    console.log(`[SMS-NOT-CONFIGURED] ${phone}: ${message}`);
+    return { ok: false, error: "SMS_WEBHOOK_URL sozlanmagan" };
+  }
+  try {
+    const response = await fetch(SMS_WEBHOOK_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(SMS_WEBHOOK_TOKEN ? { Authorization: `Bearer ${SMS_WEBHOOK_TOKEN}` } : {}),
+      },
+      body: JSON.stringify({ phone, message }),
+    });
+    return response.ok ? { ok: true } : { ok: false, error: await response.text() };
+  } catch (_) {
+    return { ok: false, error: "SMS provider ulanish xatosi" };
+  }
 }
 
 // ---------- Eskalatsiya ----------
 async function escalateUnanswered() {
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  // Bemor 25 minut ichida AI check-in xabariga javob bermasa, eng yaqin
+  // (priority=1 yoki location bo'yicha) yaqin odamga SMS yuboriladi.
+  const twentyFiveMinutesAgo = new Date(Date.now() - 25 * 60 * 1000).toISOString();
   const { data: stale } = await supabase
     .from("checkins")
     .select("id, client_id, family_step, family_notified_at")
     .in("status", ["sent", "sms_sent"])
-    .lt("created_at", oneHourAgo);
+    .lt("created_at", twentyFiveMinutesAgo);
 
   if (!stale) return;
 
@@ -171,7 +193,14 @@ async function escalateUnanswered() {
     if (!nextMember) continue;
 
     const relation = nextMember.relationship || "qarindosh";
-    await sendSms(nextMember.phone, `CareLink: ${nextMember.name} (${relation})ingiz so'rovga javob bermayapti. Iltimos u bilan bog'lanib holatini so'rang.`);
+    const sms = await sendSms(nextMember.phone, `CareLink: ${nextMember.name} (${relation})ingiz 25 minutdan beri AI tekshiruviga javob bermayapti. Iltimos darhol holatini so'rang.`);
+    await supabase.from("notifications").insert({
+      recipient_id: chk.client_id,
+      type: "alert",
+      title: "Yaqin odamga SMS yuborildi",
+      body: sms.ok ? `${nextMember.name}ga yordam so'rovi yuborildi.` : `SMS yuborilmadi: ${sms.error}`,
+      source: "sms_escalation",
+    });
 
     const newStep = chk.family_step + 1;
     await supabase
@@ -179,7 +208,7 @@ async function escalateUnanswered() {
       .update({
         family_step: newStep,
         family_notified_at: new Date().toISOString(),
-        status: newStep >= family.length ? "locked" : "sms_sent",
+        status: sms.ok ? (newStep >= family.length ? "locked" : "sms_sent") : "escalated",
       })
       .eq("id", chk.id);
   }

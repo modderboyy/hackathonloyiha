@@ -237,6 +237,8 @@ class _HomeTab extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(height: 14),
+          const _SafetyPanel(),
           const SizedBox(height: 18),
 
           // Klinikadan discharge vaqtida kelgan AI-safe care context.
@@ -420,6 +422,62 @@ class _HomeTab extends StatelessWidget {
       default: return s;
     }
   }
+}
+
+class _SafetyPanel extends StatelessWidget {
+  const _SafetyPanel();
+
+  Future<void> _showResult(BuildContext context, Future<dynamic> Function() action) async {
+    final result = await action();
+    if (!context.mounted) return;
+    final ok = result?.ok == true;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(result?.message?.toString() ?? (ok ? 'Yuborildi' : 'Xatolik yuz berdi')),
+      backgroundColor: ok ? AppColors.emerald : AppColors.red,
+      behavior: SnackBarBehavior.floating,
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.read<AppState>();
+    return Container(
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(color: const Color(0xFFFFFAEB), borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFFEDF89))),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(children: [Icon(Icons.health_and_safety_outlined, color: AppColors.amber, size: 20), SizedBox(width: 8), Text('Tezkor yordam paneli', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w800)), Spacer(), Text('FAOL', style: TextStyle(color: AppColors.amber, fontSize: 10, fontWeight: FontWeight.w800))]),
+          const SizedBox(height: 10),
+          Row(children: [
+            Expanded(child: _SafetyButton(label: 'SOS', icon: Icons.sos_rounded, color: AppColors.red, onTap: () => _showResult(context, state.triggerSos))),
+            const SizedBox(width: 8),
+            Expanded(child: _SafetyButton(label: '103', icon: Icons.phone_in_talk_rounded, color: AppColors.primary, onTap: () { state.callEmergency103(); })),
+            const SizedBox(width: 8),
+            Expanded(child: _SafetyButton(label: 'Yaqinlarga', icon: Icons.group_outlined, color: AppColors.emerald, onTap: () => _showResult(context, state.notifyFamily))),
+          ]),
+        ],
+      ),
+    );
+  }
+}
+
+class _SafetyButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  const _SafetyButton({required this.label, required this.icon, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      padding: const EdgeInsets.symmetric(vertical: 9),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: color.withOpacity(0.22))),
+      child: Column(children: [Icon(icon, color: color, size: 19), const SizedBox(height: 4), Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w800))]),
+    ),
+  );
 }
 
 class _ClinicalCarePlan extends StatelessWidget {

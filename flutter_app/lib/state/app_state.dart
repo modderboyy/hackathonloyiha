@@ -6,6 +6,8 @@ import '../services/openai_service.dart';
 import '../services/notification_service.dart';
 import '../services/reminder_service.dart';
 import '../services/fcm_service.dart';
+import '../services/emergency_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 enum FcmInitStatus { idle, initializing, ready, tokenPending, webPreview, error }
 
@@ -15,6 +17,7 @@ class AppState extends ChangeNotifier {
   final OpenAIService ai = OpenAIService();
   final NotificationService notifications = NotificationService();
   final ReminderService reminders = ReminderService();
+  final EmergencyService emergency = EmergencyService();
 
   UserProfile? profile;
   HealthData? health;
@@ -44,6 +47,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> init() async {
     try {
+      notifications.setSafetyActionCallback(_handleSafetyAction);
       await notifications.init();
       await _initFcm();
       if (isLoggedIn) {
@@ -141,6 +145,7 @@ class AppState extends ChangeNotifier {
     await reminders.syncAll(reminderList);
     medications = await db.getMedications();
     familyMembers = await db.getFamilyMembers();
+    await _syncSafetyNotification();
     await checkLocked();
   }
 
@@ -148,6 +153,41 @@ class AppState extends ChangeNotifier {
     final lockedCheckin = await db.getLatestLockedCheckin();
     locked = lockedCheckin != null;
     notifyListeners();
+  }
+
+  Future<void> _syncSafetyNotification() async {
+    if (hasSubscription) {
+      await notifications.showPersistentSafetyActions();
+    } else {
+      await notifications.cancelPersistentSafetyActions();
+    }
+  }
+
+  Future<void> _handleSafetyAction(String action) async {
+    if (action == 'sos') {
+      await triggerSos();
+    } else if (action == 'family') {
+      await notifyFamily();
+    } else if (action == 'call_103') {
+      await callEmergency103();
+    }
+  }
+
+  Future<EmergencyResult> triggerSos() async {
+    final result = await emergency.trigger(action: 'sos');
+    if (result.ok) await loadAll();
+    return result;
+  }
+
+  Future<EmergencyResult> notifyFamily() async {
+    final result = await emergency.trigger(action: 'family');
+    if (result.ok) await loadAll();
+    return result;
+  }
+
+  Future<void> callEmergency103() async {
+    final uri = Uri.parse('tel:103');
+    if (await canLaunchUrl(uri)) await launchUrl(uri);
   }
 
   void _startRealtime() {
@@ -217,6 +257,7 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    await notifications.cancelPersistentSafetyActions();
     await db.logout();
     profile = null;
     health = null;

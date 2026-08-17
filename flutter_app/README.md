@@ -49,6 +49,7 @@ supabase/migrations/00018_lock_active_subscriptions.sql
 supabase/migrations/00019_notification_history.sql
 supabase/migrations/00020_vitals_push_beta_settings.sql
 supabase/migrations/00021_enable_mobile_realtime.sql
+supabase/migrations/00022_sos_emergency.sql
 ```
 
 Bu migratsiya uchta rol (`super_admin`, `medical_worker`, `patient`), klinika doirasi RLS, dori-reminder sync va AI care kontekstini yaratadi.
@@ -72,6 +73,8 @@ flutter run \
 
 ```bash
 supabase functions deploy hourly_check
+supabase functions deploy sos-alert
+supabase functions deploy ai-chat
 ```
 
 Edge Function uchun `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY` va FCM sozlamalarini Supabase secret sifatida kiriting.

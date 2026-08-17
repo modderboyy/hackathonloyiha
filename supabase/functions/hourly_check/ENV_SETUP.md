@@ -12,6 +12,8 @@ Men hamma narsani tayyorladim — sizga faqat 1 ta qiymat qoldi: **Supabase serv
 | `FIREBASE_PROJECT_ID` | `carelink-ca427` | ✅ tayyor |
 | `FIREBASE_CLIENT_EMAIL` | `firebase-adminsdk-fbsvc@carelink-ca427.iam.gserviceaccount.com` | ✅ tayyor |
 | `FIREBASE_PRIVATE_KEY` | `-----BEGIN PRIVATE KEY-----...` | ✅ tayyor |
+| `SMS_WEBHOOK_URL` | SMS provider endpoint (Eskiz/Twilio/custom) | ⚠️ avtomatik SMS uchun kerak |
+| `SMS_WEBHOOK_TOKEN` | SMS provider token | ⚠️ provider talab qilsa |
 
 ## 1. Service role key ni olish (sizdan kerak)
 
