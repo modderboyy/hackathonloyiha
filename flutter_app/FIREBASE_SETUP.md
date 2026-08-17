@@ -142,12 +142,14 @@ dependencies {
 <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
 ```
 
-## 3. google-services.json
+## 3. google-services.json va FirebaseOptions fallback
 
 Fayl allaqachon joylashtirildi:
 ```
 flutter_app/android/app/google-services.json
 ```
+
+`lib/firebase_options.dart` ham qo‘shilgan. Agar Google Services Gradle plugin `values.xml` yaratmasa, Flutter aynan shu Android FirebaseOptions bilan initialize bo‘ladi. Bu `Failed to load FirebaseOptions from resource` xatosini bartaraf qiladi.
 
 ## 4. Firebase V1 API — service account (edge function uchun)
 

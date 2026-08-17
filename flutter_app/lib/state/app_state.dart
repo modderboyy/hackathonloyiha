@@ -257,7 +257,12 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> logout() async {
-    await notifications.cancelPersistentSafetyActions();
+    // Persistent notification cancel xatosi logout oqimini to'xtatmasin.
+    try {
+      await notifications.cancelPersistentSafetyActions();
+    } catch (e) {
+      debugPrint('Safety notification cancel xato: $e');
+    }
     await db.logout();
     profile = null;
     health = null;
